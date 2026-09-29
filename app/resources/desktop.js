@@ -791,7 +791,7 @@
    */
   (function windowsIntegration(){
     const TRAY_ICON = '/resources/icons/trayIcon.png';
-    const MINI = { width: 480, height: 190, minWidth: 320, minHeight: 130 };
+    const MINI = { width: 480, height: 440, minWidth: 360, minHeight: 300 };
     const NORMAL = { width: 1280, height: 840, minWidth: 760, minHeight: 560 };
     const K = {
       onTop: 'pulsarOnTop', miniOnTop: 'pulsarMiniOnTop', closeToTray: 'pulsarCloseToTray', notify: 'pulsarNotify',
@@ -1077,7 +1077,7 @@
           mini = true; setB(K.mini, true);
           document.documentElement.classList.add('nl-mini');
           const mg = getJ(K.miniGeo) || {};
-          await safe(function (){ return W.setSize({ width: mg.width || MINI.width, height: mg.height || MINI.height, minWidth: MINI.minWidth, minHeight: MINI.minHeight }); });
+          await safe(function (){ return W.setSize({ width: Math.max(MINI.minWidth, mg.width || MINI.width), height: Math.max(MINI.minHeight, mg.height || MINI.height), minWidth: MINI.minWidth, minHeight: MINI.minHeight }); });
           if (mg.x != null && mg.y != null) await safe(function (){ return W.move(mg.x, mg.y); });
         } else {
           const g = await readGeo();
