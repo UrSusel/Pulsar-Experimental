@@ -515,6 +515,8 @@ async function testDesktop(browser){
   // OBS: okno z wyglądem overlayu
   await page.evaluate(() => window.__pulsarDesktop.obs.help());
   await poll(() => page.evaluate(() => !!document.querySelector('.obs-theme select')));
+  const obsModal = await page.evaluate(() => ({ cls: document.getElementById('modalShell').className, title: document.getElementById('modalTitle').textContent }));
+  check('OBS: pomoc ma standardowy wygląd ustawień', /settings-like/.test(obsModal.cls) && /obs-settings-modal/.test(obsModal.cls), obsModal);
   await sleep(800);
   await page.evaluate(() => { const s = document.querySelectorAll('.obs-theme select'); s[0].value = 'bar'; s[0].dispatchEvent(new Event('change')); s[1].value = 'tr'; s[1].dispatchEvent(new Event('change')); s[2].value = 'custom'; s[2].dispatchEvent(new Event('change')); const c = document.querySelector('.obs-theme input[type=color]'); c.value = '#22cc88'; c.dispatchEvent(new Event('input')); });
   await sleep(900);
@@ -714,6 +716,14 @@ async function testSettings(browser){
   await shot('settings-win-en.png');
   const en = await page.evaluate(() => document.querySelector('.sm-pane.active .sm-pane-title').textContent + ' | ' + document.getElementById('smSearch').placeholder);
   check('ustawienia: tłumaczenie EN', /Windows/.test(en) && /Search settings/.test(en), en);
+  // Hiszpański + modal dźwięku: dynamiczna treść musi używać tego samego wzorca okna.
+  await page.evaluate(() => window.__player.__i18n.set('es')); await sleep(250);
+  const es = await page.evaluate(() => ({ title: document.getElementById('smTitle').textContent, pane: document.querySelector('.sm-pane.active .sm-pane-title').textContent, search: document.getElementById('smSearch').placeholder }));
+  check('ustawienia: tłumaczenie ES', es.title === 'Ajustes' && /Windows|Apariencia|Reproducción|Biblioteca|Descargas/.test(es.pane) && es.search === 'Buscar en los ajustes', es);
+  await page.$eval('#smEqBtn', b => b.click()); await sleep(250);
+  const snd = await page.evaluate(() => ({ cls: document.getElementById('modalShell').className, title: document.getElementById('modalTitle').textContent, body: document.getElementById('modalBody').textContent }));
+  check('equalizer: standardowe okno i ES', /settings-like/.test(snd.cls) && /sound-settings-modal/.test(snd.cls) && snd.title === 'Sonido' && !/Equalizer 10 pasm|Wizualizacja 3D słyszy/.test(snd.body), snd);
+  await page.$eval('#modalCancel', b => b.click());
   await page.setViewport({ width: 520, height: 800 }); await sleep(300);
   await shot('settings-narrow.png');
   await page.close();

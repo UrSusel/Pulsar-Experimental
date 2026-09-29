@@ -263,6 +263,9 @@
   var meta = { playing: false, pos: 0, dur: 0, at: 0 };
   var $ = function (id) { return document.getElementById(id); };
   var LABELS = { pl: 'Teraz gra', en: 'Now playing', es: 'Sonando ahora' };
+  var initialLang = '';
+  try { initialLang = new URLSearchParams(location.search).get('lang') || ''; } catch (e) {}
+  if (LABELS[initialLang]) $('np').textContent = LABELS[initialLang];
 
   window.__pulsarObs = { stats: { chunks: 0, dropped: 0, resets: 0, lead: 0 }, meta: meta, connected: false };
   var stats = window.__pulsarObs.stats;
