@@ -1117,31 +1117,32 @@
   html.nl-mini body > *:not(.mini-view):not(audio):not(#styleToast) { display: none !important; }
   html.nl-mini, html.nl-mini body { background: #07070c; }
   html.nl-mini .mini-view {
+    --mv-accent-rgb: 174,117,255;
+    --mv-accent-2-rgb: 39,171,232;
+    --mv-dark-rgb: 19,12,34;
     display: flex; flex-direction: column; gap: 0; position: fixed; inset: 0; padding: 9px 10px 10px;
     background: linear-gradient(180deg, #11101b 0%, #0a0912 100%); color:#fff; user-select:none; overflow:hidden;
   }
-  .mv-titlebar { height: 30px; min-height:30px; display:flex; align-items:center; gap:9px; padding:0 8px; color:rgba(255,255,255,.58); font-size:11px; border-bottom:1px solid rgba(255,255,255,.08); }
+  .mv-titlebar { height: 30px; min-height:30px; display:flex; align-items:center; gap:9px; padding:0 8px; color:rgba(255,255,255,.58); font-size:11px; border-bottom:1px solid rgba(var(--mv-accent-rgb),.22); }
   .mv-titlebar strong { color:rgba(255,255,255,.8); font-size:12px; font-weight:600; margin-right:auto; }
   .mv-dots { display:flex; gap:5px; }.mv-dots i { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.22); }.mv-dots i:first-child { background:#ff6e87; }.mv-dots i:nth-child(2) { background:#f7c85d; }.mv-dots i:nth-child(3) { background:#57db91; }
-  .mv-status { padding:4px 7px; border:1px solid rgba(var(--accent-rgb),.42); border-radius:5px; color:rgba(204,179,255,.9); font-size:9px; letter-spacing:1px; }
-  .mv-visual { position:relative; flex:1 1 auto; min-height:150px; margin-top:9px; overflow:hidden; border-radius:11px; background:radial-gradient(circle at 50% 48%,rgba(var(--accent-rgb),.34),transparent 23%),radial-gradient(circle at 30% 82%,rgba(39,171,232,.16),transparent 32%),#080810; }
-  .mv-visual::before,.mv-visual::after { content:""; position:absolute; border:1px solid rgba(var(--accent-rgb),.28); border-radius:50%; inset:16% 20%; transform:rotate(-24deg) scaleX(1.55); box-shadow:0 0 24px rgba(var(--accent-rgb),.16),inset 0 0 24px rgba(97,215,255,.08); }
-  .mv-visual::after { inset:25% 14%; transform:rotate(35deg) scaleX(1.4); border-color:rgba(97,215,255,.22); opacity:.8; }
-  .mv-stars { position:absolute; inset:0; opacity:.58; background-image:radial-gradient(#fff 1px,transparent 1px),radial-gradient(rgb(var(--accent-rgb)) 1px,transparent 1px); background-size:52px 43px,71px 67px; background-position:10px 8px,32px 24px; }
-  .mv-core { position:absolute; left:50%; top:50%; width:62px; height:62px; transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle at 40% 35%,#fff 0 4%,#e6b6ff 13%,rgb(var(--accent-rgb)) 35%,rgba(79,41,170,.65) 61%,transparent 72%); box-shadow:0 0 25px rgb(var(--accent-rgb)),0 0 70px rgba(var(--accent-rgb),.6); }
-  .mv-bars { position:absolute; left:10%; right:10%; bottom:24px; height:42px; display:flex; align-items:center; justify-content:space-around; gap:4px; opacity:.7; mask-image:linear-gradient(180deg,transparent,#000 25%,#000 75%,transparent); }
-  .mv-bars i { display:block; width:2px; height:var(--h,50%); border-radius:2px; background:linear-gradient(180deg,#70d7ff,rgb(var(--accent-rgb))); box-shadow:0 0 7px rgba(var(--accent-rgb),.6); animation:mvBars 1.2s ease-in-out infinite alternate; animation-delay:var(--d,0s); }
-  @keyframes mvBars { from { transform:scaleY(.55); } to { transform:scaleY(1); } }
+  .mv-status { padding:4px 7px; border:1px solid rgba(var(--mv-accent-rgb),.52); border-radius:5px; color:rgba(var(--mv-accent-rgb),.95); font-size:9px; letter-spacing:1px; }
+  /* Spokojna, nieruchoma poświata z kolorów okładki — bez pulsara i bez wizualizatora. */
+  .mv-visual { position:relative; flex:1 1 auto; min-height:150px; margin-top:9px; overflow:hidden; border-radius:11px; background:
+    radial-gradient(circle at 18% 22%, rgba(var(--mv-accent-rgb),.48), transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(var(--mv-accent-2-rgb),.36), transparent 48%),
+    linear-gradient(135deg, rgb(var(--mv-dark-rgb)) 0%, #080810 76%); transition:background .45s ease; }
+  .mv-visual::after { content:""; position:absolute; inset:0; background:linear-gradient(120deg,rgba(255,255,255,.04),transparent 38%,rgba(255,255,255,.02)); pointer-events:none; }
   .mv-now { display:flex; align-items:center; gap:10px; padding:12px 5px 8px; min-height:74px; }
   .mv-cover { width:45px; height:45px; flex:0 0 45px; border-radius:9px; object-fit:cover; box-shadow:0 7px 20px rgba(0,0,0,.4); background:#151515; cursor:pointer; }
   .mv-body { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
   .mv-head { display:flex; align-items:flex-start; gap:8px; min-width:0; }
-  .mv-txt { min-width:0; flex:1; }.mv-label { color:#b395ff; font-size:8px; letter-spacing:1.15px; }.mv-title { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.mv-artist { font-size:10px; color:rgba(255,255,255,.58); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mv-seek { width:100%; margin:2px 0 0; accent-color:rgb(var(--accent-rgb)); height:10px; cursor:pointer; }.mv-time { display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,.45); font-variant-numeric:tabular-nums; margin-top:-2px; }
+  .mv-txt { min-width:0; flex:1; }.mv-label { color:rgb(var(--mv-accent-rgb)); font-size:8px; letter-spacing:1.15px; }.mv-title { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.mv-artist { font-size:10px; color:rgba(255,255,255,.58); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mv-seek { width:100%; margin:2px 0 0; accent-color:rgb(var(--mv-accent-rgb)); height:10px; cursor:pointer; }.mv-time { display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,.45); font-variant-numeric:tabular-nums; margin-top:-2px; }
   .mv-now > .mv-btn.big { flex:0 0 36px; width:36px; height:36px; }
   .mv-ctl { display:flex; align-items:center; justify-content:center; gap:9px; padding:2px 0 7px; border-top:1px solid rgba(255,255,255,.07); }
   .mv-btn { width:32px; height:32px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.07); color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0; transition:background .14s,transform .1s; }.mv-btn:hover{background:rgba(255,255,255,.14)}.mv-btn:active{transform:scale(.94)}
-  .mv-btn.big { width:38px; height:38px; background:rgba(var(--accent-rgb),.28); border-color:rgba(var(--accent-rgb),.62); }.mv-btn.sm{width:26px;height:26px;flex-shrink:0;border-color:transparent;background:transparent;color:rgba(255,255,255,.62)}.mv-btn.sm:hover{color:#fff;background:rgba(255,255,255,.1)}.mv-btn.on{color:rgb(var(--accent-rgb))}.mv-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.mv-btn.big svg{width:18px;height:18px}.mv-btn svg .fill{fill:currentColor;stroke:none}
+  .mv-btn.big { width:38px; height:38px; background:rgba(var(--mv-accent-rgb),.28); border-color:rgba(var(--mv-accent-rgb),.62); }.mv-btn.sm{width:26px;height:26px;flex-shrink:0;border-color:transparent;background:transparent;color:rgba(255,255,255,.62)}.mv-btn.sm:hover{color:#fff;background:rgba(255,255,255,.1)}.mv-btn.on{color:rgb(var(--mv-accent-rgb))}.mv-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.mv-btn.big svg{width:18px;height:18px}.mv-btn svg .fill{fill:currentColor;stroke:none}
   @media (max-width:360px){ html.nl-mini .mini-view{padding:7px 8px}.mv-status{display:none}.mv-visual{min-height:120px}.mv-cover{width:40px;height:40px;flex-basis:40px} }
   @media (max-height:300px){ .mv-visual{min-height:90px}.mv-now{min-height:65px;padding-top:7px}.mv-ctl{padding-bottom:2px} }
   .backup-sum { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
@@ -1473,7 +1474,7 @@
   <!-- Tryb mini (kompaktowe okno) — odtwarzacz bez panelu ustawień -->
   <div class="mini-view" id="miniView" aria-label="Tryb mini">
     <div class="mv-titlebar"><span class="mv-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Pulsar</strong><span class="mv-status" id="mvNowLabel">NOW PLAYING</span><button type="button" class="mv-btn sm" id="mvPinBtn" title="Zawsze na wierzchu" aria-label="Zawsze na wierzchu"><svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button><button type="button" class="mv-btn sm" id="mvExpandBtn" title="Pełny widok" aria-label="Pełny widok"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button></div>
-    <div class="mv-visual" aria-hidden="true"><span class="mv-stars"></span><span class="mv-core"></span><span class="mv-bars"><i style="--h:36%;--d:-.1s"></i><i style="--h:68%;--d:.2s"></i><i style="--h:48%;--d:-.3s"></i><i style="--h:78%;--d:.1s"></i><i style="--h:55%;--d:.4s"></i><i style="--h:88%;--d:-.2s"></i><i style="--h:43%;--d:.3s"></i><i style="--h:72%;--d:-.4s"></i><i style="--h:52%;--d:.15s"></i><i style="--h:82%;--d:-.25s"></i><i style="--h:45%;--d:.35s"></i><i style="--h:65%;--d:-.15s"></i></span></div>
+    <div class="mv-visual" id="mvVisual" aria-hidden="true"></div>
     <div class="mv-now">
       <img class="mv-cover" id="mvCover" alt="" title="Pełny widok">
       <div class="mv-body"><div class="mv-head"><div class="mv-txt"><div class="mv-label">NOW PLAYING</div><div class="mv-title" id="mvTitle">Wybierz utwór</div><div class="mv-artist" id="mvArtist">—</div></div></div><input type="range" class="mv-seek" id="mvSeek" min="0" max="1000" value="0" aria-label="Pozycja utworu"><div class="mv-time"><span id="mvCur">0:00</span><span id="mvDur">0:00</span></div></div>
@@ -8031,6 +8032,7 @@
 
   // ---- Widok mini (kompaktowe okno) ----
   const mv = {
+    root: document.getElementById('miniView'), visual: document.getElementById('mvVisual'),
     cover: document.getElementById('mvCover'), label: document.getElementById('mvNowLabel'), title: document.getElementById('mvTitle'), artist: document.getElementById('mvArtist'),
     seek: document.getElementById('mvSeek'), cur: document.getElementById('mvCur'), dur: document.getElementById('mvDur'),
     play: document.getElementById('mvPlayBtn'), prev: document.getElementById('mvPrevBtn'), next: document.getElementById('mvNextBtn'),
@@ -8038,9 +8040,61 @@
   };
   const MV_ICON_PLAY = '<svg viewBox="0 0 24 24"><path class="fill" d="M8 5v14l11-7z"/></svg>';
   const MV_ICON_PAUSE = '<svg viewBox="0 0 24 24"><path class="fill" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
-  let mvSeeking = false, mvLastSync = 0;
+  let mvSeeking = false, mvLastSync = 0, mvPaletteSrc = '';
+  const mvPaletteCache = new Map();
   function miniActive(){ return document.documentElement.classList.contains('nl-mini'); }
   function desktopHost(){ return window.__pulsarDesktop || null; }
+  function applyMiniPalette(p){
+    if (!mv.root || !p) return;
+    mv.root.style.setProperty('--mv-accent-rgb', p.accent);
+    mv.root.style.setProperty('--mv-accent-2-rgb', p.secondary);
+    mv.root.style.setProperty('--mv-dark-rgb', p.dark);
+  }
+  function setMiniPalette(src){
+    if (!mv.root || !src || src === mvPaletteSrc) return;
+    mvPaletteSrc = src;
+    const cached = mvPaletteCache.get(src);
+    if (cached){ applyMiniPalette(cached); return; }
+    const img = new Image();
+    img.onload = function(){
+      if (src !== mvPaletteSrc) return;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32; canvas.height = 32;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, 32, 32);
+        const data = ctx.getImageData(0, 0, 32, 32).data;
+        let sr = 0, sg = 0, sb = 0, count = 0, vivid = null, vividScore = -1;
+        for (let i = 0; i < data.length; i += 16){
+          const a = data[i + 3];
+          if (a < 180) continue;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          sr += r; sg += g; sb += b; count++;
+          const hi = Math.max(r, g, b), lo = Math.min(r, g, b), light = (hi + lo) / 510;
+          const saturation = (hi - lo) / Math.max(hi, 1);
+          const score = saturation * (0.45 + 0.55 * (1 - Math.abs(light - .52)));
+          if (score > vividScore){ vividScore = score; vivid = { r: r, g: g, b: b }; }
+        }
+        if (!count) return;
+        const avg = { r: Math.round(sr / count), g: Math.round(sg / count), b: Math.round(sb / count) };
+        const accent = vivid || avg;
+        const secondary = {
+          r: Math.round(avg.r * .62 + accent.r * .38),
+          g: Math.round(avg.g * .62 + accent.g * .38),
+          b: Math.round(avg.b * .62 + accent.b * .38)
+        };
+        const palette = {
+          accent: accent.r + ',' + accent.g + ',' + accent.b,
+          secondary: secondary.r + ',' + secondary.g + ',' + secondary.b,
+          dark: Math.round(avg.r * .16) + ',' + Math.round(avg.g * .16) + ',' + Math.round(avg.b * .16)
+        };
+        mvPaletteCache.set(src, palette);
+        applyMiniPalette(palette);
+      } catch (e){}
+    };
+    img.onerror = function(){};
+    img.src = src;
+  }
   function miniSync(force){
     if (!mv.title || !miniActive()) return;
     const now = performance.now();
@@ -8054,6 +8108,7 @@
     if (mv.artist.textContent !== artist){ mv.artist.textContent = artist; mv.artist.title = artist; }
     const cu = (tr && coverUrlOf(tr)) || DEFAULT_COVER;
     if (mv.cover.dataset.src !== cu){ mv.cover.dataset.src = cu; mv.cover.src = cu; }
+    setMiniPalette(cu);
     const ico = audio.paused ? MV_ICON_PLAY : MV_ICON_PAUSE;
     if (mv.play.dataset.ico !== (audio.paused ? 'p' : 'z')){ mv.play.dataset.ico = audio.paused ? 'p' : 'z'; mv.play.innerHTML = ico; }
     const d = audio.duration || 0;
