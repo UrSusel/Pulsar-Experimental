@@ -552,14 +552,48 @@
   .modal-dim.show { opacity:1; pointer-events:auto; }
   .modal { width:min(380px, 92vw); background:rgba(24,24,24,.98); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:20px; box-shadow:0 30px 80px rgba(0,0,0,.7); transform:translateY(8px) scale(.98); transition:transform .2s; text-align:left;
     max-height: min(92vh, 900px); overflow-y: auto; }
-  .modal:has(.snd-section) { width: min(436px, 94vw); }
-  .modal:has(.snd-section) .modal-body { max-height: none; }
+  .modal:not(.settings-like):has(.snd-section) { width: min(436px, 94vw); }
+  .modal:not(.settings-like):has(.snd-section) .modal-body { max-height: none; }
   .modal-dim.show .modal { transform:none; }
   .modal h3 { font-size:16px; margin-bottom:14px; }
   .modal input.modal-text { width:100%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:6px; color:#fff; padding:10px; font:inherit; margin-bottom:12px; outline:none; }
   .modal input.modal-text:focus { border-color:var(--accent); }
   .modal-body { display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; margin-bottom:14px; }
   .modal-body:empty { display:none; margin-bottom:0; }
+  /* Ustawienia dźwięku i OBS korzystają z tego samego „szklanego” języka co główne ustawienia. */
+  .modal.settings-like {
+    width: min(560px, 94vw); max-height: min(86vh, 760px); padding: 0; overflow: hidden;
+    border-radius: 18px; background: rgba(14,14,20,.97); border-color: rgba(255,255,255,.1);
+  }
+  .modal.settings-like > h3 { margin: 0; padding: 18px 22px 12px; font-size: 20px; font-weight: 600; color: #fff; }
+  .modal.settings-like .modal-body { max-height: min(65vh, 590px); overflow-y: auto; padding: 4px 22px 8px; margin: 0; gap: 0; }
+  .modal.settings-like .modal-actions { padding: 8px 22px 18px; }
+  .modal.settings-like .snd-section,
+  .modal.settings-like .obs-theme {
+    background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07);
+    border-radius: 14px; padding: 6px 14px 10px; margin-bottom: 14px;
+  }
+  .modal.settings-like .snd-section h3,
+  .modal.settings-like .obs-help h4,
+  .modal.settings-like .obs-theme > h4 {
+    margin: 8px 0 4px; font-size: 11px; font-weight: 600; letter-spacing: .7px;
+    text-transform: uppercase; color: rgba(255,255,255,.42);
+  }
+  .modal.settings-like .snd-row2 + .snd-row2 { border-top: 1px solid rgba(255,255,255,.06); }
+  .modal.settings-like .obs-help { max-height: none; overflow: visible; gap: 10px; }
+  .modal.settings-like .obs-help > h4 { margin-top: 14px; }
+  .modal.settings-like .obs-help > p,
+  .modal.settings-like .obs-help > .obs-file,
+  .modal.settings-like .obs-help > .obs-status { margin-left: 0; margin-right: 0; }
+  .modal.settings-like .obs-theme { margin-top: 4px; }
+  .modal.obs-settings-modal { width: min(720px, 94vw); }
+  .modal.sound-settings-modal { width: min(560px, 94vw); }
+  @media (max-width: 640px){
+    .modal.settings-like > h3 { padding-left: 16px; padding-right: 16px; }
+    .modal.settings-like .modal-body { padding-left: 16px; padding-right: 16px; }
+    .modal.settings-like .modal-actions { padding-left: 16px; padding-right: 16px; }
+    .modal.obs-settings-modal { width: 94vw; }
+  }
   .modal-choice { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); color:#fff; font:inherit; font-size:13px; text-align:left; padding:10px; border-radius:6px; cursor:pointer; }
   .modal-choice:hover { background:rgba(255,255,255,.14); }
   .modal-actions { display:flex; justify-content:flex-end; gap:8px; }
@@ -1083,34 +1117,49 @@
   html.nl-mini body > *:not(.mini-view):not(audio):not(#styleToast) { display: none !important; }
   html.nl-mini, html.nl-mini body { background: #07070c; }
   html.nl-mini .mini-view {
-    display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center;
-    position: fixed; inset: 0; padding: 12px 14px;
-    background:
-      radial-gradient(120% 140% at 0% 0%, rgba(var(--accent-rgb), .22), transparent 60%),
-      linear-gradient(180deg, #0d0d15, #07070c);
-    color: #fff; user-select: none;
+    --mv-accent-rgb: 174,117,255;
+    --mv-accent-2-rgb: 39,171,232;
+    --mv-dark-rgb: 19,12,34;
+    display: flex; flex-direction: column; gap: 0; position: fixed; inset: 0; padding: 9px 10px 10px;
+    background: linear-gradient(180deg, #11101b 0%, #0a0912 100%); color:#fff; user-select:none; overflow:hidden;
   }
-  .mv-cover { width: min(34vh, 132px); height: min(34vh, 132px); min-width: 64px; min-height: 64px; max-height: calc(100vh - 24px); max-width: calc(100vh - 24px);
-    border-radius: 10px; object-fit: cover; box-shadow: 0 10px 28px rgba(0,0,0,.55); background: #151515; cursor: pointer; }
-  .mv-body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-  .mv-head { display: flex; align-items: flex-start; gap: 8px; }
-  .mv-txt { min-width: 0; flex: 1; }
-  .mv-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mv-artist { font-size: 12px; color: rgba(255,255,255,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mv-seek { width: 100%; margin: 0; accent-color: rgb(var(--accent-rgb)); height: 14px; cursor: pointer; }
-  .mv-time { display: flex; justify-content: space-between; font-size: 10.5px; color: rgba(255,255,255,.5); font-variant-numeric: tabular-nums; margin-top: -4px; }
-  .mv-ctl { display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .mv-btn { width: 36px; height: 36px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.07);
-    color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; transition: background .14s, transform .1s; }
-  .mv-btn:hover { background: rgba(255,255,255,.14); }
-  .mv-btn:active { transform: scale(.94); }
-  .mv-btn.big { width: 44px; height: 44px; background: rgba(var(--accent-rgb), .22); border-color: rgba(var(--accent-rgb), .6); }
-  .mv-btn.sm { width: 28px; height: 28px; flex-shrink: 0; border-color: transparent; background: transparent; color: rgba(255,255,255,.65); }
-  .mv-btn.sm:hover { color: #fff; background: rgba(255,255,255,.1); }
-  .mv-btn.on { color: rgb(var(--accent-rgb)); }
-  .mv-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .mv-btn.big svg { width: 20px; height: 20px; }
-  .mv-btn svg .fill { fill: currentColor; stroke: none; }
+  .mv-titlebar { height: 30px; min-height:30px; display:flex; align-items:center; gap:9px; padding:0 8px; color:rgba(255,255,255,.58); font-size:11px; border-bottom:1px solid rgba(var(--mv-accent-rgb),.22); }
+  .mv-titlebar strong { color:rgba(255,255,255,.8); font-size:12px; font-weight:600; margin-right:auto; }
+  .mv-dots { display:flex; gap:5px; }.mv-dots i { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.22); }.mv-dots i:first-child { background:#ff6e87; }.mv-dots i:nth-child(2) { background:#f7c85d; }.mv-dots i:nth-child(3) { background:#57db91; }
+  .mv-status { padding:4px 7px; border:1px solid rgba(var(--mv-accent-rgb),.52); border-radius:5px; color:rgba(var(--mv-accent-rgb),.95); font-size:9px; letter-spacing:1px; }
+  /* Wizualizer reagujący na utwór, z paletą pobraną z okładki — bez centralnego pulsara. */
+  .mv-visual { position:relative; flex:1 1 auto; min-height:150px; margin-top:9px; overflow:hidden; border-radius:11px; background:
+    radial-gradient(circle at 18% 22%, rgba(var(--mv-accent-rgb),.48), transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(var(--mv-accent-2-rgb),.36), transparent 48%),
+    linear-gradient(135deg, rgb(var(--mv-dark-rgb)) 0%, #080810 76%); transition:background .45s ease, filter .35s ease; }
+  .mv-visual::before { content:""; position:absolute; inset:-18%; z-index:2; pointer-events:none; opacity:0; background:radial-gradient(circle at 50% 72%,rgba(var(--mv-accent-rgb),.45),transparent 42%); }
+  .mv-visual::after { content:""; position:absolute; inset:0; z-index:3; background:linear-gradient(120deg,rgba(255,255,255,.04),transparent 38%,rgba(255,255,255,.02)); pointer-events:none; }
+  .mv-visual.is-paused .mv-viz { opacity:.3; filter:saturate(.72); }
+  .mv-visual.is-beat { filter:brightness(1.05); }
+  .mv-visual.is-click::before { animation:mvClickFlash .34s ease-out; }
+  @keyframes mvClickFlash { 0% { opacity:.65; transform:scale(.72); } 100% { opacity:0; transform:scale(1.12); } }
+  .mv-viz { display:block; position:relative; z-index:1; width:100%; height:100%; transition:opacity .35s ease,filter .35s ease; }
+  .mv-now { display:flex; align-items:center; gap:10px; padding:12px 5px 8px; min-height:74px; }
+  .mv-art { position:relative; width:45px; height:45px; flex:0 0 45px; }
+  .mv-cover { width:45px; height:45px; display:block; border-radius:9px; object-fit:cover; box-shadow:0 7px 20px rgba(0,0,0,.4); background:#151515; cursor:pointer; transition:opacity .22s ease,transform .28s ease,box-shadow .28s ease; will-change:transform,opacity; }
+  .mv-cover.is-changing { opacity:.12; transform:scale(.88) rotate(-2deg); }
+  .mv-cover.is-playing { animation:mvCoverPulse 3.2s ease-in-out infinite; }
+  @keyframes mvCoverPulse { 0%,100% { transform:scale(1); box-shadow:0 7px 20px rgba(0,0,0,.4); } 50% { transform:scale(1.035); box-shadow:0 9px 25px rgba(var(--mv-accent-rgb),.3),0 7px 20px rgba(0,0,0,.38); } }
+  .mv-fav { position:absolute; right:-6px; bottom:-6px; z-index:2; width:19px; height:19px; padding:0; border:1px solid rgba(10,9,18,.9); border-radius:50%; background:rgba(20,18,30,.92); color:rgba(255,255,255,.68); font-size:13px; line-height:17px; cursor:pointer; transition:color .15s,background .15s,transform .12s; }
+  .mv-fav:hover { color:#fff; background:rgba(var(--mv-accent-rgb),.5); }
+  .mv-fav.on { color:#ff7097; background:rgba(45,18,38,.95); }
+  .mv-fav:active { transform:scale(.88); }
+  .mv-body { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
+  .mv-head { display:flex; align-items:flex-start; gap:8px; min-width:0; }
+  .mv-txt { min-width:0; flex:1; }.mv-label { color:rgb(var(--mv-accent-rgb)); font-size:8px; letter-spacing:1.15px; }.mv-title { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.mv-artist { font-size:10px; color:rgba(255,255,255,.58); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mv-seek { width:100%; margin:2px 0 0; accent-color:rgb(var(--mv-accent-rgb)); height:10px; cursor:pointer; }.mv-time { display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,.45); font-variant-numeric:tabular-nums; margin-top:-2px; }
+  .mv-ctl { display:flex; align-items:center; justify-content:center; gap:10px; min-height:48px; padding:4px 0 7px; border-top:1px solid rgba(255,255,255,.07); }
+  .mv-btn.mode { color:rgba(255,255,255,.58); }
+  .mv-btn.mode.on { color:rgb(var(--mv-accent-rgb)); background:rgba(var(--mv-accent-rgb),.14); border-color:rgba(var(--mv-accent-rgb),.42); }
+  .mv-btn { width:32px; height:32px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.07); color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0; transition:background .14s,transform .1s; }.mv-btn:hover{background:rgba(255,255,255,.14)}.mv-btn:active{transform:scale(.94)}
+  .mv-btn.big { width:38px; height:38px; background:rgba(var(--mv-accent-rgb),.28); border-color:rgba(var(--mv-accent-rgb),.62); }.mv-btn.sm{width:26px;height:26px;flex-shrink:0;border-color:transparent;background:transparent;color:rgba(255,255,255,.62)}.mv-btn.sm:hover{color:#fff;background:rgba(255,255,255,.1)}.mv-btn.on{color:rgb(var(--mv-accent-rgb))}.mv-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.mv-btn.big svg{width:18px;height:18px}.mv-btn svg .fill{fill:currentColor;stroke:none}
+  @media (max-width:360px){ html.nl-mini .mini-view{padding:7px 8px}.mv-status{display:none}.mv-visual{min-height:120px}.mv-cover{width:40px;height:40px;flex-basis:40px} }
+  @media (max-height:300px){ .mv-visual{min-height:90px}.mv-now{min-height:65px;padding-top:7px}.mv-ctl{padding-bottom:2px} }
   .backup-sum { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
   .backup-sum > div { display: flex; justify-content: space-between; gap: 12px; color: rgba(255,255,255,.6); }
   .backup-sum > div b { color: #fff; font-weight: 600; text-align: right; word-break: break-all; }
@@ -1166,7 +1215,7 @@
   .obs-actions button:hover { background: rgba(255,255,255,.14); }
   .obs-note { font-size: 12px; color: rgba(255,255,255,.6); }
   @media (max-height: 120px){ .mv-time { display: none; } .mv-cover { width: 64px; height: 64px; } }
-  @media (max-width: 300px){ html.nl-mini .mini-view { grid-template-columns: 1fr; } .mv-cover { display: none; } }
+  @media (max-width: 300px){ html.nl-mini .mini-view { grid-template-columns: 1fr; } .mv-art { display: none; } }
 </style>
 </head>
 <body>
@@ -1332,7 +1381,7 @@
       <span class="lib-count" id="libCount"></span>
     </div>
 
-    <p class="selection-hint" id="addingHint" hidden>Puknij utwory, których jeszcze nie ma w albumie, a potem „Dodaj do albumu".</p>
+    <p class="selection-hint" id="addingHint" hidden>Puknij utwory, których jeszcze nie ma w albumie, a potem „Dodaj do albumu”.</p>
 
     <ul class="track-list" id="trackList">
       <li class="empty-list-hint" style="display:block;list-style:none;" id="emptyListHint">Brak wybranego folderu. Kliknij ikonę foldera na dole albo upuść pliki audio na okno.</li>
@@ -1340,7 +1389,7 @@
 
     <div class="album-grid-wrap" id="albumGridWrap" hidden>
       <div class="album-grid" id="albumGrid"></div>
-      <p class="empty-list-hint" id="emptyAlbumsHint" hidden>Brak albumów. Przejdź do „Utwory", kliknij „Zaznacz utwory" i stwórz pierwszy album, albo użyj „+ Nowy album".</p>
+      <p class="empty-list-hint" id="emptyAlbumsHint" hidden>Brak albumów. Przejdź do „Utwory”, kliknij „Zaznacz utwory” i stwórz pierwszy album, albo użyj „+ Nowy album”.</p>
     </div>
 
     <div class="net-wrap" id="netView" hidden>
@@ -1356,12 +1405,12 @@
           <button class="net-chip" data-prov="itunes" type="button">iTunes</button>
           <button class="net-chip" data-prov="deezer" type="button">Deezer</button>
           <button class="net-chip" data-prov="audius" type="button">Audius</button>
-          <button class="net-chip" data-prov="archive" type="button">Archive</button>
+          <button class="net-chip" data-prov="archive" type="button">Internet Archive</button>
           <button class="net-chip" data-prov="commons" type="button">Wikimedia</button>
         </div>
         <div class="net-tools">
           <button class="lib-tool net-tool" id="netTrendingBtn" type="button" title="Popularne utwory z Audius">Na czasie</button>
-          <button class="lib-tool net-tool" id="netAdvancedBtn" type="button" title="Szukaj także po nazwie pliku, opisie i wykonawcy">Advanced</button>
+          <button class="lib-tool net-tool" id="netAdvancedBtn" type="button" title="Szukaj także po nazwie pliku, opisie i wykonawcy">Zaawansowane</button>
           <label class="lib-sort net-mp3-lab" id="netMp3Lab" title="Zapisuj pobierane z sieci utwory jako MP3 192 kbps (konwersja ffmpeg.wasm ładowana z CDN przy pierwszym zapisie). Gdy konwersja jest niemożliwa, zapisywany jest oryginalny format.">
             <input type="checkbox" id="netMp3Toggle" checked><span class="net-sw" aria-hidden="true"></span><span>MP3</span>
           </label>
@@ -1420,7 +1469,7 @@
   <div class="overlay-dim" id="overlayDim"></div>
 
   <div class="modal-dim" id="modalDim" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal" id="modalShell" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h3 id="modalTitle"></h3>
       <input type="text" class="modal-text" id="modalInput" autocomplete="off" maxlength="80" aria-label="Nazwa">
       <div class="modal-body" id="modalBody"></div>
@@ -1437,23 +1486,15 @@
   <audio id="audioXF" preload="auto"></audio>
   <audio id="audioNet" preload="none"></audio>
 
-  <!-- Tryb mini (kompaktowe okno) — tylko wersja desktopowa -->
+  <!-- Tryb mini (kompaktowe okno) — odtwarzacz bez panelu ustawień -->
   <div class="mini-view" id="miniView" aria-label="Tryb mini">
-    <img class="mv-cover" id="mvCover" alt="" title="Pełny widok">
-    <div class="mv-body">
-      <div class="mv-head">
-        <div class="mv-txt"><div class="mv-title" id="mvTitle">Wybierz utwór</div><div class="mv-artist" id="mvArtist">—</div></div>
-        <button type="button" class="mv-btn sm" id="mvPinBtn" title="Zawsze na wierzchu" aria-label="Zawsze na wierzchu"><svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button>
-        <button type="button" class="mv-btn sm" id="mvExpandBtn" title="Pełny widok" aria-label="Pełny widok"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
-      </div>
-      <input type="range" class="mv-seek" id="mvSeek" min="0" max="1000" value="0" aria-label="Pozycja utworu">
-      <div class="mv-time"><span id="mvCur">0:00</span><span id="mvDur">0:00</span></div>
-      <div class="mv-ctl">
-        <button type="button" class="mv-btn" id="mvPrevBtn" title="Poprzedni" aria-label="Poprzedni"><svg viewBox="0 0 24 24"><path d="M7 5v14"/><path class="fill" d="M19 5l-10 7 10 7z"/></svg></button>
-        <button type="button" class="mv-btn big" id="mvPlayBtn" title="Odtwórz / pauza" aria-label="Odtwórz / pauza"></button>
-        <button type="button" class="mv-btn" id="mvNextBtn" title="Następny" aria-label="Następny"><svg viewBox="0 0 24 24"><path d="M17 5v14"/><path class="fill" d="M5 5l10 7-10 7z"/></svg></button>
-      </div>
+    <div class="mv-titlebar"><span class="mv-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Pulsar</strong><span class="mv-status" id="mvNowLabel">NOW PLAYING</span><button type="button" class="mv-btn sm" id="mvPinBtn" title="Zawsze na wierzchu" aria-label="Zawsze na wierzchu"><svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button><button type="button" class="mv-btn sm" id="mvExpandBtn" title="Pełny widok" aria-label="Pełny widok"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button></div>
+    <div class="mv-visual" id="mvVisual" aria-hidden="true"><canvas class="mv-viz" id="mvViz" width="640" height="220"></canvas></div>
+    <div class="mv-now">
+      <div class="mv-art"><img class="mv-cover" id="mvCover" alt="" title="Pełny widok"><button type="button" class="mv-fav" id="mvFavBtn" title="Ulubione" aria-label="Ulubione"><span id="mvFavIcon">♡</span></button></div>
+      <div class="mv-body"><div class="mv-head"><div class="mv-txt"><div class="mv-label">NOW PLAYING</div><div class="mv-title" id="mvTitle">Wybierz utwór</div><div class="mv-artist" id="mvArtist">—</div></div></div><input type="range" class="mv-seek" id="mvSeek" min="0" max="1000" value="0" aria-label="Pozycja utworu"><div class="mv-time"><span id="mvCur">0:00</span><span id="mvDur">0:00</span></div></div>
     </div>
+    <div class="mv-ctl"><button type="button" class="mv-btn mode" id="mvShuffleBtn" title="Losowe odtwarzanie" aria-label="Losowe odtwarzanie"></button><button type="button" class="mv-btn" id="mvPrevBtn" title="Poprzedni" aria-label="Poprzedni"><svg viewBox="0 0 24 24"><path d="M7 5v14"/><path class="fill" d="M19 5l-10 7 10 7z"/></svg></button><button type="button" class="mv-btn big" id="mvPlayBtn" title="Odtwórz / pauza" aria-label="Odtwórz / pauza"></button><button type="button" class="mv-btn" id="mvNextBtn" title="Następny" aria-label="Następny"><svg viewBox="0 0 24 24"><path d="M17 5v14"/><path class="fill" d="M5 5l10 7-10 7z"/></svg></button><button type="button" class="mv-btn mode" id="mvRepeatBtn" title="Powtarzanie" aria-label="Powtarzanie"></button><button type="button" class="mv-btn volume" id="mvMuteBtn" title="Wycisz" aria-label="Wycisz"></button></div>
   </div>
   <div class="settings-menu" id="settingsMenu" hidden>
    <div class="sm-dialog" role="dialog" aria-modal="true" aria-labelledby="smTitle">
@@ -1478,7 +1519,7 @@
         <h2 class="sm-pane-title">Odtwarzanie</h2>
         <div class="sm-card"><h3 class="sm-cap">Dźwięk</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Equalizer i dźwięk</span><span class="sm-desc">EQ, normalizacja głośności, crossfade, pogłos</span></div><span class="sm-slot sm-slot-hidden" id="smSoundSlot"><button class="icon-btn" data-ic="stroke" id="soundBtn" title="Equalizer, normalizacja, crossfade" aria-label="Ustawienia dźwięku"><svg viewBox="0 0 24 24"><path d="M5 20v-3M5 13V4M12 20v-7M12 9V4M19 20v-2M19 14V4"/><circle cx="5" cy="15" r="2"/><circle cx="12" cy="11" r="2"/><circle cx="19" cy="16" r="2"/></svg></button></span><button type="button" class="sm-act" id="smEqBtn" title="Equalizer, normalizacja, crossfade, pogłos">Otwórz…</button></div><div class="sm-row sm-row-range"><div class="sm-txt"><span class="sm-lab">Balans L·P</span></div><input type="range" id="smPan" min="-100" max="100" step="5" value="0" aria-label="Balans kanałów"><span class="sm-val" id="smPanVal">środek</span></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Mono</span><span class="sm-desc">Oba kanały grają to samo — przydatne z jedną słuchawką</span></div><label class="switch"><input type="checkbox" id="smMono"><span class="slider"></span></label></div></div>
         <div class="sm-card"><h3 class="sm-cap">Przejścia i kolejka</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Gapless (bez przerw między utworami)</span><span class="sm-desc">Następny utwór startuje bez przerwy (gdy crossfade jest wyłączony)</span></div><label class="switch"><input type="checkbox" id="smGapless" checked><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Auto-DJ</span><span class="sm-desc">Dobiera następne utwory po tempie i energii</span></div><span class="sm-slot sm-slot-hidden" id="smAutoDjSlot"></span><label class="switch"><input type="checkbox" id="smAutoDj"><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Pomijaj ciszę</span><span class="sm-desc">Przycina ciszę na początku i końcu utworów</span></div><span class="sm-slot sm-slot-hidden" id="smSilenceSlot"></span><label class="switch"><input type="checkbox" id="smSkipSilence"><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Wznawiaj od miejsca, w którym skończyłeś</span><span class="sm-desc">Po uruchomieniu wraca do ostatniego utworu, pozycji i albumu</span></div><label class="switch"><input type="checkbox" id="smResume" checked><span class="slider"></span></label></div></div>
-        <div class="sm-card"><h3 class="sm-cap">Sleep timer</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Wyłącz muzykę po</span><span class="sm-desc">Łagodnie wycisza na koniec</span></div><select id="smSleep" class="sm-select" aria-label="Sleep timer"><option value="0">Wyłączony</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="end">Koniec utworu</option></select><span class="sm-val" id="smSleepVal"></span></div></div>
+        <div class="sm-card"><h3 class="sm-cap">Wyłącznik czasowy</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Wyłącz muzykę po</span><span class="sm-desc">Łagodnie wycisza na koniec</span></div><select id="smSleep" class="sm-select" aria-label="Wyłącznik czasowy"><option value="0">Wyłączony</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="end">Koniec utworu</option></select><span class="sm-val" id="smSleepVal"></span></div></div>
       </div>
       <div class="sm-pane" data-pane="look">
         <h2 class="sm-pane-title">Wygląd</h2>
@@ -1955,7 +1996,120 @@
     'Obraz okna Pulsara': { en: 'Pulsar window picture', es: 'Imagen de la ventana de Pulsar' },
     'Dodaj „Przechwytywanie okna”, wybierz Pulsar i ustaw metodę przechwytywania „Windows 10 (1903 i nowsze)” — inaczej obraz może być czarny.': { en: 'Add “Window Capture”, choose Pulsar and set the capture method to “Windows 10 (1903 and up)” — otherwise the picture may be black.', es: 'Añade “Captura de ventana”, elige Pulsar y usa el método “Windows 10 (1903 y posterior)”; si no, la imagen puede salir negra.' },
     'Dźwięk w OBS jest ok. 0,15 s za obrazem okna. Dla idealnej synchronizacji dodaj do przechwytywania okna filtr „Opóźnienie renderowania” 150 ms.': { en: 'OBS audio is about 0.15 s behind the window picture. For perfect sync, add a 150 ms “Render Delay” filter to the window capture.', es: 'El audio en OBS va unos 0,15 s por detrás de la imagen. Para una sincronía perfecta, añade a la captura de ventana un filtro “Retraso de renderizado” de 150 ms.' },
-    '„Przechwytywanie dźwięku aplikacji” nie zadziała z Pulsarem: dźwięk gra w procesie WebView2, którego OBS nie widzi. Dlatego jest to rozwiązanie.': { en: '“Application Audio Capture” does not work with Pulsar: the sound plays in a WebView2 process that OBS cannot see. That is why this option exists.', es: 'La “Captura de audio de aplicación” no funciona con Pulsar: el sonido se reproduce en un proceso de WebView2 que OBS no ve. Por eso existe esta opción.' }
+    '„Przechwytywanie dźwięku aplikacji” nie zadziała z Pulsarem: dźwięk gra w procesie WebView2, którego OBS nie widzi. Dlatego jest to rozwiązanie.': { en: '“Application Audio Capture” does not work with Pulsar: the sound plays in a WebView2 process that OBS cannot see. That is why this option exists.', es: 'La “Captura de audio de aplicación” no funciona con Pulsar: el sonido se reproduce en un proceso de WebView2 que OBS no ve. Por eso existe esta opción.' },
+    'Album jest pusty. Kliknij „+ Utwory”, aby dodać utwory z biblioteki.': { en: 'This album is empty. Click “+ Tracks” to add tracks from the library.', es: 'Este álbum está vacío. Pulsa «+ Canciones» para añadir canciones de la biblioteca.' },
+    'Crossfade': { en: 'Crossfade', es: 'Crossfade' },
+    'Czas crossfade': { en: 'Crossfade duration', es: 'Duración del crossfade' },
+    'MP3…': { en: 'MP3…', es: 'MP3…' },
+    'Odtwórz album': { en: 'Play album', es: 'Reproducir álbum' },
+    'Pogłos i szerokość stereo działają na sygnale po equalizerze': { en: 'Reverb and stereo width work on the signal after the equalizer', es: 'La reverberación y la amplitud estéreo actúan sobre la señal después del ecualizador' },
+    'odtwarzany': { en: 'playing', es: 'reproduciendo' },
+    '”': { en: '”', es: '»' },
+    'Wyłącznik czasowy': { en: 'Sleep timer', es: 'Temporizador' },
+    'Zaawansowane': { en: 'Advanced', es: 'Avanzado' },
+    'Internet Archive': { en: 'Internet Archive', es: 'Internet Archive' },
+    'Zaznacz utwory z listy': { en: 'Select tracks from the list', es: 'Selecciona canciones de la lista' },
+    'Brak wyników dla „': { en: 'No results for “', es: 'Sin resultados para «' },
+    'Koniec kolejki': { en: 'End of queue', es: 'Fin de la cola' },
+    '★ Auto-DJ wybiera następny utwór': { en: '★ Auto-DJ picks the next track', es: '★ Auto-DJ elige la siguiente canción' },
+    'Nazwa': { en: 'Name', es: 'Nombre' },
+    'Okładka utworu': { en: 'Track cover', es: 'Portada de la canción' },
+    'Odtwórz lub zatrzymaj': { en: 'Play or pause', es: 'Reproducir o pausar' },
+    'Sterowanie odtwarzaniem': { en: 'Playback controls', es: 'Controles de reproducción' },
+    'Losowe odtwarzanie': { en: 'Shuffle playback', es: 'Reproducción aleatoria' },
+    'Poprzedni utwór': { en: 'Previous track', es: 'Canción anterior' },
+    'Następny utwór': { en: 'Next track', es: 'Siguiente canción' },
+    'Tempo wykryte lokalnie z analizy utworu': { en: 'Tempo detected locally from track analysis', es: 'Tempo detectado localmente mediante el análisis de la canción' },
+    'Wycisz/Odwieś': { en: 'Mute/unmute', es: 'Silenciar/activar sonido' },
+    'Styl wizualizacji 3D': { en: '3D visualizer style', es: 'Estilo del visualizador 3D' },
+    'Zmień styl wizualizacji 3D': { en: 'Change 3D visualizer style', es: 'Cambiar el estilo del visualizador 3D' },
+    'Mini-player (Picture-in-Picture)': { en: 'Mini-player (Picture-in-Picture)', es: 'Minirreproductor (Picture-in-Picture)' },
+    'Dodaj utwory z folderu lub pliki audio': { en: 'Add tracks from a folder or audio files', es: 'Añadir canciones de una carpeta o archivos de audio' },
+    'Zapisuj pobierane z sieci utwory jako MP3 192 kbps (konwersja ffmpeg.wasm ładowana z CDN przy pierwszym zapisie). Gdy konwersja jest niemożliwa, zapisywany jest oryginalny format.': { en: 'Save web downloads as 192 kbps MP3 (ffmpeg.wasm is loaded from a CDN on first save). If conversion is unavailable, the original format is saved.', es: 'Guardar descargas web como MP3 de 192 kbps (ffmpeg.wasm se carga desde una CDN al guardar por primera vez). Si no se puede convertir, se guarda el formato original.' },
+    'Brak albumów': { en: 'No albums yet', es: 'Aún no hay álbumes' },
+    'Okładka (opcjonalnie):': { en: 'Cover (optional):', es: 'Portada (opcional):' },
+    'Przesuń w górę': { en: 'Move up', es: 'Mover arriba' },
+    'Przesuń w dół': { en: 'Move down', es: 'Mover abajo' },
+    'Usuń z albumu': { en: 'Remove from album', es: 'Quitar del álbum' },
+    'Nazwa albumu': { en: 'Album name', es: 'Nombre del álbum' },
+    'Utwórz album': { en: 'Create album', es: 'Crear álbum' },
+    'W albumie znajdzie się ': { en: 'The album will contain ', es: 'El álbum contendrá ' },
+    'Utworzono albumów: ': { en: 'Albums created: ', es: 'Álbumes creados: ' },
+    'Foldery są już zgrupowane': { en: 'Folders are already grouped', es: 'Las carpetas ya están agrupadas' },
+    'Brak albumów — utwórz nowy poniżej.': { en: 'No albums — create one below.', es: 'No hay álbumes; crea uno abajo.' },
+    'Zaznaczone do dodania: ': { en: 'Selected to add: ', es: 'Seleccionadas para añadir: ' },
+    'Zaznacz utwory, których nie ma jeszcze w albumie': { en: 'Select tracks that are not in the album yet', es: 'Selecciona las canciones que aún no están en el álbum' },
+    'do „': { en: 'to “', es: 'al álbum «' },
+    'albumu': { en: 'album', es: 'álbum' },
+    'Zaznaczono: ': { en: 'Selected: ', es: 'Seleccionadas: ' },
+    'Nowy album (bieżący utwór)': { en: 'New album (current track)', es: 'Nuevo álbum (canción actual)' },
+    'Koniec': { en: 'Done', es: 'Listo' },
+    'Nic nie znaleziono — spróbuj innego tytułu lub artysty.': { en: 'Nothing found — try another title or artist.', es: 'No se encontró nada; prueba con otro título o artista.' },
+    'Zapisuję…': { en: 'Saving…', es: 'Guardando…' },
+    '✓ W bibliotece': { en: '✓ In library', es: '✓ En la biblioteca' },
+    'Sieć: ': { en: 'Web: ', es: 'Red: ' },
+    'Uzupełniam ': { en: 'Fetching ', es: 'Completando ' },
+    'Pobiera kolejno wszystkie utwory z YouTube (MP3 przy włączonym trybie MP3 i moscie z ffmpeg)': { en: 'Downloads all YouTube tracks in sequence (MP3 when MP3 mode and the ffmpeg bridge are enabled)', es: 'Descarga todas las canciones de YouTube en orden (MP3 cuando están activos el modo MP3 y el puente ffmpeg)' },
+    'Usuń duplikaty': { en: 'Remove duplicates', es: 'Eliminar duplicados' },
+    'Brak duplikatów': { en: 'No duplicates', es: 'Sin duplicados' },
+    'Zapis z sieci: MP3 192 kbps': { en: 'Web downloads: 192 kbps MP3', es: 'Descargas web: MP3 de 192 kbps' },
+    'Zapis z sieci: oryginalny format': { en: 'Web downloads: original format', es: 'Descargas web: formato original' },
+    '✨ Reakcja na muzykę: wł.': { en: '✨ Music reaction: on', es: '✨ Reacción a la música: activada' },
+    'Reakcja na muzykę: wył. — spokojne tło': { en: 'Music reaction: off — calm background', es: 'Reacción a la música: desactivada — fondo tranquilo' },
+    'Mono: wł.': { en: 'Mono: on', es: 'Mono: activado' },
+    'Mono: wył.': { en: 'Mono: off', es: 'Mono: desactivado' },
+    'Wyczyść wyszukiwanie': { en: 'Clear search', es: 'Limpiar búsqueda' },
+    'Skopiowano do schowka': { en: 'Copied to clipboard', es: 'Copiado al portapapeles' },
+    'Zaznacz i skopiuj ręcznie': { en: 'Select and copy manually', es: 'Selecciona y copia manualmente' },
+    '+ Utwórz nowy album z zaznaczonych': { en: '+ Create a new album from selected', es: '+ Crear un álbum nuevo con las seleccionadas' },
+    'Nie udało się doładować ffmpeg.wasm z CDN': { en: 'Could not load ffmpeg.wasm from the CDN', es: 'No se pudo cargar ffmpeg.wasm desde la CDN' },
+    'ffmpeg.wasm niedostępny w tym środowisku': { en: 'ffmpeg.wasm is unavailable in this environment', es: 'ffmpeg.wasm no está disponible en este entorno' },
+    'Brak dostępu do CDN z ffmpeg.wasm': { en: 'The ffmpeg.wasm CDN is unavailable', es: 'No se puede acceder a la CDN de ffmpeg.wasm' },
+    'ffmpeg.wasm niedostępny': { en: 'ffmpeg.wasm unavailable', es: 'ffmpeg.wasm no disponible' },
+    'Ładowanie ffmpeg.wasm trwa zbyt długo': { en: 'Loading ffmpeg.wasm is taking too long', es: 'La carga de ffmpeg.wasm está tardando demasiado' },
+    'Konwersja do MP3 trwa zbyt długo': { en: 'MP3 conversion is taking too long', es: 'La conversión a MP3 está tardando demasiado' },
+    'Konwersja do MP3 nie powiodła się': { en: 'MP3 conversion failed', es: 'La conversión a MP3 falló' },
+    'Nie udało się pobrać „Na czasie" — sprawdź połączenie i kliknij „Na czasie" ponownie.': { en: 'Could not fetch Trending — check your connection and click Trending again.', es: 'No se pudo obtener Tendencias; comprueba la conexión y pulsa Tendencias de nuevo.' },
+    'Błąd pobierania „Na czasie" — spróbuj ponownie.': { en: 'Trending download failed — try again.', es: 'Falló la descarga de Tendencias; inténtalo de nuevo.' },
+    'Mostek yt-dlp połączony — podgląd i zapis MP3 z YouTube działają w pełni': { en: 'yt-dlp bridge connected — YouTube preview and MP3 saving work fully', es: 'Puente yt-dlp conectado; la vista previa y el guardado MP3 de YouTube funcionan completamente' },
+    'Mostek yt-dlp nie odpowiada (http://127.0.0.1:': { en: 'The yt-dlp bridge is not responding (http://127.0.0.1:', es: 'El puente yt-dlp no responde (http://127.0.0.1:' },
+    '). Kliknij, aby sprawdzić ponownie': { en: '). Click to check again', es: '). Pulsa para comprobarlo de nuevo' },
+    'błąd zapisu': { en: 'save error', es: 'error al guardar' },
+    'Pomijanie ciszy włączone — kliknij, aby wyłączyć': { en: 'Silence skipping on — click to turn it off', es: 'Omisión de silencios activada; pulsa para desactivarla' },
+    'Pomijanie ciszy wyłączone — kliknij, aby włączyć (tnie intro/przerwy/outro)': { en: 'Silence skipping off — click to turn it on (cuts intros/gaps/outros)', es: 'Omisión de silencios desactivada; pulsa para activarla (corta intros/pausas/outros)' },
+    '⏭ Pomijanie ciszy: wł.': { en: '⏭ Silence skipping: on', es: '⏭ Omitir silencios: activado' },
+    'Pomijanie ciszy: wył.': { en: 'Silence skipping: off', es: 'Omisión de silencios: desactivada' },
+    'Auto-DJ: dobieram następne utwory po tempie i energii': { en: 'Auto-DJ: choosing the next tracks by tempo and energy', es: 'Auto-DJ: eligiendo las siguientes canciones por tempo y energía' },
+    'Auto-DJ włączony — dodaj więcej utworów, żeby działał': { en: 'Auto-DJ on — add more tracks for it to work', es: 'Auto-DJ activado; añade más canciones para que funcione' },
+    'Auto-DJ wyłączony — gra zwykła kolejność': { en: 'Auto-DJ off — playing the usual order', es: 'Auto-DJ desactivado; se reproduce el orden normal' },
+    'Pominięto ciszę ': { en: 'Skipped silence ', es: 'Silencio omitido ' },
+    'Przekroczono czas konwersji': { en: 'Conversion timed out', es: 'Se agotó el tiempo de conversión' },
+    'Styl wizualizacji: ': { en: 'Visual style: ', es: 'Estilo visual: ' },
+    ' — kliknij, aby zmienić': { en: ' — click to change', es: ' — pulsa para cambiar' },
+    'Losowe odtwarzanie: włączone (S)': { en: 'Shuffle playback: on (S)', es: 'Reproducción aleatoria: activada (S)' },
+    'Losowe odtwarzanie: wyłączone (S)': { en: 'Shuffle playback: off (S)', es: 'Reproducción aleatoria: desactivada (S)' },
+    'Powtarzanie: wyłączone (R)': { en: 'Repeat: off (R)', es: 'Repetir: desactivado (R)' },
+    'Powtarzanie: cały album (R)': { en: 'Repeat: album (R)', es: 'Repetir: álbum (R)' },
+    'Powtarzanie: jeden utwór (R)': { en: 'Repeat: one track (R)', es: 'Repetir: una canción (R)' },
+    ' (wymaga yt-dlp; plik ytdl-bridge.mjs leży obok muzyka.html). Dla tego jednego utworu możesz skopiować komendę: ': { en: ' (requires yt-dlp; ytdl-bridge.mjs is next to muzyka.html). For this track, you can copy the command: ', es: ' (requiere yt-dlp; ytdl-bridge.mjs está junto a muzyka.html). Para esta canción puedes copiar el comando: ' },
+    '. Zapisuję oryginalny format (': { en: '. Saving the original format (', es: '. Guardando el formato original (' },
+    'Utwór z sieci ': { en: 'Web track ', es: 'Canción de la red ' },
+    'a gotowy MP3 upuść na okno odtwarzacza.': { en: 'and drop the finished MP3 onto the player window.', es: 'y suelta el MP3 terminado en la ventana del reproductor.' },
+
+    'Nie mogę utworzyć folderu „': { en: 'Could not create folder “', es: 'No se pudo crear la carpeta «' },
+    '": ': { en: '”: ', es: '»: ' },
+    'folder niedostępny po utworzeniu': { en: 'folder unavailable after creation', es: 'carpeta no disponible después de crearla' },
+    'folder niedostępny': { en: 'folder unavailable', es: 'carpeta no disponible' },
+    'To mix/radio YouTube (RD…/UL…) — yt-dlp nie potrafi pobrać takiej listy. Dodaj utwory pojedynczo albo wklej link zwykłej playlisty.': { en: 'This is a YouTube mix/radio (RD…/UL…) — yt-dlp cannot fetch this list. Add tracks one by one or paste a regular playlist link.', es: 'Es una mezcla/radio de YouTube (RD…/UL…); yt-dlp no puede obtener esta lista. Añade las canciones una a una o pega el enlace de una lista normal.' },
+    'yt-dlp zakończył pracę z kodem błędu ': { en: 'yt-dlp exited with error code ', es: 'yt-dlp terminó con el código de error ' },
+    ' (bez szczegółów)': { en: ' (no details)', es: ' (sin detalles)' },
+    'yt-dlp nie zwrócił żadnych pozycji playlisty': { en: 'yt-dlp returned no playlist entries', es: 'yt-dlp no devolvió elementos de la lista' },
+    'Nie ustawiono folderu na dysku': { en: 'No disk folder configured', es: 'No hay una carpeta de disco configurada' },
+    'Zapis na dysk nie powiódł się: ': { en: 'Could not save to disk: ', es: 'No se pudo guardar en disco: ' },
+    'To nie jest link playlisty YouTube (brak list=…)': { en: 'This is not a YouTube playlist link (missing list=…)', es: 'No es un enlace de lista de YouTube (falta list=…)' },
+    'Playlista': { en: 'Playlist', es: 'Lista' },
+    'Wyszukiwanie działa normalnie — uruchom mostek, aby słuchać i zapisywać utwory.': { en: 'Search works normally — start the bridge to preview and save tracks.', es: 'La búsqueda funciona con normalidad; inicia el puente para escuchar y guardar canciones.' },
+    'do albumu': { en: 'to album', es: 'al álbum' },
   };
   var I18N_STATIC = {
     'Opuść pełny ekran': { en: 'Exit fullscreen', es: 'Salir de pantalla completa' },
@@ -2056,7 +2210,7 @@
   var I18N_RECS = [];
   function t(pl){
     if (CUR_LANG === 'pl') return pl;
-    var d = I18N_DICT[String(pl)];
+    var d = I18N_DICT[String(pl)] || I18N_STATIC[String(pl)];
     return (d && d[CUR_LANG]) ? d[CUR_LANG] : pl;
   }
   function i18nTrStatic(v){
@@ -2263,6 +2417,7 @@
   const selCancelBtn = document.getElementById('selCancelBtn');
   const modalDim = document.getElementById('modalDim');
   const modalTitle = document.getElementById('modalTitle');
+  const modalShell = document.getElementById('modalShell');
   const modalInput = document.getElementById('modalInput');
   const modalBody = document.getElementById('modalBody');
   const modalOk = document.getElementById('modalOk');
@@ -2377,9 +2532,9 @@
   function flashStyleToast(){ showToast('✦ ' + t(VISUAL_MODES[visualMode])); }
   function updateStyleBtn(){
     if (!ambientStyleBtn) return;
-    const t = 'Styl wizualizacji: ' + VISUAL_MODES[visualMode] + ' — kliknij, aby zmienić';
-    ambientStyleBtn.title = t;
-    ambientStyleBtn.setAttribute('aria-label', t);
+    const styleLabel = t('Styl wizualizacji: ') + t(VISUAL_MODES[visualMode]) + t(' — kliknij, aby zmienić');
+    ambientStyleBtn.title = styleLabel;
+    ambientStyleBtn.setAttribute('aria-label', styleLabel);
     ambientStyleBtn.hidden = !(Boolean(ambientVisual) && threeDMode);
   }
   if (ambientStyleBtn) ambientStyleBtn.addEventListener('click', function(){
@@ -3454,8 +3609,8 @@
     shuffleBtn.innerHTML = coverShuffleBtn.innerHTML = ICON_SHUFFLE;
     const repIcon = repeatMode === 2 ? ICON_REPEAT_ONE : ICON_REPEAT;
     repeatBtn.innerHTML = coverRepeatBtn.innerHTML = repIcon;
-    const shuffleTitle = shuffleOn ? 'Losowe odtwarzanie: włączone (S)' : 'Losowe odtwarzanie: wyłączone (S)';
-    const repeatTitles = ['Powtarzanie: wyłączone (R)', 'Powtarzanie: cały album (R)', 'Powtarzanie: jeden utwór (R)'];
+    const shuffleTitle = t(shuffleOn ? 'Losowe odtwarzanie: włączone (S)' : 'Losowe odtwarzanie: wyłączone (S)');
+    const repeatTitles = ['Powtarzanie: wyłączone (R)', 'Powtarzanie: cały album (R)', 'Powtarzanie: jeden utwór (R)'].map(t);
     [shuffleBtn, coverShuffleBtn].forEach(b => { b.classList.toggle('active', shuffleOn); b.title = shuffleTitle; b.setAttribute('aria-pressed', String(shuffleOn)); });
     [repeatBtn, coverRepeatBtn].forEach(b => { b.classList.toggle('active', repeatMode > 0); b.title = repeatTitles[repeatMode]; b.setAttribute('aria-pressed', String(repeatMode > 0)); });
   }
@@ -3467,7 +3622,7 @@
     const tabs = libraryTabs.querySelectorAll('.lib-tab');
     tabs.forEach(btn => btn.classList.toggle('active', !openAlbumId && btn.dataset.view === libraryView));
     libraryTabs.style.visibility = openAlbumId ? 'hidden' : 'visible';
-    libraryHeading.textContent = openAlbumId ? 'Album' : t('Biblioteka');
+    libraryHeading.textContent = openAlbumId ? t('Album') : t('Biblioteka');
     const showTracks = !openAlbumId && libraryView === 'tracks';
     const showAlbums = !openAlbumId && libraryView === 'albums';
     trackListEl.hidden = !showTracks;
@@ -3546,7 +3701,7 @@
       const hint = document.createElement('li');
       hint.className = 'empty-list-hint';
       hint.style.cssText = 'display:block;list-style:none;';
-      hint.textContent = 'Brak wyników dla „' + q + '"';
+      hint.textContent = t('Brak wyników dla „') + q + t('”');
       trackListEl.appendChild(hint);
       return;
     }
@@ -3647,7 +3802,7 @@
       albumGrid.appendChild(card);
     }
     if (!albums.length){
-      emptyAlbumsHint.innerHTML = 'Brak albumów.<br><button class="primary-btn empty-action" type="button">+ Dodaj muzykę</button>';
+      emptyAlbumsHint.innerHTML = t('Brak albumów') + '.<br><button class="primary-btn empty-action" type="button">' + t('+ Dodaj muzykę') + '</button>';
       const add = emptyAlbumsHint.querySelector('.empty-action');
       if (add) add.addEventListener('click', () => folderInput.click());
     }
@@ -3659,14 +3814,14 @@
       const img = document.createElement('img'); img.alt = '';
       img.src = album.coverBlob ? URL.createObjectURL(album.coverBlob) : DEFAULT_COVER;
       const fab = document.createElement('button');
-      fab.type = 'button'; fab.className = 'card-fab'; fab.title = 'Odtwórz album';
-      fab.setAttribute('aria-label', 'Odtwórz album: ' + album.name);
+      fab.type = 'button'; fab.className = 'card-fab'; fab.title = t('Odtwórz album');
+      fab.setAttribute('aria-label', t('Odtwórz album') + ': ' + album.name);
       fab.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><polygon points="8,6 19,12 8,18" fill="currentColor"/></svg>';
       fab.addEventListener('click', ev => { ev.stopPropagation(); playAlbumFrom(album, false); });
       art.appendChild(img); art.appendChild(fab);
       const name = document.createElement('div'); name.className = 'album-card-name'; name.textContent = album.name;
       const meta = document.createElement('div'); meta.className = 'album-card-meta';
-      meta.textContent = pluralTracks(count) + (album.id === activeAlbumId ? ' • odtwarzany' : '');
+      meta.textContent = pluralTracks(count) + (album.id === activeAlbumId ? ' • ' + t('odtwarzany') : '');
       const actions = document.createElement('div'); actions.className = 'album-card-actions';
       const mk = (icon, title, cls, fn) => {
         const b = document.createElement('button');
@@ -3678,10 +3833,10 @@
         b.addEventListener('click', ev => { ev.stopPropagation(); fn(); });
         actions.appendChild(b);
       };
-      mk(IC.play, 'Odtwórz album', '', () => playAlbumFrom(album, false));
-      mk(IC.shuffle, 'Odtwórz losowo', '', () => playAlbumFrom(album, true));
-      mk(IC.pencil, 'Zmień nazwę', '', () => openRenameAlbumModal(album));
-      mk(IC.trash, 'Usuń album', 'danger', () => deleteAlbum(album));
+      mk(IC.play, t('Odtwórz album'), '', () => playAlbumFrom(album, false));
+      mk(IC.shuffle, t('Odtwórz losowo'), '', () => playAlbumFrom(album, true));
+      mk(IC.pencil, t('Zmień nazwę'), '', () => openRenameAlbumModal(album));
+      mk(IC.trash, t('Usuń album'), 'danger', () => deleteAlbum(album));
       card.appendChild(art); card.appendChild(name); card.appendChild(meta); card.appendChild(actions);
       card.addEventListener('click', () => { openAlbumId = album.id; renderLibrary(); });
       albumGrid.appendChild(card);
@@ -3765,8 +3920,8 @@
         b.addEventListener('click', ev => { ev.stopPropagation(); fn(); });
         acts.appendChild(b);
       };
-      if (!isLiked){ mkAct('↑', 'Przesuń w górę', () => moveAlbumTrack(album, order, -1)); mkAct('↓', 'Przesuń w dół', () => moveAlbumTrack(album, order, 1)); }
-      mkAct('×', isLiked ? 'Usuń z polubionych' : 'Usuń z albumu', () => {
+      if (!isLiked){ mkAct('↑', t('Przesuń w górę'), () => moveAlbumTrack(album, order, -1)); mkAct('↓', t('Przesuń w dół'), () => moveAlbumTrack(album, order, 1)); }
+      mkAct('×', isLiked ? t('Usuń z polubionych') : t('Usuń z albumu'), () => {
         if (isLiked){ toggleFav(id); renderAlbumDetail(); refreshAlbumMenu(); return; }
         removeAlbumTrack(album, id);
       });
@@ -3819,19 +3974,19 @@
     const n = selectedIds.size;
     if (addingToAlbumId){
       const album = albumById(addingToAlbumId);
-      selectionCount.textContent = n ? `Zaznaczone do dodania: ${n}` : 'Zaznacz utwory, których nie ma jeszcze w albumie';
-      selAddToAlbumBtn.textContent = `Dodaj ${n || ''}${n ? ' ' : ''}do „${album ? album.name : 'albumu'}”`;
+      selectionCount.textContent = n ? t('Zaznaczone do dodania: ') + n : t('Zaznacz utwory, których nie ma jeszcze w albumie');
+      selAddToAlbumBtn.textContent = t('Dodaj') + (n ? ' ' + n : '') + ' ' + t('do „') + (album ? album.name : t('albumu')) + t('”');
       selAddToAlbumBtn.disabled = false;
       selNewAlbumBtn.hidden = true;
       selRemoveBtn.hidden = true;
-      selCancelBtn.textContent = 'Koniec';
+      selCancelBtn.textContent = t('Koniec');
     } else {
-      selectionCount.textContent = n ? `Zaznaczono: ${n}` : 'Zaznacz utwory z listy';
-      selNewAlbumBtn.textContent = n ? `Nowy album (${n})` : 'Nowy album (bieżący utwór)';
+      selectionCount.textContent = n ? t('Zaznaczono: ') + n : t('Zaznacz utwory z listy');
+      selNewAlbumBtn.textContent = n ? t('Nowy album') + ' (' + n + ')' : t('Nowy album (bieżący utwór)');
       selNewAlbumBtn.hidden = false;
       selRemoveBtn.hidden = false;
       selRemoveBtn.disabled = !n;
-      selCancelBtn.textContent = 'Anuluj';
+      selCancelBtn.textContent = t('Anuluj');
     }
   }
 
@@ -3863,12 +4018,18 @@
   /* ---------- Modale: tworzenie / nazwa / wybór albumu ---------- */
   let modalOnOk = null;
   function openModal(opts){
+    opts = opts || {};
     modalTitle.textContent = opts.title || '';
+    if (modalShell){
+      modalShell.className = 'modal';
+      String(opts.variant || '').split(/\s+/).filter(Boolean).forEach(function (name){ modalShell.classList.add(name); });
+    }
     if (opts.input != null){ modalInput.hidden = false; modalInput.placeholder = opts.input; modalInput.value = opts.value || ''; }
     else modalInput.hidden = true;
     modalBody.innerHTML = '';
     if (opts.buildBody) opts.buildBody(modalBody);
-    modalOk.textContent = opts.okText || 'Zapisz';
+    modalOk.textContent = t(opts.okText || 'Zapisz');
+    modalCancel.textContent = t('Anuluj');
     modalOk.hidden = Boolean(opts.hideOk);
     modalOnOk = opts.onOk || null;
     modalDim.hidden = false;
@@ -4224,13 +4385,13 @@
     const src1 = (seedIds && seedIds.length) ? tracks.find(t => t.id === seedIds[0]) : (currentIndex > -1 ? tracks[currentIndex] : null);
     if (src1 && src1.folder && src1.folder !== 'Muzyka') prefill = (src1.folder.split('/').pop() || '').trim();
     openModal({
-      title: 'Nowy album',
-      input: 'Nazwa albumu',
+      title: t('Nowy album'),
+      input: t('Nazwa albumu'),
       value: prefill,
-      okText: 'Utwórz album',
+      okText: t('Utwórz album'),
       buildBody(body){
         const row = document.createElement('label'); row.className = 'modal-cover-row';
-        const span = document.createElement('span'); span.textContent = 'Okładka (opcjonalnie):';
+        const span = document.createElement('span'); span.textContent = t('Okładka (opcjonalnie):');
         const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp';
         const prev = document.createElement('img'); prev.hidden = true; prev.alt = '';
         input.addEventListener('change', () => {
@@ -4240,7 +4401,7 @@
         row.appendChild(span); row.appendChild(input); row.appendChild(prev);
         if (seedIds && seedIds.length){
           const info = document.createElement('div'); info.className = 'album-card-meta';
-          info.textContent = `W albumie znajdzie się ${pluralTracks(seedIds.length)}.`;
+          info.textContent = t('W albumie znajdzie się ') + pluralTracks(seedIds.length) + '.';
           body.appendChild(info);
         }
         body.appendChild(row);
@@ -4297,17 +4458,17 @@
     setLibView('albums'); openAlbumId = null;
     renderLibrary();
     refreshAlbumMenu();
-    showToast(created ? ('Utworzono albumów: ' + created) : 'Foldery są już zgrupowane');
+    showToast(created ? (t('Utworzono albumów: ') + created) : t('Foldery są już zgrupowane'));
   }
   if (autoAlbumsBtn) autoAlbumsBtn.addEventListener('click', () => autoAlbumsFromFolders());
 
   function openRenameAlbumModal(album){
     if (!album) return;
     openModal({
-      title: 'Zmień nazwę albumu',
-      input: 'Nazwa albumu',
+      title: t('Zmień nazwę albumu'),
+      input: t('Nazwa albumu'),
       value: album.name,
-      okText: 'Zapisz',
+      okText: t('Zapisz'),
       onOk(name){
         if (!name) { modalInput.focus(); return false; }
         album.name = name.trim();
@@ -4324,7 +4485,7 @@
     if (!list.length) return;
     if (!albums.length){ openCreateAlbumModal(list); return; }
     openModal({
-      title: `Dodaj ${pluralTracks(list.length)} do albumu`,
+      title: t('Dodaj') + ' ' + pluralTracks(list.length) + ' ' + t('do albumu'),
       input: null,
       hideOk: true,
       buildBody(body){
@@ -4332,7 +4493,7 @@
           const already = list.filter(id => album.trackIds.indexOf(id) > -1).length;
           const b = document.createElement('button');
           b.type = 'button'; b.className = 'modal-choice';
-          b.textContent = `${album.name} — ${pluralTracks(album.trackIds.length)}${already ? ` • ${already} już w albumie` : ''}`;
+          b.textContent = album.name + ' — ' + pluralTracks(album.trackIds.length) + (already ? ' • ' + already + ' ' + t('już w albumie') : '');
           b.addEventListener('click', async () => {
             album.trackIds = album.trackIds.concat(list.filter(id => album.trackIds.indexOf(id) === -1));
             if (!album.customCover){ const cov = await buildAlbumCover(album.trackIds); if (cov) album.coverBlob = cov; }
@@ -4346,7 +4507,7 @@
         });
         const nb = document.createElement('button');
         nb.type = 'button'; nb.className = 'modal-choice';
-        nb.textContent = '+ Utwórz nowy album z zaznaczonych';
+        nb.textContent = t('+ Utwórz nowy album z zaznaczonych');
         nb.addEventListener('click', () => { closeModal(); openCreateAlbumModal(list); });
         body.appendChild(nb);
       }
@@ -4375,7 +4536,7 @@
     playlistMenuItems.innerHTML = '';
     if (!albums.length){
       const empty = document.createElement('div'); empty.className = 'playlist-menu-title';
-      empty.textContent = 'Brak albumów — utwórz nowy poniżej.';
+      empty.textContent = t('Brak albumów — utwórz nowy poniżej.');
       playlistMenuItems.appendChild(empty);
       return;
     }
@@ -4599,14 +4760,14 @@
     if (!c) return;
     e.preventDefault();
     Promise.resolve(copyTextToClipboard(c.getAttribute('data-copy') || c.textContent)).then(function(ok){
-      showToast(ok ? 'Skopiowano do schowka' : 'Zaznacz i skopiuj ręcznie');
+      showToast(ok ? t('Skopiowano do schowka') : t('Zaznacz i skopiuj ręcznie'));
     });
   });
   function bridgeHintHtml(r){
     const cmd = 'node ytdl-bridge.mjs';
     const per = r ? ytDlpCmd(r.link || ('https://youtu.be/' + (r.ytId || r.id))) : YTDLP_CMD;
-    return YT_FAIL_HINT + '<code class="copyable" data-copy="' + cmd + '" title="Kliknij, aby skopiować">' + cmd + '</code>' +
-      ' (wymaga yt-dlp; plik ytdl-bridge.mjs leży obok muzyka.html). Dla tego jednego utworu możesz skopiować komendę: <code class="copyable" data-copy="' + per.replace(/"/g, '&quot;') + '" title="Kliknij, aby skopiować">yt-dlp -x --audio-format mp3 …</code>, a gotowy MP3 upuść na okno odtwarzacza.';
+    return YT_FAIL_HINT + '<code class="copyable" data-copy="' + cmd + '" title="' + t('Kliknij, aby skopiować') + '">' + cmd + '</code>' +
+      t(' (wymaga yt-dlp; plik ytdl-bridge.mjs leży obok muzyka.html). Dla tego jednego utworu możesz skopiować komendę: ') + '<code class="copyable" data-copy="' + per.replace(/"/g, '&quot;') + '" title="' + t('Kliknij, aby skopiować') + '">yt-dlp -x --audio-format mp3 …</code>, ' + t('a gotowy MP3 upuść na okno odtwarzacza.');
   }
 
   async function netItunes(term, limit){
@@ -4877,21 +5038,21 @@
       const sc = document.createElement('script');
       sc.src = src; sc.async = true;
       sc.onload = function(){ st.done(); res(true); };
-      sc.onerror = function(){ st.done(); rej(new Error('Nie udało się doładować ffmpeg.wasm z CDN')); };
+      sc.onerror = function(){ st.done(); rej(new Error(t('Nie udało się doładować ffmpeg.wasm z CDN'))); };
       document.head.appendChild(sc);
     });
   }
   function ensureFFmpeg(){
     if (ffState === 'ready') return Promise.resolve(ffmpegInst);
-    if (!SCRIPTS_OK || typeof Worker === 'undefined'){ ffState = 'unsupported'; return Promise.reject(new Error('ffmpeg.wasm niedostępny w tym środowisku')); }
+    if (!SCRIPTS_OK || typeof Worker === 'undefined'){ ffState = 'unsupported'; return Promise.reject(new Error(t('ffmpeg.wasm niedostępny w tym środowisku'))); }
     if (ffPromise) return ffPromise;
     ffState = 'loading';
     ffPromise = (async function(){
       if (typeof window.createFFmpeg !== 'function'){
         try { await ffLoadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js'); }
-        catch(e){ try { await ffLoadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js'); } catch(e2){ throw new Error('Brak dostępu do CDN z ffmpeg.wasm'); } }
+        catch(e){ try { await ffLoadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js'); } catch(e2){ throw new Error(t('Brak dostępu do CDN z ffmpeg.wasm')); } }
       }
-      if (typeof window.createFFmpeg !== 'function') throw new Error('ffmpeg.wasm niedostępny');
+      if (typeof window.createFFmpeg !== 'function') throw new Error(t('ffmpeg.wasm niedostępny'));
       const inst = window.createFFmpeg({ corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js', log: false });
       await inst.load();
       ffmpegInst = inst; ffState = 'ready';
@@ -4901,7 +5062,7 @@
     return ffPromise;
   }
   function withTimeout(pr, ms, msg){
-    return Promise.race([pr, new Promise(function(_, rej){ setTimeout(function(){ rej(new Error(msg || 'Przekroczono czas konwersji')); }, ms); })]);
+    return Promise.race([pr, new Promise(function(_, rej){ setTimeout(function(){ rej(new Error(msg || t('Przekroczono czas konwersji'))); }, ms); })]);
   }
   function blobBytes(blob){
     if (blob && typeof blob.arrayBuffer === 'function') return blob.arrayBuffer().then(ab => new Uint8Array(ab));
@@ -4916,7 +5077,7 @@
   }
   async function convertToMp3(blob, meta){
     if (/mp3|mpeg/i.test(String(blob && blob.type || ''))) return blob; // już MP3 — nie przekodowywać (re-encode psułby jakość)
-    const ff = await withTimeout(ensureFFmpeg(), 30000, 'Ładowanie ffmpeg.wasm trwa zbyt długo');
+    const ff = await withTimeout(ensureFFmpeg(), 30000, t('Ładowanie ffmpeg.wasm trwa zbyt długo'));
     const inExt = (meta && meta.ext) || 'm4a';
     const inName = 'in.' + inExt, coverName = 'cover.jpg', outName = 'out.mp3';
     ff.FS('writeFile', inName, await blobBytes(blob));
@@ -4937,20 +5098,20 @@
     };
     try {
       if (hasCover){
-        await withTimeout(ff.run.apply(ff, ['-i', inName, '-i', coverName, '-map', '0:a', '-map', '1:0', '-c:a', 'libmp3lame', '-b:a', '192k', '-c:v', 'copy', '-id3v2_version', '3', '-metadata:s:v', 'title=Album cover', '-metadata:s:v', 'comment=Cover (front)'].concat(metaArgs, [outName])), 180000, 'Konwersja do MP3 trwa zbyt długo');
+        await withTimeout(ff.run.apply(ff, ['-i', inName, '-i', coverName, '-map', '0:a', '-map', '1:0', '-c:a', 'libmp3lame', '-b:a', '192k', '-c:v', 'copy', '-id3v2_version', '3', '-metadata:s:v', 'title=Album cover', '-metadata:s:v', 'comment=Cover (front)'].concat(metaArgs, [outName])), 180000, t('Konwersja do MP3 trwa zbyt długo'));
       } else {
-        await withTimeout(plainRun(), 180000, 'Konwersja do MP3 trwa zbyt długo');
+        await withTimeout(plainRun(), 180000, t('Konwersja do MP3 trwa zbyt długo'));
       }
       out = ff.FS('readFile', outName);
     } catch(e){
       if (hasCover){
-        try { await withTimeout(plainRun(), 180000, 'Konwersja do MP3 trwa zbyt długo'); out = ff.FS('readFile', outName); } catch(e2){}
+        try { await withTimeout(plainRun(), 180000, t('Konwersja do MP3 trwa zbyt długo')); out = ff.FS('readFile', outName); } catch(e2){}
       }
     }
     try { ff.FS('unlink', inName); } catch(e){}
     if (hasCover) try { ff.FS('unlink', coverName); } catch(e){}
     if (out) try { ff.FS('unlink', outName); } catch(e){}
-    if (!out || !out.length) throw new Error('Konwersja do MP3 nie powiodła się');
+    if (!out || !out.length) throw new Error(t('Konwersja do MP3 nie powiodła się'));
     return new Blob([out.buffer || out], { type: 'audio/mpeg' });
   }
   async function toMp3(blob, meta){
@@ -5067,8 +5228,8 @@
     netBusy = true; netLastError = ''; netSetHint(t('Pobieram popularne utwory z Audius…'));
     try {
       netResults = await netAudius('', 20, true);
-      if (!netResults.length){ netLastError = 'Nie udało się pobrać „Na czasie" — sprawdź połączenie i kliknij „Na czasie" ponownie.'; netFirstOpen = true; }
-    } catch(e){ netLastError = 'Błąd pobierania „Na czasie" — spróbuj ponownie.'; netFirstOpen = true; }
+      if (!netResults.length){ netLastError = t('Nie udało się pobrać „Na czasie" — sprawdź połączenie i kliknij „Na czasie" ponownie.'); netFirstOpen = true; }
+    } catch(e){ netLastError = t('Błąd pobierania „Na czasie" — spróbuj ponownie.'); netFirstOpen = true; }
     finally { netBusy = false; netRenderResults(); }
   }
   const NET_GENRES = [
@@ -5148,7 +5309,7 @@
     updateBridgeBanner();
     renderNetBrowseState();
     netGrid.innerHTML = '';
-    if (!netResults.length){ renderNetBrowseState(); if (!netBusy) netSetHint(netLastError || (netQuery && netQuery.value.trim() ? 'Nic nie znaleziono — spróbuj innego tytułu lub artysty.' : '')); return; }
+    if (!netResults.length){ renderNetBrowseState(); if (!netBusy) netSetHint(netLastError || (netQuery && netQuery.value.trim() ? t('Nic nie znaleziono — spróbuj innego tytułu lub artysty.') : '')); return; }
     netSetHint('');
     const hasIt = netResults.some(r => r.provider === 'itunes');
     const providers = [...new Set(netResults.map(r => r.provider))];
@@ -5166,10 +5327,10 @@
       const bar = document.createElement('div'); bar.className = 'net-save-all';
       const b = document.createElement('button'); b.type = 'button'; b.className = 'lib-tool net-save-all-btn';
       b.textContent = t('⬇ Zapisz wszystkie z YouTube (') + ytCount + ')';
-      b.title = 'Pobiera kolejno wszystkie utwory z YouTube (MP3 przy włączonym trybie MP3 i moscie z ffmpeg)';
+      b.title = t('Pobiera kolejno wszystkie utwory z YouTube (MP3 przy włączonym trybie MP3 i moscie z ffmpeg)');
       b.addEventListener('click', async function(){
         if (b.disabled) return;
-        b.disabled = true; b.textContent = 'Zapisuję…';
+        b.disabled = true; b.textContent = t('Zapisuję…');
         const idxs = netResults.map((r, i) => (r.provider === 'youtube' && (r.stream || r.ytStream)) ? i : -1).filter(i => i >= 0);
         let okN = 0;
         for (const idx of idxs){ try { await netImport(idx, null); okN++; } catch(e){} }
@@ -5213,7 +5374,7 @@
     const p = audioNet.play();
     if (p && p.catch) p.catch(() => netSetHint(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.')));
     netNowIdx = i;
-    if (netBadgeTxt) netBadgeTxt.textContent = 'Sieć: ' + (r.artist ? r.artist + ' — ' : '') + r.title + (r.isFull ? '' : ' (30 s)');
+    if (netBadgeTxt) netBadgeTxt.textContent = t('Sieć: ') + (r.artist ? r.artist + ' — ' : '') + r.title + (r.isFull ? '' : ' (30 s)');
     if (netBadge) netBadge.hidden = false;
     netRenderPlayStates();
   }
@@ -5282,11 +5443,11 @@
     // Duplikat sprawdzamy NAJPIERW — bez zbędnego pobierania i konwersji
     const dupNetId = r.provider + ':' + r.id;
     if (tracks.some(function(t){ return (t.netId && t.netId === dupNetId) || (normTitle(t.title) === normTitle(r.title) && normTitle(t.artist) === normTitle(r.artist) && r.artist); })){
-      if (btnEl){ btnEl.textContent = '✓ W bibliotece'; btnEl.disabled = false; }
+      if (btnEl){ btnEl.textContent = t('✓ W bibliotece'); btnEl.disabled = false; }
       showToast(t('Ten utwór jest już w bibliotece'));
       return;
     }
-    if (btnEl){ btnEl.disabled = true; btnEl.textContent = 'Zapisuję…'; }
+    if (btnEl){ btnEl.disabled = true; btnEl.textContent = t('Zapisuję…'); }
     let streamUrl = r.stream, ytExt = r.ytExt || '';
     if (r.ytStream && !streamUrl){
       if (btnEl) btnEl.textContent = 'YouTube…';
@@ -5320,10 +5481,10 @@
         const mp3 = await toMp3(blob, { ext: ext, title: r.title, artist: r.artist, album: r.album || '', year: r.year || '', coverBlob: coverBlob });
         if (mp3 && mp3.size){ finalBlob = mp3; ext = 'mp3'; converted = true; }
       } catch(e){
-        netSetHint(t('Konwersja do MP3 niedostępna') + (e && e.message ? ' — ' + e.message : '') + '. Zapisuję oryginalny format (' + ext + ').');
+        netSetHint(t('Konwersja do MP3 niedostępna') + (e && e.message ? ' — ' + e.message : '') + t('. Zapisuję oryginalny format (') + ext + ').');
       }
     }
-    const safeName = String(r.artist + ' - ' + r.title).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 120) || ('Utwór z sieci ' + (i + 1));
+    const safeName = String(r.artist + ' - ' + r.title).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 120) || (t('Utwór z sieci ') + (i + 1));
     let file;
     try { file = new File([finalBlob], safeName + '.' + ext, { type: finalBlob.type || ('audio/' + ext) }); }
     catch(e){ file = finalBlob; }
@@ -5347,7 +5508,7 @@
           const sd = await netJson(BRIDGE_BASE + '/mp3save?id=' + encodeURIComponent(r.ytId || r.id) + '&dir=' + encodeURIComponent(netDiskDir()), 300000);
           if (sd && sd.ok && sd.file) showToast(t('💾 Zapisano na dysku: ') + sd.file);
           else if (sd && sd.error) showToast(t('Dysk: ') + sd.error);
-        } catch(e){ showToast(t('Dysk: ') + ((e && e.message) || 'błąd zapisu')); }
+        } catch(e){ showToast(t('Dysk: ') + ((e && e.message) || t('błąd zapisu'))); }
       }
     }
   }
@@ -5554,10 +5715,10 @@
     let ok = 0, done = 0;
     for (const item of targets){
       done++;
-      if (btn) btn.textContent = 'Uzupełniam ' + done + '/' + targets.length + '…';
+      if (btn) btn.textContent = t('Uzupełniam ') + done + '/' + targets.length + '…';
       try { const prov = await enrichOne(item.t); if (prov){ ok++; if (ok % 5 === 0) renderLibrary(); } } catch(e){}
     }
-    if (btn){ btn.disabled = false; btn.classList.remove('on'); btn.textContent = 'Uzupełnij online'; }
+    if (btn){ btn.disabled = false; btn.classList.remove('on'); btn.textContent = t('Uzupełnij online'); }
     enrichBusy = false;
     renderLibrary();
     if (ok){ showToast(t('Uzupełniono online: ') + ok + ' / ' + done); queueLibraryAnalysis(); }
@@ -5661,8 +5822,8 @@
       netBridgeChip.classList.toggle('net-bridge-on', !!ok);
       netBridgeChip.classList.toggle('net-bridge-off', !ok);
       netBridgeChip.textContent = (ok ? t('● yt-dlp: działa') : t('○ yt-dlp: wyłączony')).replace(/^[●○]\s*/, '');
-      netBridgeChip.title = ok ? 'Mostek yt-dlp połączony — podgląd i zapis MP3 z YouTube działają w pełni'
-                               : 'Mostek yt-dlp nie odpowiada (http://127.0.0.1:' + BRIDGE_PORT + '). Kliknij, aby sprawdzić ponownie';
+      netBridgeChip.title = ok ? t('Mostek yt-dlp połączony — podgląd i zapis MP3 z YouTube działają w pełni')
+                               : t('Mostek yt-dlp nie odpowiada (http://127.0.0.1:') + BRIDGE_PORT + t('). Kliknij, aby sprawdzić ponownie');
       updateBridgeBanner();
     });
   }
@@ -5681,7 +5842,7 @@
     netMp3Toggle.checked = netMp3;
     const netMp3Lab = document.getElementById('netMp3Lab');
     if (netMp3Lab) netMp3Lab.classList.toggle('active', netMp3);
-    netMp3Toggle.addEventListener('change', function(){ setMp3On(netMp3Toggle.checked); showToast(netMp3 ? 'Zapis z sieci: MP3 192 kbps' : 'Zapis z sieci: oryginalny format'); });
+    netMp3Toggle.addEventListener('change', function(){ setMp3On(netMp3Toggle.checked); showToast(t(netMp3 ? 'Zapis z sieci: MP3 192 kbps' : 'Zapis z sieci: oryginalny format')); });
   }
   if (netAdvancedBtn) netAdvancedBtn.addEventListener('click', function(){
     netAdvanced = !netAdvanced;
@@ -5728,7 +5889,7 @@
     if (!b) return;
     const n = dupExtraCount();
     b.disabled = n === 0;
-    b.textContent = n ? ('Usuń duplikaty (' + n + ')') : 'Brak duplikatów';
+    b.textContent = n ? (t('Usuń duplikaty') + ' (' + n + ')') : t('Brak duplikatów');
     b.classList.toggle('attention', n > 0);
   }
   async function removeDuplicates(manual){
@@ -5840,6 +6001,7 @@
     openModal({
       title: t('Dźwięk'),
       hideOk: true,
+      variant: 'settings-like sound-settings-modal',
       buildBody(body){
         body.innerHTML = '';
 
@@ -6701,13 +6863,13 @@
     if (!b) return;
     b.classList.toggle('active', skipSilenceOn);
     b.setAttribute('aria-pressed', String(skipSilenceOn));
-    b.title = skipSilenceOn ? 'Pomijanie ciszy włączone — kliknij, aby wyłączyć'
-                            : 'Pomijanie ciszy wyłączone — kliknij, aby włączyć (tnie intro/przerwy/outro)';
+    b.title = skipSilenceOn ? t('Pomijanie ciszy włączone — kliknij, aby wyłączyć')
+                            : t('Pomijanie ciszy wyłączone — kliknij, aby włączyć (tnie intro/przerwy/outro)');
   }
   const skipSilenceBtn = document.getElementById('skipSilenceBtn');
   if (skipSilenceBtn) skipSilenceBtn.addEventListener('click', function(){
     setSkipSilence(!skipSilenceOn);
-    showToast(skipSilenceOn ? '⏭ Pomijanie ciszy: wł.' : 'Pomijanie ciszy: wył.');
+    showToast(t(skipSilenceOn ? '⏭ Pomijanie ciszy: wł.' : 'Pomijanie ciszy: wył.'));
   });
   updateSkipSilenceBtn();
   try { autoDjOn = localStorage.getItem('playerAutoDj') === '1'; } catch(e){}
@@ -6719,7 +6881,7 @@
     autoDjOn = !!v;
     try { localStorage.setItem('playerAutoDj', autoDjOn ? '1' : '0'); } catch(e){}
     updateAutoDjBtn();
-    showToast(autoDjOn ? (tracks.length > 1 ? 'Auto-DJ: dobieram następne utwory po tempie i energii' : 'Auto-DJ włączony — dodaj więcej utworów, żeby działał') : 'Auto-DJ wyłączony — gra zwykła kolejność');
+    showToast(t(autoDjOn ? (tracks.length > 1 ? 'Auto-DJ: dobieram następne utwory po tempie i energii' : 'Auto-DJ włączony — dodaj więcej utworów, żeby działał') : 'Auto-DJ wyłączony — gra zwykła kolejność'));
   }
   if (autoDjBtn) autoDjBtn.addEventListener('click', () => setAutoDj(!autoDjOn));
 
@@ -6861,7 +7023,7 @@
     smAudioReactEl.checked = audioReactOn;
     smAudioReactEl.addEventListener('change', function(){
       setAudioReact(smAudioReactEl.checked);
-      showToast(audioReactOn ? '✨ Reakcja na muzykę: wł.' : 'Reakcja na muzykę: wył. — spokojne tło');
+      showToast(t(audioReactOn ? '✨ Reakcja na muzykę: wł.' : 'Reakcja na muzykę: wył. — spokojne tło'));
     });
   }
   const smPanEl = document.getElementById('smPan');
@@ -6876,7 +7038,7 @@
   if (smMonoEl) smMonoEl.addEventListener('change', function(){
     fxState.mono = smMonoEl.checked;
     applyFX(); saveFx();
-    showToast(fxState.mono ? 'Mono: wł.' : 'Mono: wył.');
+    showToast(t(fxState.mono ? 'Mono: wł.' : 'Mono: wył.'));
   });
 
   /* ---- Eksport kolejki do M3U ---- */
@@ -7395,7 +7557,7 @@
     nowLi.appendChild(nowBadge); nowLi.appendChild(nowInfo);
     listEl.appendChild(nowLi);
     if (autoDjOn){
-      const dj = document.createElement('li'); dj.className = 'qp-djnote'; dj.textContent = '★ Auto-DJ wybiera następny utwór';
+      const dj = document.createElement('li'); dj.className = 'qp-djnote'; dj.textContent = t('★ Auto-DJ wybiera następny utwór');
       listEl.appendChild(dj);
     }
     let dragK = -1;
@@ -7433,7 +7595,7 @@
         listEl.appendChild(li);
       }
       if (pos === queue.length - 1 && repeatMode !== 1){
-        const end = document.createElement('li'); end.className = 'qp-end'; end.textContent = 'Koniec kolejki';
+        const end = document.createElement('li'); end.className = 'qp-end'; end.textContent = t('Koniec kolejki');
         listEl.appendChild(end);
       }
     }
@@ -7884,28 +8046,249 @@
 
   // ---- Widok mini (kompaktowe okno) ----
   const mv = {
-    cover: document.getElementById('mvCover'), title: document.getElementById('mvTitle'), artist: document.getElementById('mvArtist'),
+    root: document.getElementById('miniView'), visual: document.getElementById('mvVisual'), viz: document.getElementById('mvViz'),
+    cover: document.getElementById('mvCover'), art: document.querySelector('.mv-art'), fav: document.getElementById('mvFavBtn'), favIcon: document.getElementById('mvFavIcon'), label: document.getElementById('mvNowLabel'), title: document.getElementById('mvTitle'), artist: document.getElementById('mvArtist'),
     seek: document.getElementById('mvSeek'), cur: document.getElementById('mvCur'), dur: document.getElementById('mvDur'),
-    play: document.getElementById('mvPlayBtn'), prev: document.getElementById('mvPrevBtn'), next: document.getElementById('mvNextBtn'),
+    play: document.getElementById('mvPlayBtn'), prev: document.getElementById('mvPrevBtn'), next: document.getElementById('mvNextBtn'), shuffle: document.getElementById('mvShuffleBtn'), repeat: document.getElementById('mvRepeatBtn'), mute: document.getElementById('mvMuteBtn'),
     pin: document.getElementById('mvPinBtn'), expand: document.getElementById('mvExpandBtn')
   };
   const MV_ICON_PLAY = '<svg viewBox="0 0 24 24"><path class="fill" d="M8 5v14l11-7z"/></svg>';
   const MV_ICON_PAUSE = '<svg viewBox="0 0 24 24"><path class="fill" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
-  let mvSeeking = false, mvLastSync = 0;
+  let mvSeeking = false, mvLastSync = 0, mvPaletteSrc = '';
+  const mvPaletteCache = new Map();
+  let mvPaletteCurrent = null, mvPaletteTarget = null, mvPaletteRaf = 0;
   function miniActive(){ return document.documentElement.classList.contains('nl-mini'); }
   function desktopHost(){ return window.__pulsarDesktop || null; }
+  function paletteArray(p){
+    return {
+      accent: p.accent.split(',').map(Number),
+      secondary: p.secondary.split(',').map(Number),
+      dark: p.dark.split(',').map(Number)
+    };
+  }
+  function applyMiniPalette(p){
+    if (!mv.root || !p) return;
+    const css = function(v){ return v.map(function(n){ return Math.round(n); }).join(','); };
+    mv.root.style.setProperty('--mv-accent-rgb', css(p.accent));
+    mv.root.style.setProperty('--mv-accent-2-rgb', css(p.secondary));
+    mv.root.style.setProperty('--mv-dark-rgb', css(p.dark));
+  }
+  function miniPaletteFrame(){
+    mvPaletteRaf = 0;
+    if (!mvPaletteCurrent || !mvPaletteTarget) return;
+    let done = true;
+    ['accent', 'secondary', 'dark'].forEach(function(key){
+      for (let i = 0; i < 3; i++){
+        const d = mvPaletteTarget[key][i] - mvPaletteCurrent[key][i];
+        mvPaletteCurrent[key][i] += d * .12;
+        if (Math.abs(d) > .5) done = false;
+      }
+    });
+    applyMiniPalette(mvPaletteCurrent);
+    if (!done) mvPaletteRaf = requestAnimationFrame(miniPaletteFrame);
+    else { mvPaletteCurrent = paletteArray({ accent: mvPaletteTarget.accent.join(','), secondary: mvPaletteTarget.secondary.join(','), dark: mvPaletteTarget.dark.join(',') }); mvPaletteTarget = null; }
+  }
+  function animateMiniPalette(p){
+    const next = paletteArray(p);
+    if (!mvPaletteCurrent){
+      mvPaletteCurrent = next;
+      applyMiniPalette(next);
+      return;
+    }
+    mvPaletteTarget = next;
+    if (!mvPaletteRaf) mvPaletteRaf = requestAnimationFrame(miniPaletteFrame);
+  }
+  function setMiniPalette(src){
+    if (!mv.root || !src || src === mvPaletteSrc) return;
+    mvPaletteSrc = src;
+    const cached = mvPaletteCache.get(src);
+    if (cached){ animateMiniPalette(cached); return; }
+    const img = new Image();
+    img.onload = function(){
+      if (src !== mvPaletteSrc) return;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32; canvas.height = 32;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, 32, 32);
+        const data = ctx.getImageData(0, 0, 32, 32).data;
+        let sr = 0, sg = 0, sb = 0, count = 0, vivid = null, vividScore = -1;
+        for (let i = 0; i < data.length; i += 16){
+          const a = data[i + 3];
+          if (a < 180) continue;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          sr += r; sg += g; sb += b; count++;
+          const hi = Math.max(r, g, b), lo = Math.min(r, g, b), light = (hi + lo) / 510;
+          const saturation = (hi - lo) / Math.max(hi, 1);
+          const score = saturation * (0.45 + 0.55 * (1 - Math.abs(light - .52)));
+          if (score > vividScore){ vividScore = score; vivid = { r: r, g: g, b: b }; }
+        }
+        if (!count) return;
+        const avg = { r: Math.round(sr / count), g: Math.round(sg / count), b: Math.round(sb / count) };
+        const accent = vivid || avg;
+        const secondary = {
+          r: Math.round(avg.r * .62 + accent.r * .38),
+          g: Math.round(avg.g * .62 + accent.g * .38),
+          b: Math.round(avg.b * .62 + accent.b * .38)
+        };
+        const palette = {
+          accent: accent.r + ',' + accent.g + ',' + accent.b,
+          secondary: secondary.r + ',' + secondary.g + ',' + secondary.b,
+          dark: Math.round(avg.r * .16) + ',' + Math.round(avg.g * .16) + ',' + Math.round(avg.b * .16)
+        };
+        mvPaletteCache.set(src, palette);
+        animateMiniPalette(palette);
+      } catch (e){}
+    };
+    img.onerror = function(){};
+    img.src = src;
+  }
+  function updateMiniModeButtons(){
+    if (!mv.shuffle || !mv.repeat) return;
+    mv.shuffle.innerHTML = ICON_SHUFFLE;
+    mv.repeat.innerHTML = repeatMode === 2 ? ICON_REPEAT_ONE : ICON_REPEAT;
+    const shuffleTitle = t(shuffleOn ? 'Losowe odtwarzanie: włączone (S)' : 'Losowe odtwarzanie: wyłączone (S)');
+    const repeatTitles = ['Powtarzanie: wyłączone (R)', 'Powtarzanie: cały album (R)', 'Powtarzanie: jeden utwór (R)'].map(t);
+    mv.shuffle.classList.toggle('on', shuffleOn);
+    mv.repeat.classList.toggle('on', repeatMode > 0);
+    mv.shuffle.title = shuffleTitle;
+    mv.shuffle.setAttribute('aria-pressed', String(shuffleOn));
+    mv.repeat.title = repeatTitles[repeatMode];
+    mv.repeat.setAttribute('aria-pressed', String(repeatMode > 0));
+  }
+  function updateMiniFavorite(){
+    if (!mv.fav) return;
+    const liked = !!(tracks[currentIndex] && tracks[currentIndex].fav);
+    mv.fav.classList.toggle('on', liked);
+    if (mv.favIcon) mv.favIcon.textContent = liked ? '♥' : '♡';
+    mv.fav.title = t('Ulubione');
+    mv.fav.setAttribute('aria-pressed', String(liked));
+  }
+  function updateMiniMuteButton(){
+    if (!mv.mute) return;
+    const muted = !!audio.muted || audio.volume === 0;
+    const icon = muted ? ICON_VOL_MUTE : (audio.volume < .5 ? ICON_VOL_LOW : ICON_VOL_HIGH);
+    mv.mute.innerHTML = icon;
+    mv.mute.title = t(muted ? 'Wycisz/Odwieś' : 'Wycisz');
+    mv.mute.setAttribute('aria-label', mv.mute.title);
+  }
+  let mvPulseTimer = 0;
+  function miniPulse(){
+    if (!mv.visual) return;
+    clearTimeout(mvPulseTimer);
+    mv.visual.classList.remove('is-click');
+    void mv.visual.offsetWidth;
+    mv.visual.classList.add('is-click');
+    mvPulseTimer = setTimeout(function(){ mv.visual.classList.remove('is-click'); }, 360);
+  }
+  let mvVizRaf = 0, mvVizLevels = [], mvVizPeaks = [], mvVizFlash = 0;
+  function miniVisualizerFrame(){
+    if (!miniActive() || !mv.viz){ mvVizRaf = 0; return; }
+    const canvas = mv.viz;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const width = Math.max(2, Math.round(rect.width * dpr));
+    const height = Math.max(2, Math.round(rect.height * dpr));
+    if (canvas.width !== width || canvas.height !== height){ canvas.width = width; canvas.height = height; }
+    const ctx = canvas.getContext('2d');
+    const now = performance.now();
+    const playing = !audio.paused;
+    ctx.clearRect(0, 0, width, height);
+    let accent = 'rgb(174,117,255)', secondary = 'rgb(39,171,232)';
+    try {
+      const css = getComputedStyle(mv.root);
+      const toRgb = function(name, fallback){
+        const a = css.getPropertyValue(name).trim().split(',').map(Number);
+        return a.length === 3 && a.every(Number.isFinite) ? 'rgb(' + a.join(',') + ')' : fallback;
+      };
+      accent = toRgb('--mv-accent-rgb', accent);
+      secondary = toRgb('--mv-accent-2-rgb', secondary);
+    } catch(e){}
+    if (analyser && freqData && playing) analyser.getByteFrequencyData(freqData);
+    const bars = Math.max(18, Math.min(42, Math.floor(width / (dpr * 13))));
+    if (mvVizLevels.length !== bars){ mvVizLevels = new Array(bars).fill(0); mvVizPeaks = new Array(bars).fill(0); }
+    const gap = Math.max(2, width / (bars * 7));
+    const barWidth = Math.max(2, (width - gap * (bars - 1)) / bars);
+    const baseY = height - 15 * dpr;
+    const gradient = ctx.createLinearGradient(0, baseY, 0, 0);
+    gradient.addColorStop(0, secondary);
+    gradient.addColorStop(1, accent);
+    let bass = 0;
+    if (freqData && playing){
+      const bassBins = Math.min(8, freqData.length);
+      for (let i = 1; i < bassBins; i++) bass += freqData[i] || 0;
+      bass /= Math.max(1, bassBins - 1) * 255;
+    }
+    mvVizFlash = Math.max(mvVizFlash * .86, playing ? Math.max(0, (bass - .34) * 1.65) : 0);
+    if (mv.visual){
+      mv.visual.classList.toggle('is-paused', !playing);
+      if (mvVizFlash > .52) mv.visual.classList.add('is-beat');
+      else mv.visual.classList.remove('is-beat');
+    }
+    if (mvVizFlash > .01){
+      const glow = ctx.createRadialGradient(width * .5, height * .56, 0, width * .5, height * .56, width * .72);
+      glow.addColorStop(0, accent.replace('rgb(', 'rgba(').replace(')', ',.8)'));
+      glow.addColorStop(1, accent.replace('rgb(', 'rgba(').replace(')', ',0)'));
+      ctx.globalAlpha = Math.min(.32, mvVizFlash * .3);
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.fillStyle = gradient;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 9 * dpr;
+    for (let i = 0; i < bars; i++){
+      const bin = Math.min((freqData ? freqData.length : 64) - 1, Math.floor((i / bars) * (freqData ? freqData.length * .86 : 48)) + 1);
+      const raw = freqData && playing ? (freqData[bin] || 0) / 255 : .055 + .025 * Math.sin(now / 530 + i * .8);
+      const target = Math.max(.025, Math.min(1, raw * .92 + (playing ? .05 : 0)));
+      const smooth = playing ? .18 : .06;
+      mvVizLevels[i] += (target - mvVizLevels[i]) * smooth;
+      mvVizPeaks[i] = Math.max(mvVizLevels[i], mvVizPeaks[i] - (playing ? .008 : .025));
+      const level = mvVizLevels[i];
+      const bh = Math.max(2 * dpr, height * level * .72);
+      const x = i * (barWidth + gap);
+      const y = baseY - bh;
+      ctx.globalAlpha = .38 + level * .62;
+      ctx.fillRect(x, y, barWidth, bh);
+      // Delikatne odbicie pod osią słupków.
+      ctx.globalAlpha = .1 + level * .12;
+      ctx.fillRect(x, baseY + 4 * dpr, barWidth, Math.max(1, bh * .23));
+      // Peak holder pozostaje chwilę nad najwyższym poziomem.
+      ctx.globalAlpha = .65;
+      ctx.fillRect(x, baseY - Math.max(2 * dpr, height * mvVizPeaks[i] * .72) - 4 * dpr, barWidth, Math.max(1, dpr));
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = .38;
+    ctx.fillStyle = secondary;
+    ctx.fillRect(0, baseY + 2 * dpr, width, Math.max(1, dpr));
+    ctx.globalAlpha = 1;
+    mvVizRaf = requestAnimationFrame(miniVisualizerFrame);
+  }
+  function startMiniVisualizer(){
+    if (!mvVizRaf && mv.viz) mvVizRaf = requestAnimationFrame(miniVisualizerFrame);
+  }
   function miniSync(force){
     if (!mv.title || !miniActive()) return;
+    startMiniVisualizer();
     const now = performance.now();
     if (!force && now - mvLastSync < 250) return;
     mvLastSync = now;
     const tr = tracks[currentIndex];
     const title = tr ? (tr.title || '') : t('Wybierz utwór');
     const artist = tr ? txArtist(tr.artist || '') : '—';
+    if (mv.label) mv.label.textContent = String(t('aktualnie odtwarzany')).toUpperCase();
     if (mv.title.textContent !== title){ mv.title.textContent = title; mv.title.title = title; }
     if (mv.artist.textContent !== artist){ mv.artist.textContent = artist; mv.artist.title = artist; }
     const cu = (tr && coverUrlOf(tr)) || DEFAULT_COVER;
-    if (mv.cover.dataset.src !== cu){ mv.cover.dataset.src = cu; mv.cover.src = cu; }
+    if (mv.cover.dataset.src !== cu){
+      mv.cover.classList.remove('is-changing');
+      void mv.cover.offsetWidth;
+      mv.cover.classList.add('is-changing');
+      mv.cover.dataset.src = cu;
+      mv.cover.src = cu;
+      setTimeout(function(){ mv.cover.classList.remove('is-changing'); }, 80);
+    }
+    mv.cover.classList.toggle('is-playing', !audio.paused);
+    setMiniPalette(cu);
     const ico = audio.paused ? MV_ICON_PLAY : MV_ICON_PAUSE;
     if (mv.play.dataset.ico !== (audio.paused ? 'p' : 'z')){ mv.play.dataset.ico = audio.paused ? 'p' : 'z'; mv.play.innerHTML = ico; }
     const d = audio.duration || 0;
@@ -7914,6 +8297,9 @@
     mv.dur.textContent = formatTime(d || 0);
     const host = desktopHost();
     mv.pin.classList.toggle('on', !!(host && host.isOnTop && host.isOnTop()));
+    updateMiniModeButtons();
+    updateMiniFavorite();
+    updateMiniMuteButton();
   }
   if (mv.title){
     mv.seek.addEventListener('input', function(){
@@ -7929,12 +8315,25 @@
     mv.play.addEventListener('click', function(){ togglePlay(); });
     mv.prev.addEventListener('click', function(){ prevTrack(); });
     mv.next.addEventListener('click', function(){ nextTrack(false); });
+    mv.shuffle.addEventListener('click', function(){ toggleShuffle(); updateMiniModeButtons(); });
+    mv.repeat.addEventListener('click', function(){ cycleRepeat(); updateMiniModeButtons(); });
+    mv.fav.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (tracks[currentIndex]) toggleFav(tracks[currentIndex].id);
+      updateMiniFavorite();
+      miniPulse();
+    });
+    mv.mute.addEventListener('click', function(){ muteBtn.click(); miniPulse(); });
+    [mv.shuffle, mv.prev, mv.play, mv.next, mv.repeat, mv.mute].forEach(function(btn){ btn.addEventListener('click', miniPulse); });
+    updateMiniModeButtons();
+    updateMiniFavorite();
+    updateMiniMuteButton();
     const toFull = function(){ const h = desktopHost(); if (h && h.setMini) h.setMini(false); };
     mv.expand.addEventListener('click', toFull);
     mv.cover.addEventListener('dblclick', toFull);
     mv.cover.addEventListener('click', function(){ togglePlay(); });
     mv.pin.addEventListener('click', function(){ const h = desktopHost(); if (h && h.toggleOnTop) h.toggleOnTop(); setTimeout(function(){ miniSync(true); }, 60); });
-    ['play', 'pause', 'timeupdate', 'loadedmetadata', 'durationchange', 'ended', 'seeked'].forEach(function(ev){
+    ['play', 'pause', 'timeupdate', 'loadedmetadata', 'durationchange', 'ended', 'seeked', 'volumechange'].forEach(function(ev){
       audio.addEventListener(ev, function(){ miniSync(ev !== 'timeupdate'); });
     });
     document.addEventListener('pulsar:state', function(){ miniSync(true); });
