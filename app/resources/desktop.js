@@ -218,12 +218,12 @@
       try { await Neutralino.filesystem.createDirectory(dir); } catch (e){} // istniejący folder też rzuca — ignorujemy
       try {
         const st = await Neutralino.filesystem.getStats(dir);
-        if (!st) throw new Error('folder niedostępny po utworzeniu');
+        if (!st) throw new Error(dTr('folder niedostępny po utworzeniu'));
         return jsonResponse({ ok: true, dir: dir });
-      } catch (e){ return jsonResponse({ ok: false, error: 'Nie mogę utworzyć folderu „' + dir + '": ' + String((e && e.message) || e) }, 400); }
+      } catch (e){ return jsonResponse({ ok: false, error: dTr('Nie mogę utworzyć folderu „') + dir + dTr('": ') + String((e && e.message) || e) }, 400); }
     }
     if (!(await hasYtDlp())){
-      return jsonResponse({ ok: false, error: 'yt-dlp.exe nie znaleziony obok aplikacji' }, 503);
+      return jsonResponse({ ok: false, error: dTr('yt-dlp.exe nie znaleziony obok aplikacji') }, 503);
     }
     if (p === '/search'){
       const term = x.searchParams.get('q') || '';
@@ -240,7 +240,7 @@
     if (p === '/playlist'){
       const raw = (x.searchParams.get('u') || '').trim();
       const m = raw.match(/[?&]list=([\w-]{12,})/) || raw.match(/^([\w-]{12,})$/);
-      if (!m) return jsonResponse({ ok: true, title: 'Playlista', items: [], error: 'To nie jest link playlisty YouTube (brak list=…)' });
+      if (!m) return jsonResponse({ ok: true, title: dTr('Playlista'), items: [], error: dTr('To nie jest link playlisty YouTube (brak list=…)') });
       const listId = m[1];
       const isMix = /^(RD|UL)/.test(listId); // RD… = radio/mix, UL… = My Mix — yt-dlp tego nie pobierze
       const PL_URL = q('https://www.youtube.com/playlist?list=' + listId);
@@ -252,15 +252,15 @@
       const items = (res.out && res.out.entries ? res.out.entries : []).map(mapEntry).filter(Boolean);
       let error = '';
       if (!items.length){
-        if (isMix) error = 'To mix/radio YouTube (RD…/UL…) — yt-dlp nie potrafi pobrać takiej listy. Dodaj utwory pojedynczo albo wklej link zwykłej playlisty.';
+        if (isMix) error = dTr('To mix/radio YouTube (RD…/UL…) — yt-dlp nie potrafi pobrać takiej listy. Dodaj utwory pojedynczo albo wklej link zwykłej playlisty.');
         else {
           const last = (res.stderr || '').split('\n').filter(function (l){ return l.trim(); }).pop() || '';
           error = last.slice(0, 300)
-            || (res.exitCode ? 'yt-dlp zakończył pracę z kodem błędu ' + res.exitCode + ' (bez szczegółów)' : '')
-            || 'yt-dlp nie zwrócił żadnych pozycji playlisty';
+            || (res.exitCode ? dTr('yt-dlp zakończył pracę z kodem błędu ') + res.exitCode + dTr(' (bez szczegółów)') : '')
+            || dTr('yt-dlp nie zwrócił żadnych pozycji playlisty');
         }
       }
-      return jsonResponse({ ok: true, title: (res.out && res.out.title) || 'Playlista', items: items, error: error });
+      return jsonResponse({ ok: true, title: (res.out && res.out.title) || dTr('Playlista'), items: items, error: error });
     }
     if (p === '/audio' || p === '/mp3'){
       const id = x.searchParams.get('id') || '';
@@ -275,13 +275,13 @@
     if (p === '/mp3save'){
       const id = x.searchParams.get('id') || '';
       let dir = (x.searchParams.get('dir') || '').trim();
-      if (!dir) return jsonResponse({ ok: false, error: 'Nie ustawiono folderu na dysku' }, 400);
+      if (!dir) return jsonResponse({ ok: false, error: dTr('Nie ustawiono folderu na dysku') }, 400);
       dir = cleanWinPath(dir);
       try { await Neutralino.filesystem.createDirectory(dir); } catch (e){}
       try {
         const st = await Neutralino.filesystem.getStats(dir);
-        if (!st) throw new Error('folder niedostępny');
-      } catch (e){ return jsonResponse({ ok: false, error: 'Nie mogę utworzyć folderu „' + dir + '": ' + String((e && e.message) || e) }, 400); }
+        if (!st) throw new Error(dTr('folder niedostępny'));
+      } catch (e){ return jsonResponse({ ok: false, error: dTr('Nie mogę utworzyć folderu „') + dir + dTr('": ') + String((e && e.message) || e) }, 400); }
       let meta = null;
       try { meta = await ytdlpJson('--dump-single-json --no-playlist ' + q('https://www.youtube.com/watch?v=' + id)); } catch (e){}
       try {
@@ -305,7 +305,7 @@
         try { await Neutralino.filesystem.remove(dl.path); } catch (e){}
         return jsonResponse({ ok: true, dir: dir, file: nice + '.' + dl.ext, path: dest });
       } catch (e){
-        return jsonResponse({ ok: false, error: 'Zapis na dysk nie powiódł się: ' + (e && e.message || e) }, 502);
+        return jsonResponse({ ok: false, error: dTr('Zapis na dysk nie powiódł się: ') + (e && e.message || e) }, 502);
       }
     }
     return new Response('desktop bridge: unknown endpoint', { status: 404 });
@@ -791,7 +791,7 @@
    */
   (function windowsIntegration(){
     const TRAY_ICON = '/resources/icons/trayIcon.png';
-    const MINI = { width: 480, height: 190, minWidth: 320, minHeight: 130 };
+    const MINI = { width: 480, height: 440, minWidth: 360, minHeight: 300 };
     const NORMAL = { width: 1280, height: 840, minWidth: 760, minHeight: 560 };
     const K = {
       onTop: 'pulsarOnTop', miniOnTop: 'pulsarMiniOnTop', closeToTray: 'pulsarCloseToTray', notify: 'pulsarNotify',
@@ -1077,7 +1077,7 @@
           mini = true; setB(K.mini, true);
           document.documentElement.classList.add('nl-mini');
           const mg = getJ(K.miniGeo) || {};
-          await safe(function (){ return W.setSize({ width: mg.width || MINI.width, height: mg.height || MINI.height, minWidth: MINI.minWidth, minHeight: MINI.minHeight }); });
+          await safe(function (){ return W.setSize({ width: Math.max(MINI.minWidth, mg.width || MINI.width), height: Math.max(MINI.minHeight, mg.height || MINI.height), minWidth: MINI.minWidth, minHeight: MINI.minHeight }); });
           if (mg.x != null && mg.y != null) await safe(function (){ return W.move(mg.x, mg.y); });
         } else {
           const g = await readGeo();
@@ -1436,6 +1436,7 @@
       const menu = document.getElementById('settingsMenu'); if (menu) menu.hidden = true;
       h.modal({
         title: tr('Pulsar w OBS'),
+        variant: 'settings-like obs-settings-modal',
         buildBody: function (body){
           const box = el('div', 'obs-help');
           const st = el('div', 'obs-status');
@@ -1586,7 +1587,7 @@
       det.addEventListener('toggle', function (){ try { sessionStorage.setItem('pulsarObsMore', det.open ? '1' : '0'); } catch (e){} });
       wrap.appendChild(det);
       const pv = el('div', 'obs-preview');
-      const fr = el('iframe'); fr.src = '/obs/overlay.html?preview=1'; fr.setAttribute('tabindex', '-1'); fr.title = tr('Podgląd');
+      const fr = el('iframe'); fr.src = '/obs/overlay.html?preview=1&lang=' + encodeURIComponent((host() && host().lang) ? host().lang() : 'pl'); fr.setAttribute('tabindex', '-1'); fr.title = tr('Podgląd');
       fr.addEventListener('load', function (){ previewFrame = fr; sendPreview(); });
       pv.appendChild(fr); wrap.appendChild(pv);
       const fit = function (){ const w = pv.clientWidth; if (w) pv.style.setProperty('--k', String(w / 800)); };
