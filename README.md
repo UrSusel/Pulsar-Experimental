@@ -52,6 +52,17 @@ How it works: an AudioWorklet taps the final mix and a Web Worker streams it as 
 
 Single-file web app (vanilla JS + WebGL shaders) wrapped with [Neutralino.js](https://neutralino.js.org) (WebView2) — ~20 MB, no Electron, no Node.js required at runtime. Downloads powered by the bundled [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
+## 🐧 Linux port
+
+A separate Linux port lives in [`linux/`](linux/). It uses the same player UI and audio engine with a POSIX/Neutralino desktop bridge instead of PowerShell and WinForms. Build a portable x86_64 bundle with:
+
+```bash
+chmod +x linux/build.sh
+./linux/build.sh
+```
+
+The result is created in `linux/dist/`. See [`linux/README.md`](linux/README.md) for WebKitGTK dependencies, `yt-dlp`/`ffmpeg`, OBS limitations and manual build options.
+
 ## 🧩 Source code & building
 
 The app source lives in [`app/`](app/) (recovered 1:1 from `resources.neu`, SHA-256 verified):
