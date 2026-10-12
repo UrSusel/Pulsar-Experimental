@@ -1,0 +1,52 @@
+name: Complete Pulsar-Linux bundle
+# One-off helper: GitHub-hosted runners can reach release assets, so it drops
+# the Neutralino Linux runtime (and the standalone yt-dlp, if available) into
+# Pulsar-Linux/ and pushes them back to this branch.
+on:
+  push:
+    paths:
+      - 'Pulsar-Linux/**'
+      - '.github/workflows/pulsar-linux-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  add-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch Neutralino runtime (Linux x64)
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 4 --retry-delay 3 -o /tmp/neutralino.zip \
+            https://github.com/neutralinojs/neutralinojs/releases/download/v6.9.0/neutralinojs-v6.9.0.zip
+          unzip -o /tmp/neutralino.zip -d /tmp/neutralino "neutralino-linux_x64" "neutralino.js.neu"
+          install -m 0755 /tmp/neutralino/neutralino-linux_x64 Pulsar-Linux/pulsar
+          ls -l Pulsar-Linux/pulsar
+
+      - name: Prefer standalone yt-dlp when available
+        run: |
+          set -euo pipefail
+          for a in yt-dlp_Linux_x86_64 yt-dlp_Linux; do
+            url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/$a"
+            if curl -fsSL --retry 2 -o /tmp/yt-dlp "$url"; then
+              head -c 2 /tmp/yt-dlp | grep -q 'ELF' && { install -m 0755 /tmp/yt-dlp Pulsar-Linux/yt-dlp; echo "replaced with $a"; exit 0; }
+            fi
+          done
+          echo "keeping bundled python zipapp yt-dlp"
+
+      - name: Commit binaries back to the branch
+        run: |
+          set -euo pipefail
+          git config user.name "pulsar-ci"
+          git config user.email "pulsar-ci@users.noreply.github.com"
+          git add -f Pulsar-Linux/pulsar Pulsar-Linux/yt-dlp
+          if git diff --cached --quiet; then
+            echo "no changes to commit"
+          else
+            git commit -m "Add Linux runtime and yt-dlp binary"
+            git push
+          fi
