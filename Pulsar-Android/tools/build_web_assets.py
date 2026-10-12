@@ -94,6 +94,32 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
             raise ValueError(f"expected exactly one source fragment: {old.strip()}")
         html = html.replace(old, new, 1)
 
+    # Android owns a native MediaSession in the playback service. Suppress the
+    # browser MediaSession hooks in this generated copy to avoid competing
+    # system sessions and duplicate transport actions.
+    media_session_replacements = [
+        (
+            "    if (!('mediaSession' in navigator)) return;",
+            "    if (window.__pulsarAndroid || !('mediaSession' in navigator)) return;",
+        ),
+        (
+            "if ('mediaSession' in navigator) try{ navigator.mediaSession.playbackState = 'playing'; } catch(e){}",
+            "if (!window.__pulsarAndroid && 'mediaSession' in navigator) try{ navigator.mediaSession.playbackState = 'playing'; } catch(e){}",
+        ),
+        (
+            "if ('mediaSession' in navigator) try{ navigator.mediaSession.playbackState = 'paused'; } catch(e){}",
+            "if (!window.__pulsarAndroid && 'mediaSession' in navigator) try{ navigator.mediaSession.playbackState = 'paused'; } catch(e){}",
+        ),
+        (
+            "  if ('mediaSession' in navigator){\n    try{\n      navigator.mediaSession.setActionHandler('play', () => audio.play().catch(() => {}));",
+            "  if (!window.__pulsarAndroid && 'mediaSession' in navigator){\n    try{\n      navigator.mediaSession.setActionHandler('play', () => audio.play().catch(() => {}));",
+        ),
+    ]
+    for old, new in media_session_replacements:
+        if html.count(old) != 1:
+            raise ValueError(f"expected exactly one MediaSession source fragment: {old[:100]!r}")
+        html = html.replace(old, new, 1)
+
     input_pattern = re.compile(r'<input type="file" id="folderInput"[^>]*>')
     html, count = input_pattern.subn(
         '<input type="file" id="folderInput" accept="audio/*" multiple hidden>', html, count=1
