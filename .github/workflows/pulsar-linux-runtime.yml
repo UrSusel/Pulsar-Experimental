@@ -23,7 +23,8 @@ jobs:
           set -euo pipefail
           curl -fsSL --retry 4 --retry-delay 3 -o /tmp/neutralino.zip \
             https://github.com/neutralinojs/neutralinojs/releases/download/v6.9.0/neutralinojs-v6.9.0.zip
-          unzip -o /tmp/neutralino.zip -d /tmp/neutralino "neutralino-linux_x64" "neutralino.js.neu"
+          unzip -o /tmp/neutralino.zip -d /tmp/neutralino
+          test -f /tmp/neutralino/neutralino-linux_x64
           install -m 0755 /tmp/neutralino/neutralino-linux_x64 Pulsar-Linux/pulsar
           ls -l Pulsar-Linux/pulsar
 
@@ -48,5 +49,5 @@ jobs:
             echo "no changes to commit"
           else
             git commit -m "Add Linux runtime and yt-dlp binary"
-            git push
+            git push origin "HEAD:${{ github.ref_name }}"
           fi
