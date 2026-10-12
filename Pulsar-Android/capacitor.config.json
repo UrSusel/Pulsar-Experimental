@@ -1,0 +1,8 @@
+{
+  "appId": "pl.ursusel.pulsar.android",
+  "appName": "Pulsar",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}
