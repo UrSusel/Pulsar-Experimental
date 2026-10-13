@@ -163,7 +163,7 @@ which keeps one copy of the engine on the page.
 ## Checks
 
 ```bash
-node Pulsar-Sync/tools/test_drive_sync.js          # 176 checks: engine, panel, plugins, desktop adapter
+node Pulsar-Sync/tools/test_drive_sync.js          # 203 checks: engine, panel, plugins, desktop adapter
 python Pulsar-Sync/tools/test_desktop_bundle.py    # 36 checks on the two packed archives
 python Pulsar-Sync/tools/refresh_download_zips.py --check
 node Pulsar-Android/tools/test_background_watchdog.js

@@ -103,9 +103,23 @@
       autoDesc: 'Nowy utwór z YouTube z drugiego urządzenia ściąga się tu sam, po kilka na raz.',
       autoDescMetered: 'Ten sam mechanizm na telefonie jest domyślnie wyłączony, żeby nie zużywał danych z sieci komórkowej. Możesz go tu włączyć.',
       autoOn: 'Automatyczne pobieranie włączone.', autoOff: 'Automatyczne pobieranie wyłączone.',
+      autoStateOn: 'Automatyczne pobieranie: włączone', autoWaiting: ' · czeka na pobranie: ',
+      autoStateOff: 'Automatyczne pobieranie: wyłączone — włącz przełącznikiem wyżej',
+      autoLastOk: 'Ostatnio pobrane automatycznie: ', autoLastFail: 'Ostatnie pobieranie nie udało się: ',
+      refreshFiles: 'Odśwież listę plików',
+      refreshFilesHint: 'Sprawdź, które pliki biblioteki widzi teraz to urządzenie.',
+      filesSeen: 'Widzę pliki: ', filesNone: 'nie widzę w folderze żadnego pliku biblioteki',
+      onlyOwnFile: 'W folderze widzę na razie tylko własny plik — Dysk pokazuje pliki z drugiego urządzenia z opóźnieniem. Otwórz folder w aplikacji Dysk Google (to odświeży listę) i kliknij „Odśwież listę plików”.',
+      downloadAll: 'Pobierz wszystkie tutaj',
+      downloadAllHint: 'Te utwory są już w bibliotece na innym urządzeniu — możesz ściągnąć je tutaj po kolei, jednym kliknięciem.',
+      downloadNothing: 'Nie ma teraz czego pobierać z YouTube.',
       autoDownloading: 'Automatycznie pobieram: ',
       writeBackWarning: 'Uwaga: po zapisie nie widzę swoich danych w pliku — sprawdź, czy oba urządzenia wskazują ten sam folder w tej samej chmurze.',
       cloudRestored: 'Odtworzone z pamięci (odczyt nie pokazał wszystkiego): ',
+      keylessA: 'Biblioteka ma ', keylessB: ' utworów, a do chmury jedzie ',
+      keylessC: ' — reszta nie ma identyfikatora utworu. Dodaj je ponownie z zakładki Sieć, żeby dostały identyfikator YouTube i mogły jechać między urządzeniami.',
+      bridgeDown: 'Mostek do YouTube nie odpowiada — bez niego nic się nie ściągnie. Uruchom go w zakładce Sieć i spróbuj ponownie.',
+      bridgeCheck: 'Sprawdź mostek do YouTube w zakładce Sieć — bez niego utwory z internetu się nie ściągną.',
       nothingToSend: 'Biblioteka jest pusta, a w folderze nie ma jeszcze pliku — nie ma czego wysyłać.',
       removedElsewhere: 'Usunięte na innym urządzeniu: ',
       mirror: 'Trzymaj czytelną kopię na Dysku (folder Pulsar)',
@@ -172,10 +186,24 @@
       autoLab: 'Download YouTube tracks from another device automatically',
       autoDesc: 'A YouTube track added on the other device is fetched here on its own, a few at a time.',
       autoDescMetered: 'The same mechanism stays off by default on a phone so it does not use mobile data. You can switch it on here.',
-      autoOn: 'Automatic download switch on.', autoOff: 'Automatic download switch off.',
+      autoOn: 'Automatic download on.', autoOff: 'Automatic download off.',
+      autoStateOn: 'Automatic download: on', autoWaiting: ' · waiting: ',
+      autoStateOff: 'Automatic download: off — turn the switch above on',
+      autoLastOk: 'Last automatic download: ', autoLastFail: 'Last download failed: ',
+      refreshFiles: 'Refresh file list',
+      refreshFilesHint: 'Check which library files this device can see right now.',
+      filesSeen: 'Files I can see: ', filesNone: 'no library file visible in the folder',
+      onlyOwnFile: 'I can only see my own file in the folder — Drive shows files from another device with a delay. Open the folder in the Google Drive app (that refreshes the listing) and click “Refresh file list”.',
+      downloadAll: 'Download all here',
+      downloadAllHint: 'These tracks are already in the library on another device — you can fetch them all here, one after another, in a single click.',
+      downloadNothing: 'There is nothing to download from YouTube right now.',
       autoDownloading: 'Downloading automatically: ',
       writeBackWarning: 'Warning: after writing I cannot see my own data in the file — check that both devices point at the same folder in the same cloud.',
       cloudRestored: 'Restored from memory (the read did not show everything): ',
+      keylessA: 'The library holds ', keylessB: ' tracks and only ',
+      keylessC: ' travel to the cloud — the rest have no track identifier. Add them again from the Network tab so they get a YouTube id and can travel between devices.',
+      bridgeDown: 'The YouTube bridge is not responding — without it nothing downloads. Start it in the Network tab and try again.',
+      bridgeCheck: 'Check the YouTube bridge in the Network tab — without it nothing downloads from the web.',
       nothingToSend: 'The library is empty and there is no file in the folder yet — there is nothing to send.',
       removedElsewhere: 'Removed on another device: ',
       mirror: 'Keep a readable copy in Drive (Pulsar folder)',
@@ -839,7 +867,8 @@
   // Co mówi plik w chmurze: ile ma pozycji, kiedy i na jakim urządzeniu
   // powstała ostatnia zmiana. Bez tego „czy zsynchronizowało się?" jest zgadywaniem.
   var cloudMeta = { tracks: 0, albums: 0, updatedAt: 0, device: '', fromOther: false,
-    fileModifiedAt: 0, files: [], ownFile: '', ownFileAt: 0, devices: [], writeBack: '', restored: 0 };
+    fileModifiedAt: 0, files: [], ownFile: '', ownFileAt: 0, devices: [], writeBack: '', restored: 0,
+    seen: null, libraryTracks: 0, snapshotTracks: 0 };
   // Automatyczne pobieranie nowych utworów: na komputerze domyślnie włączone,
   // na telefonie wyłączone (dane komórkowe) — z przełącznikiem w panelu.
   var AUTO_MAX_PER_SYNC = 3;
@@ -850,12 +879,21 @@
   var autoBatchAt = 0;
   var autoBusy = false;
   var autoTried = {};
+  // Ostatnia próba pobrania (także automatyczna) — panel mówi, co się stało,
+  // zamiast milczeć, gdy utwór czeka i nic się nie dzieje.
+  var autoLast = null;
+  // Ostatnia odpowiedź mostka YouTube (desktop): po nieudanym pobieraniu pytamy
+  // go wprost, żeby panel powiedział „mostek nie odpowiada”, a nie „nie udało się”.
+  var downloadProbe = null;
+  var downloadProbeBusy = false;
   var cloudKnownKeys = [];
   var cloudAnnounced = false;
   var MAX_CLOUD_ROWS = 25;
   // Świeżo wgrany plik bywa przez chwilę niewidoczny (lista folderu w SAF na
   // Androidzie, klient Drive na komputerze) — drugi odczyt to łapie.
-  var READ_RETRY_MS = 1500;
+  var READ_RETRY_MS = 1500;      // pierwsza przerwa, zanim znów zapytamy folder
+  var READ_TRIES = 3;            // ile razy pytamy folder o listę plików
+  var EXPECT_FILE_MS = 7 * 24 * 60 * 60 * 1000;  // jak długo pamiętamy, że plik tu był
   var IMPORT_WAIT_MS = 120000;  // ile czekamy, aż import pojawi się w bibliotece
   var IMPORT_POLL_MS = 1500;
   var scheduledTimer = null;
@@ -904,6 +942,21 @@
   function hostSnapshot() {
     if (typeof window.__pulsarSyncSnapshot !== 'function') return null;
     try { return window.__pulsarSyncSnapshot(); } catch (error) { return null; }
+  }
+
+  /**
+   * Ile utworów ma biblioteka na tym urządzeniu. Gdy jest ich więcej niż wpisów
+   * w snapshocie, reszta nie ma identyfikatora, po którym urządzenia się
+   * kojarzą — i cicho nie jedzie do chmury. Panel musi to powiedzieć, bo inaczej
+   * wygląda to jak „telefon nie wysyła połowy biblioteki” bez powodu.
+   */
+  function libraryTrackCount() {
+    try {
+      var player = window.__player;
+      var info = player && typeof player.state === 'function' ? player.state() : null;
+      var count = Math.round(Number(info && info.tracks) || 0);
+      return count > 0 ? count : 0;
+    } catch (error) { return 0; }
   }
 
   function loadSettings() {
@@ -1148,23 +1201,66 @@
     return Promise.resolve([]);
   }
 
+  /** Pliki, które powinny być w folderze: te, które już w nim widzieliśmy. */
+  function expectedFileNames() {
+    var out = [];
+    var seen = cloudMeta.seen || {};
+    var oldest = nowMs() - EXPECT_FILE_MS;
+    Object.keys(seen).forEach(function (name) {
+      if (name && Number(seen[name] || 0) > oldest) out.push(name);
+    });
+    // Własnego pliku tu nie ma: gdy nie widać zapisu tego urządzenia, panel
+    // powie o tym osobną linią, a ponawianie odczytu niczego by nie dało.
+    return out;
+  }
+
+  /** Zapamiętuje, co leży w folderze; zapomina to, czego dawno tam nie ma. */
+  function rememberCloudFiles(files) {
+    if (!cloudMeta.seen) cloudMeta.seen = {};
+    var now = nowMs();
+    (files || []).forEach(function (file) {
+      if (file && file.name) cloudMeta.seen[file.name] = now;
+    });
+    var oldest = now - EXPECT_FILE_MS;
+    Object.keys(cloudMeta.seen).forEach(function (name) {
+      if (Number(cloudMeta.seen[name] || 0) < oldest) delete cloudMeta.seen[name];
+    });
+  }
+
+  function missingCloudFiles(files) {
+    var have = {};
+    (files || []).forEach(function (file) { if (file && file.name) have[file.name] = true; });
+    return expectedFileNames().filter(function (name) { return !have[name]; });
+  }
+
   /**
-   * Odczyt z jedną ponowną próbą: świeżo wgrany plik bywa przez chwilę
-   * niewidoczny (SAF na Androidzie, klient Drive na komputerze). Gdy drugi
-   * odczyt też nic nie widzi, obraz chmury uzupełni pamięć.
+   * Odczyt z ponowieniem: świeżo wgrany plik bywa przez chwilę niewidoczny
+   * (SAF na Androidzie, klient Drive na komputerze). Ponawiamy nie tylko wtedy,
+   * gdy folder wygląda na pusty, ale i wtedy, gdy brakuje pliku, który już
+   * w nim widzieliśmy — inaczej jedno urządzenie „nie widzi” biblioteki
+   * drugiego, choć oba pliki leżą w tym samym folderze.
    */
   function readCloudFilesWithRetry(memoryManifest) {
-    return readCloudFiles().then(function (files) {
-      if (files.length || !cloudMemoryState(memoryManifest).fresh) return files;
+    var memoryFresh = cloudMemoryState(memoryManifest).fresh;
+    function suspicious(files) {
+      if (!files.length) return memoryFresh || expectedFileNames().length > 0;
+      return missingCloudFiles(files).length > 0;
+    }
+    function attempt(files, tries) {
+      if (!suspicious(files) || tries >= READ_TRIES - 1) return Promise.resolve(files);
       return new Promise(function (resolve) {
         setTimeout(function () {
           readCloudFiles().then(function (again) {
-            resolve(again.length ? again : files);
-          }, function () {
-            resolve(files);
-          });
-        }, Math.max(0, READ_RETRY_MS));
+            resolve(attempt(again.length ? again : files, tries + 1));
+          }, function () { resolve(files); });
+        }, Math.max(0, READ_RETRY_MS * (tries + 1)));
       });
+    }
+    return readCloudFiles().then(function (files) {
+      return attempt(files, 0);
+    }).then(function (files) {
+      rememberCloudFiles(files);
+      return files;
     });
   }
 
@@ -1217,6 +1313,8 @@
       .then(function (device) {
         var snapshot = hostSnapshot();
         if (!snapshot) throw new Error(T('missingLibrary'));
+        cloudMeta.libraryTracks = libraryTrackCount();
+        cloudMeta.snapshotTracks = (snapshot.tracks || []).length;
         return stateGet('manifest').then(function (stored) {
           var previous = stored && stored.value ? stored.value : null;
           return stateGet('localKeys').then(function (keysStored) {
@@ -1274,7 +1372,10 @@
                   return String((item && item.name) || (item && item.id) || '');
                 }).filter(Boolean),
                 writeBack: cloudMeta.writeBack,
-                restored: cloudMeta.restored
+                restored: cloudMeta.restored,
+                seen: cloudMeta.seen,
+                libraryTracks: cloudMeta.libraryTracks,
+                snapshotTracks: cloudMeta.snapshotTracks
               };
               statePut({ id: 'cloudMeta', value: cloudMeta }).catch(function () {});
             }
@@ -1527,6 +1628,10 @@
       '  <h3 class="sm-cap" data-cloud-text="cloudOnlyCap"></h3>' +
       '  <div class="sm-row"><div class="sm-txt"><span class="sm-desc" data-cloud-text="cloudOnlyHint"></span></div></div>' +
       '  <div data-cloud="cloudOnlyList"></div>' +
+      '  <div class="sm-row sm-hide" data-cloud-row="downloadAll">' +
+      '    <div class="sm-txt"><span class="sm-desc" data-cloud-text="downloadAllHint"></span></div>' +
+      '    <button type="button" class="sm-act" data-cloud="downloadAll"></button>' +
+      '  </div>' +
       '</div>' +
       '<div class="sm-card" data-cloud-section="folder">' +
       '  <h3 class="sm-cap" data-cloud-text="folderCap"></h3>' +
@@ -1538,6 +1643,10 @@
       '  <div class="sm-row">' +
       '    <div class="sm-txt"><span class="sm-desc" data-cloud-text="folderForgetHint"></span></div>' +
       '    <button type="button" class="sm-act" data-cloud="forget" data-cloud-text="forgetFolder"></button>' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-desc" data-cloud-text="refreshFilesHint"></span></div>' +
+      '    <button type="button" class="sm-act" data-cloud="refresh" data-cloud-text="refreshFiles"></button>' +
       '  </div>' +
       '</div>' +
       '<div class="sm-card" data-cloud-section="google">' +
@@ -1734,6 +1843,20 @@
       }).catch(function (error) { fail(message(error)); });
     });
 
+    var all = find('downloadAll');
+    if (all) all.addEventListener('click', function () {
+      all.disabled = true;
+      downloadAllCloudTracks().then(function () { all.disabled = false; })
+        .catch(function (error) { all.disabled = false; fail(message(error)); });
+    });
+
+    var refresh = find('refresh');
+    if (refresh) refresh.addEventListener('click', function () {
+      refresh.disabled = true;
+      refreshCloudFiles().then(function () { refresh.disabled = false; })
+        .catch(function (error) { refresh.disabled = false; fail(message(error)); });
+    });
+
     var sync = find('sync');
     if (sync) sync.addEventListener('click', function () {
       runSync({ force: true }).then(function (result) {
@@ -1803,16 +1926,30 @@
    * runtime (z netId, okładką i tagami), a potem biblioteka idzie do chmury —
    * dzięki temu znika z listy „tylko w chmurze" po obu stronach.
    */
+  /** Co się stało z ostatnim pobieraniem — dla panelu. */
+  function stampDownload(entry, ok, errorText) {
+    if (!ok && downloadIdOf(entry)) probeDownloader();
+    autoLast = {
+      key: String((entry && entry.key) || ''),
+      title: String((entry && entry.title) || (entry && entry.key) || ''),
+      ok: !!ok,
+      error: String(errorText || ''),
+      at: nowMs()
+    };
+    renderPanelStatus();
+    return ok;
+  }
+
   /** Importuje utwór z YouTube na tym urządzeniu. `quiet` = tryb automatyczny. */
   function importCloudTrack(entry, quiet) {
     var key = (entry && entry.key) || '';
     var id = downloadIdOf(entry);
-    if (!id) { fail(T('downloadFileOnly')); return Promise.resolve(false); }
+    if (!id) { fail(T('downloadFileOnly')); return Promise.resolve(stampDownload(entry, false, T('downloadFileOnly'))); }
     var net = netApi();
-    if (!net) { fail(T('downloadNoApi')); return Promise.resolve(false); }
+    if (!net) { fail(T('downloadNoApi')); return Promise.resolve(stampDownload(entry, false, T('downloadNoApi'))); }
     if (typeof net.enabled === 'function' && net.enabled() === false) {
       fail(T('downloadOff'));
-      return Promise.resolve(false);
+      return Promise.resolve(stampDownload(entry, false, T('downloadOff')));
     }
     note((quiet ? T('autoDownloading') : T('downloading')) + ((entry && entry.title) || ('YouTube ' + id)));
     return Promise.resolve().then(function () {
@@ -1829,12 +1966,104 @@
     }).then(function () {
       return waitForTrack(key, IMPORT_WAIT_MS);
     }).then(function (found) {
-      if (!found) { fail(T('downloadUnconfirmed')); return false; }
+      if (!found) { fail(T('downloadUnconfirmed')); return stampDownload(entry, false, T('downloadUnconfirmed')); }
       note(T('downloaded'));
-      return true;
+      return stampDownload(entry, true, '');
     }).catch(function (error) {
       fail(message(error));
-      return false;
+      return stampDownload(entry, false, message(error));
+    });
+  }
+
+  /**
+   * Czy pobieranie z YouTube ma z czym pracować. Na komputerze dźwięk ciągnie
+   * mostek (yt-dlp) — bez niego przycisk „Pobierz tutaj” i automat kończą się
+   * niczym, więc panel musi powiedzieć to wprost.
+   */
+  function downloaderHint() {
+    var net = netApi();
+    var yt = net && net.youtube;
+    if (!net || !yt || typeof yt.bridge !== 'function') return '';
+    var info = null;
+    try { info = yt.bridge() || {}; } catch (error) { return ''; }
+    var port = Number(info.port || 0) || 0;
+    if (downloadProbe) {
+      if (downloadProbe.ok) return '';
+      return T('bridgeDown') + (downloadProbe.port ? ' (' + downloadProbe.port + ')' : '');
+    }
+    if (info.ok) return '';
+    return T('bridgeCheck') + (port ? ' (' + port + ')' : '');
+  }
+
+  /** Pyta mostek, czy odpowiada — tylko po nieudanym pobieraniu, raz na 5 minut. */
+  function probeDownloader() {
+    var net = netApi();
+    var yt = net && net.youtube;
+    if (!yt || typeof yt.probeBridge !== 'function') return;
+    if (downloadProbeBusy || (downloadProbe && nowMs() - downloadProbe.at < 5 * 60 * 1000)) return;
+    downloadProbeBusy = true;
+    Promise.resolve().then(function () { return yt.probeBridge(); }).then(function (ok) {
+      downloadProbeBusy = false;
+      var info = {};
+      try { info = (typeof yt.bridge === 'function' && yt.bridge()) || {}; } catch (error) { info = {}; }
+      downloadProbe = { ok: !!ok, port: Number(info.port || 0) || 0, at: nowMs() };
+      renderPanelStatus();
+    }).catch(function () { downloadProbeBusy = false; });
+  }
+
+  /**
+   * Ile utworów z YouTube czeka na pobranie tutaj. */
+  function autoWaitingCount() {
+    return (cloudEntries || []).filter(function (entry) { return !!downloadIdOf(entry); }).length;
+  }
+
+  /**
+   * Ręczne „Pobierz wszystkie tutaj": pomija przełącznik automatu i okno
+   * ponowień — użytkownik kliknął, więc chce pobrania, a nie odczekania 6 h.
+   */
+  function downloadAllCloudTracks() {
+    var queue = (cloudEntries || []).filter(function (entry) { return !!downloadIdOf(entry); });
+    if (!queue.length) { fail(T('downloadNothing')); return Promise.resolve({ skipped: 'nothing' }); }
+    var done = 0;
+    var chain = Promise.resolve();
+    queue.slice(0, MAX_CLOUD_ROWS).forEach(function (entry) {
+      chain = chain.then(function () {
+        return importCloudTrack(entry, false).then(function (ok) { if (ok) done++; });
+      });
+    });
+    return chain.then(function () {
+      if (!done) return { skipped: 'not-imported' };
+      return runSync({ force: true });
+    });
+  }
+
+  /**
+   * Ręczne sprawdzenie folderu: pokazuje dokładnie, które pliki biblioteki
+   * widzi to urządzenie. Gdy Dysk pokazuje folder z opóźnieniem, to jedyny
+   * sposób, żeby odróżnić „nie ma pliku” od „jeszcze go nie widzę”.
+   */
+  function refreshCloudFiles() {
+    transport = transportFor(state.mode);
+    if (!transport || !transport.api) { fail(T('noTransport')); return Promise.resolve([]); }
+    var device = null;
+    return deviceInfo().then(function (info) {
+      device = info;
+      return readCloudFiles();
+    }).then(function (files) {
+      var own = ownFileName(device, files);
+      cloudMeta.files = cloudFilesInfo(files, unionCloudFiles(files), own);
+      cloudMeta.ownFile = own;
+      cloudMeta.seenAt = nowMs();
+      statePut({ id: 'cloudMeta', value: cloudMeta }).catch(function () {});
+      var names = files.map(function (file) { return file.name; }).join(', ');
+      var text = T('filesSeen') + (files.length ? files.length + ' — ' + names : T('filesNone'));
+      if (files.length === 1 && files[0].name === own) text += ' ' + T('onlyOwnFile');
+      note(text);
+      renderPanelStatus();
+      return files;
+    }).catch(function (error) {
+      fail(message(error));
+      return [];
     });
   }
 
@@ -1885,6 +2114,12 @@
     var entries = cloudEntries || [];
     card.classList.toggle('sm-hide', !entries.length);
     if (!entries.length) { list.innerHTML = ''; return; }
+
+    var downloadable = autoWaitingCount();
+    var allRow = pane.querySelector('[data-cloud-row="downloadAll"]');
+    var allButton = pane.querySelector('[data-cloud="downloadAll"]');
+    if (allRow) allRow.classList.toggle('sm-hide', !downloadable);
+    if (allButton) allButton.textContent = T('downloadAll') + ' (' + downloadable + ')';
 
     var shown = entries.slice(0, MAX_CLOUD_ROWS);
     var html = '';
@@ -1962,7 +2197,10 @@
             (breakdown ? ' (' + breakdown + ')' : ''));
         }
         if (cloudMeta.ownFile) {
+          var ownEntry = null;
+          (cloudMeta.files || []).forEach(function (file) { if (!ownEntry && file.own) ownEntry = file; });
           lines.push(T('ownFileLabel') + cloudMeta.ownFile +
+            (ownEntry ? ' · ' + ownEntry.tracks + ' ' + T('tracksWord') : '') +
             (cloudMeta.ownFileAt ? T('fileChanged') + new Date(cloudMeta.ownFileAt).toLocaleString() : ''));
         }
         if (cloudMeta.fromOther && cloudMeta.updatedAt) {
@@ -1974,8 +2212,33 @@
           lines.push(T('devicesInFile') + cloudMeta.devices.join(', '));
         }
         if (cloudMeta.restored) lines.push(T('cloudRestored') + cloudMeta.restored);
+        // Biblioteka większa niż to, co jedzie do chmury: utwory bez
+        // identyfikatora nie mają po czym się skojarzyć między urządzeniami.
+        if (cloudMeta.libraryTracks && cloudMeta.snapshotTracks &&
+            cloudMeta.libraryTracks > cloudMeta.snapshotTracks) {
+          lines.push(T('keylessA') + cloudMeta.libraryTracks + T('keylessB') + cloudMeta.snapshotTracks + T('keylessC'));
+        }
         if (cloudMeta.writeBack === 'missing') lines.push(T('writeBackWarning'));
+        // Widzę tylko własny plik: to najczęstsza przyczyna „drugie urządzenie
+        // mnie nie widzi”, a Dysk pokazuje cudze pliki z opóźnieniem.
+        if (cloudMeta.files && cloudMeta.files.length === 1 && cloudMeta.files[0].own && state.lastSyncAt) {
+          lines.push(T('onlyOwnFile'));
+        }
         if (counters.removed) lines.push(T('removedElsewhere') + counters.removed);
+      }
+      if (state.enabled) {
+        var waiting = autoWaitingCount();
+        lines.push(state.autoDownload
+          ? T('autoStateOn') + (waiting ? T('autoWaiting') + waiting : '')
+          : T('autoStateOff'));
+      }
+      if (autoLast) {
+        lines.push((autoLast.ok ? T('autoLastOk') : T('autoLastFail')) + (autoLast.title || autoLast.key) +
+          (autoLast.ok ? '' : ' — ' + (autoLast.error || '')));
+        if (!autoLast.ok) {
+          var hint = downloaderHint();
+          if (hint) lines.push(hint);
+        }
       }
       if (busy) lines.push(T('syncing'));
       if (state.lastError) lines.push(T('error') + state.lastError);
@@ -2067,6 +2330,9 @@
     state: function () { return state; },
     counters: function () { return counters; },
     download: downloadCloudTrack,
+    downloadAll: downloadAllCloudTracks,
+    refreshFiles: refreshCloudFiles,
+    autoLast: function () { return autoLast ? Object.assign({}, autoLast) : null; },
     autoDownload: autoDownloadFresh,
     cloudOnly: function () { return cloudEntries.slice(); },
     ownFile: function () { return cloudMeta.ownFile || ''; },

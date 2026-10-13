@@ -1593,6 +1593,237 @@ async function checkRuntimeHooks() {
       JSON.stringify(stale.restored));
   }
 
+  { // 52. plik drugiego urządzenia znika z listy folderu — ponawiamy odczyt
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:PHONEONLY01', title: 'Z telefonu', artist: 'Y' })] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({}), track({ netId: 'youtube:PCLOCAL0001', title: 'Z komputera', artist: 'Z' })] });
+    phone.api.setReadRetry(30);
+    const phonePane = phone.api.openPanel();
+
+    await phone.api.sync();   // telefon widzi w folderze oba pliki
+    const memory = await phone.api.cloudMemory();
+    check('the phone remembers the whole library it saw',
+      !!memory && memory.tracks === 3, JSON.stringify(memory));
+
+    // Drive przestaje pokazywać plik komputera — dokładnie to, co widział
+    // „android nie widzi biblioteki windowsa”.
+    const pcName = pc.api.ownFile();
+    const realDirectory = phone.sandbox.Neutralino.filesystem.readDirectory;
+    let reads = 0;
+    phone.sandbox.Neutralino.filesystem.readDirectory = async (target) => {
+      reads++;
+      const list = await realDirectory(target);
+      return list.filter((entry) => entry.entry !== pcName);
+    };
+    const outcome = await phone.api.sync();
+    check('the folder is asked again when a known file disappears',
+      reads >= 3, 'odczytów folderu: ' + reads);
+    check('the sync still ends without an error', !outcome.error, JSON.stringify(outcome));
+    check('and the library from that file stays in the cloud',
+      cloudUnion(shared).tracks.length === 3,
+      JSON.stringify(cloudUnion(shared).tracks.map((entry) => entry.key)));
+    phone.sandbox.Neutralino.filesystem.readDirectory = realDirectory;
+    await phone.api.sync();
+    check('when the file is visible again nothing is missing',
+      cloudUnion(shared).tracks.length === 3,
+      JSON.stringify(cloudUnion(shared).tracks.map((entry) => entry.key)));
+  }
+
+  { // 52b. Drive podaje starszą wersję własnego pliku — pamięć go uzupełnia
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:PHONEONLY01', title: 'Z telefonu', artist: 'Y' })] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({}), track({ netId: 'youtube:PCLOCAL0001', title: 'Z komputera', artist: 'Z' })] });
+    const phonePane = phone.api.openPanel();
+    await phone.api.sync();
+    check('the phone wrote the whole library to its own file',
+      cloudUnion(shared).tracks.length === 3,
+      JSON.stringify(cloudUnion(shared).tracks.map((entry) => entry.key)));
+
+    phone.api.setReadRetry(30);
+    // Kopia z chmury bez wpisu komputera i bez znacznika kasowania, a plik
+    // komputera jest w tej chwili niewidoczny dla telefonu.
+    const ownPath = '/home/user/Dysk Google/Pulsar/' + phone.api.ownFile();
+    const stale = JSON.parse(shared.files.get(ownPath));
+    stale.tracks = stale.tracks.filter((entry) => entry.key !== 'youtube:PCLOCAL0001');
+    shared.files.set(ownPath, JSON.stringify(stale));
+    const pcName = pc.api.ownFile();
+    const realDirectory = phone.sandbox.Neutralino.filesystem.readDirectory;
+    phone.sandbox.Neutralino.filesystem.readDirectory = async (target) => {
+      const list = await realDirectory(target);
+      return list.filter((entry) => entry.entry !== pcName);
+    };
+
+    await phone.api.sync();
+    phone.sandbox.Neutralino.filesystem.readDirectory = realDirectory;
+    check('an entry that vanished without a deletion mark comes back from memory',
+      (JSON.parse(shared.files.get(ownPath)).tracks || []).some((entry) => entry.key === 'youtube:PCLOCAL0001'),
+      JSON.stringify((JSON.parse(shared.files.get(ownPath)).tracks || []).map((entry) => entry.key)));
+    check('and the panel says where it came from',
+      /Odtworzone z pamięci/.test(phonePane.querySelector('[data-cloud="status"]').textContent),
+      phonePane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(-170));
+    check('the computer still finds its track in the cloud',
+      (JSON.parse(shared.files.get(ownPath)).removed || []).length === 0 &&
+      !(JSON.parse(shared.files.get(ownPath)).removed || []).some((entry) => entry.key === 'youtube:PCLOCAL0001'),
+      JSON.stringify(JSON.parse(shared.files.get(ownPath)).removed));
+  }
+
+  { // 53. nowy utwór z YouTube z drugiego urządzenia ściąga się sam
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({})] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({})] });
+    pc.api.setImportWait(400);
+    const pane = pc.api.openPanel();
+    const results = [{ provider: 'youtube', id: 'NEWSONG0001', ytId: 'NEWSONG0001', title: 'Nowy z telefonu', artist: 'Wykonawca' }];
+    const net = makeNet({
+      results,
+      onImport: function (index) {
+        const item = results[index] || {};
+        pc.library.state.tracks.push({ netId: 'youtube:' + item.id, title: item.title, artist: item.artist, durMs: 0, fav: false, plays: 0 });
+      },
+    });
+    pc.sandbox.window.__player = { __net: net };
+
+    phone.library.state.tracks.push(track({ netId: 'youtube:NEWSONG0001', title: 'Nowy z telefonu', artist: 'Wykonawca' }));
+    await phone.api.sync();
+    await pc.api.sync();
+    const status = pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ');
+    check('the panel counts what waits for an automatic download',
+      /Automatyczne pobieranie: włączone( · czeka na pobranie: 1)?/.test(status), status.slice(-150));
+
+    await wait(900);
+    check('the track from the other device downloads by itself',
+      pc.library.state.tracks.some((item) => item.netId === 'youtube:NEWSONG0001'),
+      JSON.stringify(net.calls));
+    check('the panel says what was downloaded automatically',
+      /Ostatnio pobrane automatycznie: Nowy z telefonu/.test(pane.querySelector('[data-cloud="status"]').textContent),
+      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(-160));
+    check('and it leaves the cloud-only list',
+      !pc.api.cloudOnly().some((entry) => entry.key === 'youtube:NEWSONG0001'),
+      JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+  }
+
+  { // 54. nieudane pobranie jest widoczne w panelu z powodem
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:GONEVIDEO01', title: 'Nie ma go', artist: 'X' })] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({})] });
+    pc.api.setImportWait(300);
+    const pane = pc.api.openPanel();
+    pc.sandbox.window.__player = { __net: makeNet({ results: [] }) };
+
+    await phone.api.sync();
+    await pc.api.sync();
+    await wait(800);
+    const status = pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ');
+    check('a failed automatic download is named with its reason',
+      /Ostatnie pobieranie nie udało się: Nie ma go — YouTube nie zwrócił/.test(status), status.slice(-170));
+    check('and the track waits for another try',
+      pc.api.cloudOnly().some((entry) => entry.key === 'youtube:GONEVIDEO01'),
+      JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+  }
+
+  { // 55. „Pobierz wszystkie tutaj" działa także przy wyłączonym automacie
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:MANUALSONG1', title: 'Ręczny', artist: 'R' })] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({})] });
+    pc.api.setImportWait(400);
+    const pane = pc.api.openPanel();
+    pane.querySelector('[data-cloud="auto"]').change(false);
+    await wait(20);
+    const results = [{ provider: 'youtube', id: 'MANUALSONG1', ytId: 'MANUALSONG1', title: 'Ręczny', artist: 'R' }];
+    const net = makeNet({
+      results,
+      onImport: function (index) {
+        const item = results[index] || {};
+        pc.library.state.tracks.push({ netId: 'youtube:' + item.id, title: item.title, artist: item.artist, durMs: 0, fav: false, plays: 0 });
+      },
+    });
+    pc.sandbox.window.__player = { __net: net };
+
+    await phone.api.sync();
+    await pc.api.sync();
+    await wait(700);
+    check('with the switch off nothing downloads by itself',
+      !pc.library.state.tracks.some((item) => item.netId === 'youtube:MANUALSONG1') && !net.calls.length,
+      JSON.stringify(net.calls));
+    check('and the panel says the automatic download is off',
+      /Automatyczne pobieranie: wyłączone/.test(pane.querySelector('[data-cloud="status"]').textContent),
+      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(-140));
+
+    const all = pane.querySelector('[data-cloud="downloadAll"]');
+    check('the button counts what is waiting', /Pobierz wszystkie tutaj \(1\)/.test(all.textContent), all.textContent);
+    all.click();
+    await wait(600);
+    check('one click downloads the waiting track',
+      pc.library.state.tracks.some((item) => item.netId === 'youtube:MANUALSONG1'), JSON.stringify(net.calls));
+    check('and the cloud-only list is empty afterwards',
+      pc.api.cloudOnly().length === 0, JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+  }
+
+  { // 56. „Odśwież listę plików" mówi, co to urządzenie naprawdę widzi
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({})] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({})] });
+    const pane = phone.api.openPanel();
+    await phone.api.sync();
+
+    const pcName = pc.api.ownFile();
+    const realDirectory = phone.sandbox.Neutralino.filesystem.readDirectory;
+    phone.sandbox.Neutralino.filesystem.readDirectory = async (target) => {
+      const list = await realDirectory(target);
+      return list.filter((entry) => entry.entry !== pcName);
+    };
+    pane.querySelector('[data-cloud="refresh"]').click();
+    await wait(120);
+    check('a refresh names the files this device can see',
+      phone.toasts.some((text) => /Widzę pliki: 1/.test(text)), JSON.stringify(phone.toasts.slice(-2)));
+    check('and warns when only its own file is visible',
+      /tylko własny plik/.test(pane.querySelector('[data-cloud="status"]').textContent),
+      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(-150));
+
+    phone.sandbox.Neutralino.filesystem.readDirectory = realDirectory;
+    pane.querySelector('[data-cloud="refresh"]').click();
+    await wait(120);
+    check('with both files visible the refresh lists two',
+      phone.toasts.some((text) => /Widzę pliki: 2/.test(text)), JSON.stringify(phone.toasts.slice(-1)));
+    check('and the warning goes away',
+      !/tylko własny plik/.test(pane.querySelector('[data-cloud="status"]').textContent),
+      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(-140));
+  }
+
+  { // 57. biblioteka większa niż to, co jedzie do chmury, jest nazwana w panelu
+    const shared = { files: new Map(), dirs: new Set() };
+    const env = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:WITHKEY0001' })] });
+    const pane = env.api.openPanel();
+    env.sandbox.window.__player = { state: () => ({ tracks: 3 }) };
+    await env.api.sync();
+    const status = pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ');
+    check('the panel says how much of the library travels',
+      /Biblioteka ma 3 utworów, a do chmury jedzie 1/.test(status), status.slice(-200));
+  }
+
+  { // 58. nieudane pobranie bez mostka YouTube nazywa mostek wprost
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:NOBRIDGE001', title: 'Bez mostka', artist: 'X' })] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({})] });
+    pc.api.setImportWait(300);
+    const pane = pc.api.openPanel();
+    const net = makeNet({ results: [] });
+    net.youtube = {
+      bridge: () => ({ ok: false, port: 8787, base: 'http://127.0.0.1:8787', ffmpeg: false }),
+      probeBridge: () => Promise.resolve(false),
+    };
+    pc.sandbox.window.__player = { __net: net };
+
+    await phone.api.sync();
+    await pc.api.sync();
+    await wait(900);
+    const status = pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ');
+    check('a failed download names the YouTube bridge when it is down',
+      /Mostek do YouTube nie odpowiada/.test(status), status.slice(-200));
+    check('and the reason for the failure stays in the panel',
+      /Ostatnie pobieranie nie udało się: Bez mostka/.test(status), status.slice(-260));
+  }
+
   await checkRuntimeHooks();
   console.log(results.join('\n'));
   const failed = results.filter((line) => line.startsWith('FAIL'));
