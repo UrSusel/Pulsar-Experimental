@@ -138,7 +138,7 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
         ),
         (
             "  function bridgeHintHtml(r){\n    const cmd = 'node ytdl-bridge.mjs';",
-            "  function bridgeHintHtml(r){\n    if (window.__pulsarAndroid) return t('Na Androidzie pobieranie z YouTube zależy od dostępnych źródeł online; YouTube lub dostawcy mogą blokować niektóre utwory.');\n    const cmd = 'node ytdl-bridge.mjs';",
+            "  function bridgeHintHtml(r){\n    if (window.__pulsarAndroid) return t('Nie znaleziono strumienia audio. Android sprawdził publiczne źródła Piped/Cobalt, ale żadne nie udostępniło audio dla tego filmu. Spróbuj ponownie później.');\n    const cmd = 'node ytdl-bridge.mjs';",
         ),
     ]
     for old, new in android_network_replacements:
@@ -148,8 +148,8 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
 
     # The packed desktop runtime still ships an old Cobalt client (stale
     # instance-list schema, mandatory JWT/session flow, and an invalid bitrate).
-    # Android discovers current public instances and tries their unauthenticated
-    # API first, while continuing to keep the local yt-dlp bridge disabled.
+    # Android discovers current public Cobalt instances for the fallback after
+    # the multi-instance Piped stream pass; the local yt-dlp bridge stays disabled.
     youtube_provider_replacements = [
         (
             "  const YT_PIPED = ['https://api.piped.private.coffee', 'https://pipedapi.ducks.party', 'https://pipedapi.kavin.rocks']; // tylko wyszukiwanie (CORS OK)",
@@ -256,9 +256,9 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
   }
   async function netYtCobalt(ytId){
     const list = await ytCobaltList();
-    const order = [ytCobaltLastGood].concat(list).filter(function(base, index, all){ return base && all.indexOf(base) === index; });
-    for (const base of order.slice(0, 3)){
-      const ctl = netTimeout(10000);
+    const order = [ytCobaltLastGood].concat(list).filter(function(base, index, all){ return base && all.indexOf(base) === index; }).slice(0, 4);
+    const jobs = order.map(async function(base){
+      const ctl = netTimeout(8000);
       try {
         const endpoint = base.replace(/\/+$/, '') + '/';
         const response = await fetch(endpoint, { method: 'POST', signal: ctl.signal,
@@ -268,26 +268,165 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
             downloadMode: 'audio', audioFormat: 'mp3', audioBitrate: '128',
             filenameStyle: 'basic', alwaysProxy: true, localProcessing: 'disabled'
           }) });
-        if (!response || !response.ok) continue;
+        if (!response || !response.ok) throw new Error('Cobalt HTTP error');
         const data = await response.json();
         const status = String(data && data.status || '').toLowerCase();
         let fileUrl = data && typeof data.url === 'string' ? data.url : '';
         if (!fileUrl && status === 'local-processing' && Array.isArray(data.tunnel)){
           fileUrl = String(data.tunnel.find(function(url){ return typeof url === 'string' && url; }) || '');
         }
-        if (!fileUrl || !['tunnel', 'redirect', 'local-processing', 'stream', 'success'].includes(status)) continue;
+        if (!fileUrl || !['tunnel', 'redirect', 'local-processing', 'stream', 'success'].includes(status)) throw new Error('Cobalt returned no stream');
         let resolved;
-        try { resolved = new URL(fileUrl, endpoint).href; } catch(e){ continue; }
-        ytCobaltLastGood = base;
-        return { url: resolved, ext: 'mp3', via: 'cobalt' };
-      } catch(e){} finally { ctl.done(); }
-    }
-    return null;
+        try { resolved = new URL(fileUrl, endpoint).href; } catch(e){ throw new Error('Invalid Cobalt stream URL'); }
+        if (!/^https:\/\//i.test(resolved)) throw new Error('Cobalt returned a non-HTTPS stream');
+        return { url: resolved, ext: 'mp3', via: 'cobalt', base: base };
+      } finally { ctl.done(); }
+    });
+    const results = await Promise.allSettled(jobs);
+    const streams = results.filter(function(result){ return result && result.status === 'fulfilled' && result.value && result.value.url; }).map(function(result){ return result.value; });
+    if (!streams.length) return null;
+    ytCobaltLastGood = streams[0].base;
+    return Object.assign({}, streams[0], { fallbacks: streams.slice(1) });
   }
   function ytThumbUrl(id){'''
     html, cobalt_count = cobalt_pattern.subn(lambda _match: cobalt_replacement, html, count=1)
     if cobalt_count != 1:
         raise ValueError("could not replace the outdated Android Cobalt client")
+
+    # Search can succeed while the selected instance has no stream for a
+    # particular video. Probe a broader current Piped pool concurrently before
+    # the slower Cobalt fallback, and reject placeholder stream entries.
+    youtube_stream_pattern = re.compile(r"  async function netYtStream\(ytId\)\{.*?\n  /\* Wklejony link YouTube", re.S)
+    youtube_stream_replacement = r'''  const YT_PIPED_STREAM = [
+    'https://api.piped.yt', 'https://pipedapi.ducks.party', 'https://api.piped.private.coffee',
+    'https://pipedapi.kavin.rocks', 'https://pipedapi.leptons.xyz', 'https://pipedapi.nosebs.ru',
+    'https://piped-api.privacy.com.de', 'https://pipedapi.adminforge.de'
+  ];
+  async function ytPipedAudio(base, ytId){
+    const data = await netJson(base + '/streams/' + encodeURIComponent(ytId), 7000);
+    const streams = data && Array.isArray(data.audioStreams) ? data.audioStreams.filter(function(item){
+      return item && typeof item.url === 'string' && item.url.trim();
+    }) : [];
+    if (!streams.length) throw new Error('No Piped audio streams');
+    const best = streams.slice().sort(function(a, b){
+      return ytScoreStream(b.mimeType || b.format || b.codec, b.bitrate) - ytScoreStream(a.mimeType || a.format || a.codec, a.bitrate);
+    })[0];
+    let streamUrl;
+    try { streamUrl = new URL(String(best.url), data.proxyUrl || base).href; }
+    catch(e){ throw new Error('Invalid Piped audio URL'); }
+    if (!/^https:\/\//i.test(streamUrl)) throw new Error('Piped returned a non-HTTPS stream');
+    const mime = String(best.mimeType || best.format || best.codec || '');
+    return { url: streamUrl, ext: /mp4|m4a|aac/i.test(mime) ? 'm4a' : (/webm|opus/i.test(mime) ? 'webm' : 'm4a'), via: 'piped', base: base };
+  }
+  async function netYtStream(ytId){
+    // Keep the local bridge first on desktop; Android skips it and fans out to
+    // public Piped stream endpoints before trying Cobalt.
+    if (await ytBridgePing()){
+      return { url: BRIDGE_BASE + '/audio?id=' + encodeURIComponent(ytId), ext: 'm4a', via: 'bridge' };
+    }
+    const pipedBases = [ytLastGood.piped].concat(YT_PIPED_STREAM).filter(function(base, index, all){
+      return base && all.indexOf(base) === index;
+    });
+    const pipedResults = await Promise.allSettled(pipedBases.map(function(base){ return ytPipedAudio(base, ytId); }));
+    const pipedStreams = pipedResults.filter(function(result){ return result && result.status === 'fulfilled' && result.value && result.value.url; }).map(function(result){ return result.value; });
+    if (pipedStreams.length){
+      ytLastGood.piped = pipedStreams[0].base;
+      return Object.assign({}, pipedStreams[0], { fallbacks: pipedStreams.slice(1) });
+    }
+    const cobalt = await netYtCobalt(ytId);
+    if (cobalt) return cobalt;
+    return null;
+  }
+  /* Wklejony link YouTube'''
+    html, stream_count = youtube_stream_pattern.subn(lambda _match: youtube_stream_replacement, html, count=1)
+    if stream_count != 1:
+        raise ValueError("could not replace the Android YouTube stream resolver")
+
+    # Public instances can return audio URLs that are valid for a native client
+    # but blocked by WebView CORS, redirect policy, or CDN request headers. On
+    # Android, fetch that resolved media into app cache before using it in the
+    # HTML audio element or importing it into the library.
+    android_youtube_media_replacements = [
+        (
+            "  /* Wklejony link YouTube → natychmiastowy wynik bez wyszukiwarki */",
+            r'''  let ytAndroidCacheError = '';
+  const ytAndroidPrepare = new Map();
+  async function netYtAndroidCacheOne(plugin, capacitor, ytId, stream){
+    const key = String(ytId || '') + '|' + String(stream.url || '');
+    if (!ytAndroidPrepare.has(key)){
+      const pending = Promise.resolve().then(function(){
+        return plugin.prepareYoutubeAudio({ videoId: String(ytId || ''), url: String(stream.url), ext: String(stream.ext || 'm4a') });
+      }).then(function(result){
+        if (!result || !result.path) throw new Error('Android returned no cached audio file.');
+        const path = String(result.path);
+        const fileUri = path.slice(0, 7).toLowerCase() === 'file://' ? path : 'file://' + path;
+        const localUrl = capacitor.convertFileSrc(fileUri);
+        if (!localUrl) throw new Error('Capacitor could not map the cached audio file.');
+        ytAndroidCacheError = '';
+        return Object.assign({}, stream, { url: localUrl, ext: result.ext || stream.ext || 'm4a', via: 'android-native' });
+      }).catch(function(error){
+        ytAndroidCacheError = String(error && error.message || error || 'Android audio cache failed').slice(0, 180);
+        ytAndroidPrepare.delete(key);
+        return null;
+      });
+      ytAndroidPrepare.set(key, pending);
+    }
+    return await ytAndroidPrepare.get(key);
+  }
+  async function netYtAndroidCache(ytId, stream){
+    if (!window.__pulsarAndroid || !stream || !stream.url) return stream;
+    ytAndroidCacheError = '';
+    const capacitor = window.Capacitor;
+    const plugin = capacitor && capacitor.Plugins && capacitor.Plugins.PulsarMedia;
+    if (!plugin || typeof plugin.prepareYoutubeAudio !== 'function' || typeof capacitor.convertFileSrc !== 'function') return stream;
+    netSetHint(t('Przygotowuję audio YouTube na urządzeniu…'));
+    let fallback = stream;
+    const candidates = [stream].concat(Array.isArray(stream.fallbacks) ? stream.fallbacks : []).slice(0, 4);
+    for (const candidate of candidates){
+      if (!candidate || !candidate.url) continue;
+      fallback = candidate;
+      const local = await netYtAndroidCacheOne(plugin, capacitor, ytId, candidate);
+      if (local) return local;
+    }
+    if (stream.via === 'piped'){
+      const cobalt = await netYtCobalt(ytId);
+      const cobaltCandidates = cobalt ? [cobalt].concat(Array.isArray(cobalt.fallbacks) ? cobalt.fallbacks : []).slice(0, 4) : [];
+      for (const candidate of cobaltCandidates){
+        if (!candidate || !candidate.url) continue;
+        fallback = candidate;
+        const local = await netYtAndroidCacheOne(plugin, capacitor, ytId, candidate);
+        if (local) return local;
+      }
+    }
+    return fallback;
+  }
+  /* Wklejony link YouTube → natychmiastowy wynik bez wyszukiwarki */''',
+        ),
+    ]
+    for old, new in android_youtube_media_replacements:
+        if html.count(old) != 1:
+            raise ValueError(f"expected exactly one Android YouTube media fragment: {old[:100]!r}")
+        html = html.replace(old, new, 1)
+
+    stream_call = "const sres = await netYtStream(r.ytId || r.id);"
+    if html.count(stream_call) != 2:
+        raise ValueError("expected exactly two YouTube stream-resolution call sites")
+    html = html.replace(
+        stream_call,
+        "let sres = await netYtStream(r.ytId || r.id);\n      if (sres && sres.url) sres = await netYtAndroidCache(r.ytId || r.id, sres);",
+    )
+
+    playback_failure = "    if (p && p.catch) p.catch(() => netSetHint(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.')));"
+    playback_failure_with_native_detail = "    if (p && p.catch) p.catch(() => netSetHint(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.') + (window.__pulsarAndroid && ytAndroidCacheError ? ' — ' + ytAndroidCacheError : '')));"
+    if html.count(playback_failure) != 1:
+        raise ValueError("could not add Android playback-fetch diagnostics")
+    html = html.replace(playback_failure, playback_failure_with_native_detail, 1)
+
+    import_failure = "    if (!blob || !blob.size){ if (btnEl){ btnEl.disabled = false; btnEl.textContent = r.isFull ? t('Zapisz') : t('Dodaj'); } netSetHint(t('Pobieranie nie powiodło się.')); return; }"
+    import_failure_with_native_detail = "    if (!blob || !blob.size){ if (btnEl){ btnEl.disabled = false; btnEl.textContent = r.isFull ? t('Zapisz') : t('Dodaj'); }\n      const nativeError = window.__pulsarAndroid && ytAndroidCacheError ? ' ' + ytAndroidCacheError : '';\n      netSetHint(t('Pobieranie nie powiodło się.') + nativeError); return; }\n    if (window.__pulsarAndroid && r.provider === 'youtube') netSetHint('');"
+    if html.count(import_failure) != 1:
+        raise ValueError("could not add Android native-fetch diagnostics to YouTube imports")
+    html = html.replace(import_failure, import_failure_with_native_detail, 1)
 
     input_pattern = re.compile(r'<input type="file" id="folderInput"[^>]*>')
     html, count = input_pattern.subn(

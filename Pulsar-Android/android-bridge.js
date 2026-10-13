@@ -1,6 +1,7 @@
 /* Android-only adapter for the existing Pulsar web runtime.
- * Desktop/Neutralino APIs are deliberately not loaded on Android; the network
- * library stays available and uses only its public-provider fallbacks.
+ * Desktop/Neutralino APIs are deliberately not loaded on Android; YouTube
+ * resolves through public providers, then the native media plugin caches the
+ * resolved audio locally for preview and in-app import.
  */
 (function () {
   'use strict';
