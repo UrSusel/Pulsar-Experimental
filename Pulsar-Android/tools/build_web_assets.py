@@ -125,6 +125,10 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
     # the runtime's public search/stream fallbacks instead.
     android_network_replacements = [
         (
+            "  /* ---- YouTube: mostek yt-dlp (zalecany) + Cobalt/Piped/Invidious jako kaskada awaryjna ----\n     Publiczne instancje Piped/Invidious są często blokowane przez YouTube (audioStreams: 0 / 302),\n     dlatego pierwszym źródłem jest lokalny mostek ytdl-bridge.mjs (yt-dlp), a reszta to fallback. */",
+            "  /* ---- Android: wyszukiwanie i import YouTube przez dostępne publiczne instancje; lokalny yt-dlp nie działa w tym porcie. ---- */",
+        ),
+        (
             "  const BRIDGE_BASE = 'http://127.0.0.1:' + BRIDGE_PORT;",
             "  const BRIDGE_BASE = '';",
         ),
@@ -141,6 +145,134 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
         if html.count(old) != 1:
             raise ValueError(f"expected exactly one Android network source fragment: {old[:100]!r}")
         html = html.replace(old, new, 1)
+
+    # The packed desktop runtime still ships an old Cobalt client (stale
+    # instance-list schema, mandatory JWT/session flow, and an invalid bitrate).
+    # Android discovers current public instances and tries their unauthenticated
+    # API first, while continuing to keep the local yt-dlp bridge disabled.
+    youtube_provider_replacements = [
+        (
+            "  const YT_PIPED = ['https://api.piped.private.coffee', 'https://pipedapi.ducks.party', 'https://pipedapi.kavin.rocks']; // tylko wyszukiwanie (CORS OK)",
+            "  const YT_PIPED = ['https://api.piped.yt', 'https://pipedapi.ducks.party', 'https://api.piped.private.coffee']; // Piped instances with browser API access",
+        ),
+        (
+            "  const YT_INVIDIOUS = ['https://invidious.f5.si', 'https://inv.nadeko.net']; // tylko wyszukiwanie",
+            "  const YT_INVIDIOUS = ['https://invidious.f5.si', 'https://iv.ggtyler.dev', 'https://invidious.nerdvpn.de']; // search fallback only",
+        ),
+        (
+            "  const YT_COBALT = ['https://cobalt-backend.canine.tools']; // jedyna instancja z CORS; większość wymaga kapczy lub jest martwa",
+            "  const YT_COBALT = ['https://cobalt-api.meowing.de', 'https://cobalt-backend.canine.tools', 'https://kityune.imput.net', 'https://capi.3kh0.net', 'https://nachos.imput.net', 'https://sunny.imput.net', 'https://blossom.imput.net']; // public fallback instances",
+        ),
+        (
+            "  let ytCobaltDead = false; // po serii porażek nie odpytuj Cobalt jeszcze raz",
+            "  let ytCobaltListCache = [], ytCobaltListAt = 0, ytCobaltLastGood = '';",
+        ),
+        (
+            r'''          const m = String(it.url || '').match(/[?&]v=([\w-]{6,})/);
+          const id = m ? m[1] : '';''',
+            r'''          const m = String(it.url || '').match(/[?&]v=([\w-]{6,})/) || String(it.url || '').match(/\/shorts\/([\w-]{6,})/);
+          const rawId = String(it.videoId || it.id || '').trim();
+          const id = /^[\w-]{6,}$/.test(rawId) ? rawId : (m ? m[1] : '');''',
+        ),
+        (
+            "    for (const base of [ytLastGood.piped, 'https://api.piped.private.coffee']){",
+            "    const pipedStreams = [ytLastGood.piped].concat(YT_PIPED).filter(function(base, index, all){ return base && all.indexOf(base) === index; });\n    for (const base of pipedStreams){",
+        ),
+        (
+            "      const d = await netJson(base + '/streams/' + encodeURIComponent(ytId), 9000);",
+            "      const d = await netJson(base + '/streams/' + encodeURIComponent(ytId), 7500);",
+        ),
+    ]
+    for old, new in youtube_provider_replacements:
+        if html.count(old) != 1:
+            raise ValueError(f"expected exactly one Android YouTube provider fragment: {old[:100]!r}")
+        html = html.replace(old, new, 1)
+
+    cobalt_pattern = re.compile(r"  async function ytCobaltList\(\)\{.*?\n  function ytThumbUrl\(id\)\{", re.S)
+    cobalt_replacement = r'''  async function ytCobaltList(){
+    if (ytCobaltListCache.length && Date.now() - ytCobaltListAt < 300000) return ytCobaltListCache.slice();
+    const cacheKey = 'ytCobaltCacheV2';
+    const list = [], seen = new Set(), discovered = [];
+    function normalize(api, protocol){
+      if (typeof api !== 'string' || !api.trim()) return '';
+      const raw = api.trim();
+      let parsed;
+      try { parsed = new URL(/^https?:\/\//i.test(raw) ? raw : ((protocol === 'http' ? 'http:' : 'https:') + '//' + raw)); }
+      catch(e){ return ''; }
+      if (parsed.protocol !== 'https:' || !parsed.hostname) return '';
+      return parsed.origin + parsed.pathname.replace(/\/+$/, '');
+    }
+    function add(api, protocol){
+      const base = normalize(api, protocol);
+      if (!base || seen.has(base)) return '';
+      seen.add(base); list.push(base); return base;
+    }
+    try {
+      const data = await netJson('https://instances.cobalt.best/instances.json', 7000);
+      if (Array.isArray(data)){
+        const candidates = data.filter(function(x){
+          if (!x || x.online === false || x.api_online === false || x.api_key) return false;
+          const info = x.info || {};
+          if (info.auth === true) return false;
+          const cors = info.cors != null ? info.cors : x.cors;
+          if (cors === false || cors === 1 || cors === -1) return false;
+          const services = x.services || {};
+          return !Object.prototype.hasOwnProperty.call(services, 'youtube') || services.youtube === true;
+        }).sort(function(a, b){ return (Number(b.score) || 0) - (Number(a.score) || 0); });
+        candidates.slice(0, 6).forEach(function(x){
+          const base = add(x.api, x.protocol || 'https');
+          if (base) discovered.push(base);
+        });
+      }
+    } catch(e){}
+    if (discovered.length){
+      try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), list: discovered.slice(0, 12) })); } catch(e){}
+    }
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (cached && Array.isArray(cached.list) && Date.now() - cached.t < 216e5){
+        cached.list.forEach(function(api){ add(api, 'https'); });
+      }
+    } catch(e){}
+    YT_COBALT.forEach(function(api){ add(api, 'https'); });
+    ytCobaltListCache = list.slice(0, 12);
+    ytCobaltListAt = Date.now();
+    return ytCobaltListCache.slice();
+  }
+  async function netYtCobalt(ytId){
+    const list = await ytCobaltList();
+    const order = [ytCobaltLastGood].concat(list).filter(function(base, index, all){ return base && all.indexOf(base) === index; });
+    for (const base of order.slice(0, 3)){
+      const ctl = netTimeout(10000);
+      try {
+        const endpoint = base.replace(/\/+$/, '') + '/';
+        const response = await fetch(endpoint, { method: 'POST', signal: ctl.signal,
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: 'https://www.youtube.com/watch?v=' + encodeURIComponent(ytId),
+            downloadMode: 'audio', audioFormat: 'mp3', audioBitrate: '128',
+            filenameStyle: 'basic', alwaysProxy: true, localProcessing: 'disabled'
+          }) });
+        if (!response || !response.ok) continue;
+        const data = await response.json();
+        const status = String(data && data.status || '').toLowerCase();
+        let fileUrl = data && typeof data.url === 'string' ? data.url : '';
+        if (!fileUrl && status === 'local-processing' && Array.isArray(data.tunnel)){
+          fileUrl = String(data.tunnel.find(function(url){ return typeof url === 'string' && url; }) || '');
+        }
+        if (!fileUrl || !['tunnel', 'redirect', 'local-processing', 'stream', 'success'].includes(status)) continue;
+        let resolved;
+        try { resolved = new URL(fileUrl, endpoint).href; } catch(e){ continue; }
+        ytCobaltLastGood = base;
+        return { url: resolved, ext: 'mp3', via: 'cobalt' };
+      } catch(e){} finally { ctl.done(); }
+    }
+    return null;
+  }
+  function ytThumbUrl(id){'''
+    html, cobalt_count = cobalt_pattern.subn(lambda _match: cobalt_replacement, html, count=1)
+    if cobalt_count != 1:
+        raise ValueError("could not replace the outdated Android Cobalt client")
 
     input_pattern = re.compile(r'<input type="file" id="folderInput"[^>]*>')
     html, count = input_pattern.subn(
