@@ -61,6 +61,21 @@ npm run android:open
 npm run android:run
 ```
 
+**Windows:** if PowerShell answers *„npm.ps1 cannot be loaded because running scripts is disabled on this system”*, that is Windows' script policy, not the project. Either use the `.cmd` wrapper — `npm.cmd ci`, `npm.cmd run android:sync`, `npm.cmd run android:open` — or run the same commands in `cmd.exe`, or allow signed scripts for your account once:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
+The two steps `android:sync` performs can also be run without the npm wrapper:
+
+```bat
+py -3 tools\build_web_assets.py
+.\node_modules\.bin\cap.cmd sync android
+```
+
+`prepare:web` finds Python 3 itself (`python`, `py -3` or `python3`) and says plainly if none is installed, so a missing Python never looks like a broken build.
+
 The Capacitor `android/` project is included in this folder. Use Android Studio to build/run on an emulator or device. After changing the packed runtime, run `npm run android:sync` again to regenerate and copy the web assets.
 
 The build deliberately reads the existing packed runtime instead of checking in unpacked player sources. The generated `www/` tree is disposable and ignored by Git.
