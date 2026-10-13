@@ -14,6 +14,17 @@
   style.textContent = [
     'html.pulsar-android .sm-desktop-only { display: none !important; }',
     'html.pulsar-android #pipBtn { display: none !important; }',
+    // The mobile app has no fullscreen mode: it only duplicated the automatic
+    // hiding of the control bar, so the cover button is gone. The karaoke
+    // button next to it stays.
+    'html.pulsar-android #fullscreenBtn { display: none !important; }',
+    // One progress bar only (the one in the control bar). The middle copy used
+    // to fade in as soon as the control bar auto-hid, which looked like the
+    // free space above the track text was being filled in while playing.
+    'html.pulsar-android .center-seek-row { display: none !important; }',
+    // Nothing may shift while a track plays: the track text keeps its place
+    // when the control bar hides after the delay.
+    'html.pulsar-android body.bar-hidden .track-title, html.pulsar-android body.bar-hidden .track-artist { transform: none; }',
     'html.pulsar-android .sm-tab[data-pane="net"], html.pulsar-android .sm-pane[data-pane="net"] { display: none !important; }',
     'html.pulsar-android #netBridgeChip, html.pulsar-android #netBridgeBanner { display: none !important; }',
     'html.pulsar-android body { min-width: 0; overflow-x: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }',
@@ -23,7 +34,7 @@
     // container, so a new line can never push the cover, title, artist or the
     // progress bar around (previously the whole player scrolled with it).
     'html.pulsar-android body.lyrics-side .lyrics-box { overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }',
-    'html.pulsar-android body.lyrics-side .cover-wrap, html.pulsar-android body.lyrics-side .center-seek-row, html.pulsar-android body.lyrics-side .track-title, html.pulsar-android body.lyrics-side .track-artist { left: 0 !important; }',
+    'html.pulsar-android body.lyrics-side .cover-wrap, html.pulsar-android body.lyrics-side .track-title, html.pulsar-android body.lyrics-side .track-artist { left: 0 !important; }',
     // Phones/tablets in portrait: the lyrics panel sits in the normal column
     // between the cover and the track text; the cover shrinks so everything
     // (cover, lyrics, title, artist, bar) always fits the screen without
@@ -32,7 +43,6 @@
     '  html.pulsar-android body.lyrics-side .player { height: 100dvh; max-height: 100dvh; overflow: hidden; padding-top: max(12px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); }',
     '  html.pulsar-android body.lyrics-side .cover-wrap { flex: 0 0 auto; width: max(120px, min(70vw, 380px, 34vh, calc(66vh - 300px))); height: max(120px, min(70vw, 380px, 34vh, calc(66vh - 300px))); }',
     '  html.pulsar-android body.lyrics-side .lyrics-box { position: static; inset: auto; flex: 1 1 auto; min-height: 56px; width: min(94vw, 620px); max-height: 26vh; margin: 8px auto 6px; padding: 6px 8px; }',
-    '  html.pulsar-android body.lyrics-side .center-seek-row { flex: 0 0 auto; margin-top: 8px; }',
     '  html.pulsar-android body.lyrics-side .track-title, html.pulsar-android body.lyrics-side .track-artist { flex: 0 0 auto; }',
     '  html.pulsar-android body.lyrics-side .empty-hint { display: none; }',
     '  html.pulsar-android body.fullscreen-mode.lyrics-side .cover-wrap { width: max(120px, min(70vw, 46vh)); height: max(120px, min(70vw, 46vh)); }',
