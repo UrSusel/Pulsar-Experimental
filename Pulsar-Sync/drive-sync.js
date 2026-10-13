@@ -86,6 +86,10 @@
       downloadFileOnly: 'To plik z innego urządzenia — dźwięk nie jedzie przez chmurę, więc nie da się go pobrać tutaj.',
       downloadUnconfirmed: 'Import nie potwierdził się w bibliotece — sprawdź zakładkę Sieć.',
       downloadOff: 'Wyszukiwanie w sieci jest w tej chwili wyłączone — włącz je w zakładce Sieć.',
+      cloudFileInfo: 'Plik w chmurze: ', tracksWord: 'utw.', albumsWord: 'alb.',
+      lastOtherWrite: 'Ostatnia zmiana z innego urządzenia: ',
+      newFromCloud: 'Nowe z innego urządzenia: ',
+      newFromCloudHint: ' — w Ustawieniach → Chmura możesz je pobrać na tym urządzeniu.',
       removedElsewhere: 'Usunięte na innym urządzeniu: ',
       mirror: 'Trzymaj czytelną kopię na Dysku (folder Pulsar)',
       enabled: 'Synchronizuj automatycznie',
@@ -141,6 +145,10 @@
       downloadFileOnly: 'This file lives on another device — its audio never travels through the cloud, so it cannot be downloaded here.',
       downloadUnconfirmed: 'The import was not confirmed in the library — check the Network tab.',
       downloadOff: 'Network search is switched off right now — switch it on in the Network tab.',
+      cloudFileInfo: 'Cloud file: ', tracksWord: 'tracks', albumsWord: 'albums',
+      lastOtherWrite: 'Last change from another device: ',
+      newFromCloud: 'New from another device: ',
+      newFromCloudHint: ' — open Settings → Cloud to download them on this device.',
       removedElsewhere: 'Removed on another device: ',
       mirror: 'Keep a readable copy in Drive (Pulsar folder)',
       enabled: 'Sync automatically',
@@ -668,6 +676,11 @@
   // Utwory, które są w chmurze, ale nie ma ich na tym urządzeniu. Panel pokazuje
   // ich listę, a utwory z YouTube można tu pobrać jednym kliknięciem.
   var cloudEntries = [];
+  // Co mówi plik w chmurze: ile ma pozycji, kiedy i na jakim urządzeniu
+  // powstała ostatnia zmiana. Bez tego „czy zsynchronizowało się?" jest zgadywaniem.
+  var cloudMeta = { tracks: 0, albums: 0, updatedAt: 0, device: '', fromOther: false };
+  var cloudKnownKeys = [];
+  var cloudAnnounced = false;
   var MAX_CLOUD_ROWS = 25;
   var IMPORT_WAIT_MS = 120000;  // ile czekamy, aż import pojawi się w bibliotece
   var IMPORT_POLL_MS = 1500;
@@ -760,21 +773,44 @@
 
   function deviceInfo() {
     return stateGet('device').then(function (stored) {
-      if (stored && stored.deviceId) return stored;
+      var platform = devicePlatform();
+      var name = deviceName();
+      if (stored && stored.deviceId) {
+        // Starsze wpisy mówią „android" także na komputerze — poprawiamy je.
+        if (stored.platform !== platform || stored.name !== name) {
+          stored.platform = platform;
+          stored.name = name;
+          return statePut(stored).then(function () { return stored; });
+        }
+        return stored;
+      }
       var record = {
         id: 'device',
         deviceId: 'dev-' + hash(String(navigator.userAgent || '') + nowMs() + Math.random()),
-        name: deviceName(),
-        platform: 'android',
+        name: name,
+        platform: platform,
         createdAt: nowMs()
       };
       return statePut(record).then(function () { return record; });
     });
   }
 
+  function devicePlatform() {
+    return desktopAdapter() ? 'desktop' : 'android';
+  }
+
   function deviceName() {
-    var match = String(navigator.userAgent || '').match(/Android[^;]*;\s*([^)]+?)(?:\s+Build|\))/i);
-    return (match && match[1] ? match[1].trim() : 'Android').slice(0, 40);
+    var ua = String((typeof navigator !== 'undefined' && navigator.userAgent) || '');
+    if (!desktopAdapter()) {
+      var match = ua.match(/Android[^;]*;\s*([^)]+?)(?:\s+Build|\))/i);
+      return (match && match[1] ? match[1].trim() : 'Android').slice(0, 40);
+    }
+    // Desktop musi się przedstawić jako komputer — inaczej plik w chmurze
+    // wygląda, jakby zapisał go telefon.
+    if (/Windows/i.test(ua)) return 'Windows PC';
+    if (/Mac OS X|Macintosh/i.test(ua)) return 'Mac';
+    if (/Linux|X11/i.test(ua)) return 'Linux PC';
+    return 'Desktop';
   }
 
   function refreshStatus() {
@@ -870,12 +906,23 @@
         return stateGet('manifest').then(function (stored) {
           var previous = stored && stored.value ? stored.value : null;
           var localManifest = buildManifest(snapshot, previous, {
-            id: device.deviceId, name: device.name, platform: 'android'
+            id: device.deviceId, name: device.name, platform: devicePlatform()
           });
           return pullRemote().then(function (remote) {
             var remoteManifest = null;
             if (remote && remote.manifest) {
               try { remoteManifest = JSON.parse(remote.manifest); } catch (error) { remoteManifest = null; }
+            }
+            if (remoteManifest) {
+              var writer = remoteManifest.device || {};
+              cloudMeta = {
+                tracks: (remoteManifest.tracks || []).length,
+                albums: (remoteManifest.albums || []).length,
+                updatedAt: Number(remoteManifest.updatedAt || 0) || 0,
+                device: String(writer.name || writer.id || ''),
+                fromOther: !!writer.id && writer.id !== device.deviceId
+              };
+              statePut({ id: 'cloudMeta', value: cloudMeta }).catch(function () {});
             }
             var merged = mergeManifests(localManifest, remoteManifest);
             mergedManifest = merged.merged;
@@ -893,6 +940,22 @@
             }
             return applyStep.then(function () {
               cloudEntries = cloudOnlyOf(mergedManifest, snapshot);
+              // „Synchronizacja nic nie zrobiła" to najczęstsze wrażenie: nowe
+              // utwory z innego urządzenia ogłaszamy raz, gdy się pojawią.
+              if (cloudAnnounced) {
+                var fresh = cloudEntries.filter(function (entry) {
+                  return cloudKnownKeys.indexOf(entry.key) < 0;
+                });
+                if (fresh.length) {
+                  var names = fresh.slice(0, 2).map(function (entry) {
+                    return '«' + String(entry.title || entry.key) + '»';
+                  }).join(', ');
+                  if (fresh.length > 2) names += '…';
+                  toast(T('newFromCloud') + fresh.length + ' ' + names + T('newFromCloudHint'));
+                }
+              }
+              cloudKnownKeys = cloudEntries.map(function (entry) { return entry.key; });
+              cloudAnnounced = true;
               counters = {
                 sent: (mergedManifest.tracks || []).length,
                 received: plan.trackUpdates.length + plan.newAlbums.length + plan.albumUpdates.length,
@@ -1265,7 +1328,8 @@
         if (result.skipped === 'disabled') { fail(T('syncDisabled')); return; }
         if (result.error) { fail(result.error); return; }
         if (result.counters) {
-          note(T('syncDone') + ' ' + T('sent') + result.counters.sent + ' · ' + T('received') + result.counters.received);
+          note(T('syncDone') + ' ' + T('sent') + result.counters.sent + ' · ' + T('received') + result.counters.received +
+            (result.counters.cloud ? ' · ' + T('inCloud') + result.counters.cloud : ''));
         } else if (result.skipped === 'busy') {
           note(T('syncing'));
         }
@@ -1434,6 +1498,14 @@
       if (counters.sent || counters.received || counters.cloud || counters.removed) {
         lines.push(T('sent') + counters.sent + ' · ' + T('received') + counters.received);
         if (counters.cloud) lines.push(T('inCloud') + counters.cloud + T('inCloudHint'));
+        if (cloudMeta.tracks) {
+          lines.push(T('cloudFileInfo') + cloudMeta.tracks + ' ' + T('tracksWord') +
+            (cloudMeta.albums ? ' · ' + cloudMeta.albums + ' ' + T('albumsWord') : ''));
+        }
+        if (cloudMeta.fromOther && cloudMeta.updatedAt) {
+          lines.push(T('lastOtherWrite') + (cloudMeta.device || '') + ' · ' +
+            new Date(cloudMeta.updatedAt).toLocaleString());
+        }
         if (counters.removed) lines.push(T('removedElsewhere') + counters.removed);
       }
       if (busy) lines.push(T('syncing'));
@@ -1464,6 +1536,12 @@
     refreshStatus();
     deviceInfo().catch(function () {});
     cloudLoad().then(function () { renderPanelStatus(); }).catch(function () {});
+    stateGet('cloudMeta').then(function (stored) {
+      if (stored && stored.value) {
+        cloudMeta = Object.assign(cloudMeta, stored.value);
+        renderPanelStatus();
+      }
+    }).catch(function () {});
     stateGet('counters').then(function (stored) {
       if (stored && stored.value) {
         counters = Object.assign(counters, stored.value);
@@ -1519,6 +1597,7 @@
     counters: function () { return counters; },
     download: downloadCloudTrack,
     cloudOnly: function () { return cloudEntries.slice(); },
+    cloudMeta: function () { return Object.assign({}, cloudMeta); },
     setImportWait: function (ms) { IMPORT_WAIT_MS = Math.max(0, Number(ms) || 0); return IMPORT_WAIT_MS; },
     _pure: {
       trackKey: trackKey,

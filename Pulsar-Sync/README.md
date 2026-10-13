@@ -37,6 +37,14 @@ way round). The panel lists those entries by name under **Utwory tylko w chmurze
 Every failure is a sentence, never a silent button: no network API in the build, an empty search
 result, network search switched off, or an import that never lands in the library.
 
+When a sync finds tracks that were not in the cloud the last time it looked, it announces them
+("Nowe z innego urządzenia: 1 «Nowa piosenka» …") instead of changing something invisibly in the
+background, and the status box shows what the cloud file holds and who wrote it last
+("Plik w chmurze: 54 utw. · Ostatnia zmiana z innego urządzenia: Pixel 8 · 13.10.2026, 21:12").
+Devices name themselves: an Android device reports its model, a computer reports Windows PC /
+Linux PC, and the manifest stores that with `platform: desktop` — a computer no longer registers
+as "android".
+
 ## How a device joins the library
 
 Folder mode needs no Google Cloud project, no OAuth screen and no tester list — the app
@@ -103,7 +111,7 @@ which keeps one copy of the engine on the page.
 ## Checks
 
 ```bash
-node Pulsar-Sync/tools/test_drive_sync.js          # 123 checks: engine, panel, plugins, desktop adapter
+node Pulsar-Sync/tools/test_drive_sync.js          # 131 checks: engine, panel, plugins, desktop adapter
 python Pulsar-Sync/tools/test_desktop_bundle.py    # 36 checks on the two packed archives
 python Pulsar-Sync/tools/refresh_download_zips.py --check
 node Pulsar-Android/tools/test_background_watchdog.js

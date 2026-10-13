@@ -897,6 +897,16 @@ async function checkRuntimeHooks() {
       pane.children.indexOf(firstCard) === 1, 'index=' + pane.children.indexOf(firstCard));
   }
 
+  /** Komputer z wybranym folderem, po pierwszej synchronizacji. */
+  async function folderEnv(options) {
+    const env = makeEnv(Object.assign({ desktop: true, withPanel: true }, options));
+    env.api.openPanel().querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    env.api.setEnabled(true);
+    await env.api.sync();
+    return env;
+  }
+
   /** Telefon wysyła bibliotekę, komputer widzi jej utwór jako „tylko w chmurze". */
   async function cloudOnlySetup(net) {
     const shared = { files: new Map(), dirs: new Set() };
@@ -1121,6 +1131,57 @@ async function checkRuntimeHooks() {
     check('no download button for a file that only exists on the phone',
       card.querySelectorAll('[data-cloud-download]').length === 0);
     check('the panel says why it cannot be downloaded', /nie da się go pobrać|another device/i.test(card.textContent));
+  }
+
+  { // 39. panel mówi, co jest w pliku w chmurze i kto go ostatnio zapisał
+    const shared = { files: new Map(), dirs: new Set() };
+    await folderEnv({ fs: shared, tracks: [track({})] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({})] });
+
+    const pane = pc.api.openPanel();
+    const status = pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ');
+    check('panel names the size of the cloud file', /Plik w chmurze: 1 utw\./.test(status), status.slice(0, 140));
+    check('panel says who wrote the cloud file, and that it was another device',
+      /Ostatnia zmiana z innego urządzenia: Linux PC ·/.test(status), status.slice(0, 160));
+    check('cloud details are kept in state',
+      pc.api.cloudMeta().tracks === 1 && pc.api.cloudMeta().fromOther === true,
+      JSON.stringify(pc.api.cloudMeta()));
+
+    const manifest = JSON.parse(shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json'));
+    check('a computer does not describe itself as android',
+      manifest.device.platform === 'desktop' && /PC$/.test(manifest.device.name),
+      JSON.stringify(manifest.device));
+  }
+
+  { // 40. nowy utwór z drugiego urządzenia jest ogłaszany, a nie milczący
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({})] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({})] });
+    check('the first sync stays quiet', !pc.toasts.some((text) => /Nowe z innego/.test(text)),
+      JSON.stringify(pc.toasts.map((text) => text.slice(0, 30))));
+
+    phone.library.state.tracks.push(track({ netId: 'youtube:NEWSONG001', title: 'Nowa piosenka', artist: 'Ktoś' }));
+    await phone.api.sync();
+    await pc.api.sync();
+
+    check('a new track from the other device is announced',
+      pc.toasts.some((text) => /Nowe z innego urządzenia: 1/.test(text) && /Nowa piosenka/.test(text)),
+      JSON.stringify(pc.toasts.map((text) => text.slice(0, 70))));
+    const pane = pc.api.openPanel();
+    const card = pane.querySelector('[data-cloud-section="cloudOnly"]');
+    check('and it is listed with a way to get it here',
+      card.textContent.includes('Nowa piosenka') && !!card.querySelector('[data-cloud-download]'));
+  }
+
+  { // 41. Android nadal nazywa się telefonem, a nie komputerem
+    const env = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: true, tracks: [track({})] });
+    env.api.setMode('google');
+    env.api.setEnabled(true);
+    await env.api.sync();
+    const manifest = JSON.parse(env.drive.files.get('appdata'));
+    check('an Android device names its model',
+      manifest.device.name === 'Pixel 8' && manifest.device.platform === 'android',
+      JSON.stringify(manifest.device));
   }
 
   await checkRuntimeHooks();
