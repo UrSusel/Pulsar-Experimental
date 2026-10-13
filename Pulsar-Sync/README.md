@@ -13,12 +13,29 @@ engine and one set of runtime hooks; Android, Windows and Linux all ship the sam
 | `tools/test_drive_sync.js` | Offline test suite — Android plugins, desktop adapter, engine, panel. |
 | `tools/test_desktop_bundle.py` | Checks both packaged archives after injection. |
 | `tools/neu.py` | Unpack / pack / verify for the Neutralino `.neu` archives. |
+| `tools/refresh_download_zips.py` | Puts the patched `resources.neu` into `Pulsar-Linux.zip` / `Pulsar-Desktop.zip`. |
 
 ## What travels, and what never does
 
 Only metadata: track titles, artists, albums, years, favourites, play counts, the YouTube
 identifier, album names and album membership. Audio files, covers and local paths stay on
 the device that owns them. The manifest is a single file, `pulsar-library.json`.
+
+## Tracks that only exist on the other device
+
+Audio never travels, so a song saved on the phone is metadata-only on the PC (and the other
+way round). The panel lists those entries by name under **Utwory tylko w chmurze** /
+*Tracks only in the cloud*:
+
+* a YouTube entry gets a **Pobierz tutaj** / *Download here* button. It asks the runtime's own
+  network API (`window.__player.__net`) to search for that video and import it, so the track
+  arrives with its `netId`, cover and tags — and because `netId` is the cross-device key, the
+  next sync matches it and the entry stops being cloud-only everywhere;
+* a file that only exists on the other device is labelled as such, because there is nothing to
+  download — the audio is on that machine's disk.
+
+Every failure is a sentence, never a silent button: no network API in the build, an empty search
+result, network search switched off, or an import that never lands in the library.
 
 ## How a device joins the library
 
@@ -55,8 +72,11 @@ python Pulsar-Sync/tools/build_desktop_sync.py
 # only report whether a package already carries the layer
 python Pulsar-Sync/tools/build_desktop_sync.py --check
 
-# check the archives afterwards (checksums, script tags, runtime hooks)
+# check the archives afterwards (checksums, script tags, runtime hooks, panel footholds)
 python Pulsar-Sync/tools/test_desktop_bundle.py
+
+# the downloadable archives have to carry the same layer as the folders
+python Pulsar-Sync/tools/refresh_download_zips.py
 ```
 
 What the script does inside the archive:
@@ -83,8 +103,9 @@ which keeps one copy of the engine on the page.
 ## Checks
 
 ```bash
-node Pulsar-Sync/tools/test_drive_sync.js     # engine, panel, Android plugins, desktop adapter
-python Pulsar-Sync/tools/test_desktop_bundle.py   # the two packed archives
+node Pulsar-Sync/tools/test_drive_sync.js          # 123 checks: engine, panel, plugins, desktop adapter
+python Pulsar-Sync/tools/test_desktop_bundle.py    # 36 checks on the two packed archives
+python Pulsar-Sync/tools/refresh_download_zips.py --check
 node Pulsar-Android/tools/test_background_watchdog.js
 ```
 

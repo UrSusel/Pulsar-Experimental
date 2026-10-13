@@ -121,6 +121,28 @@ function makeDrive() {
 }
 
 /**
+ * Atrapa `window.__player.__net` — tego samego API, którego panel używa do
+ * pobrania utworu z YouTube. `onImport` udaje runtime: dopisuje utwór do
+ * biblioteki, tak jakby pobieranie się udało.
+ */
+function makeNet(options) {
+  const settings = options || {};
+  const calls = [];
+  const results = settings.results || [];
+  return {
+    calls, results,
+    enabled: () => settings.enabled !== false,
+    search(term) { calls.push(['search', term]); return Promise.resolve(results); },
+    results: () => results,
+    importIdx(index) {
+      calls.push(['import', index]);
+      if (settings.onImport) return Promise.resolve(settings.onImport(index));
+      return Promise.resolve();
+    },
+  };
+}
+
+/**
  * Fałszywy Neutralino z prawdziwym systemem plików w pamięci. Ten sam `fs`
  * przekazany do dwóch środowisk oznacza „ten sam folder na dwóch komputerach".
  */
@@ -342,7 +364,7 @@ function makeEnv(options) {
   vm.runInContext(fsSource.readFileSync(SOURCE, 'utf8'), sandbox, { filename: 'drive-sync.js' });
   return {
     api: sandbox.window.__pulsarDrive, drive, plugin, folder, library, plugins: pluginTable,
-    storage: sandbox.localStorage, dom: settingsDom, document, toasts,
+    storage: sandbox.localStorage, dom: settingsDom, document, toasts, sandbox,
     desktopFs: fs, desktopState,
     fireDocumentEvent(type) { (docListeners[type] || []).forEach((handler) => handler({ type })); },
   };
@@ -875,6 +897,29 @@ async function checkRuntimeHooks() {
       pane.children.indexOf(firstCard) === 1, 'index=' + pane.children.indexOf(firstCard));
   }
 
+  /** Telefon wysyła bibliotekę, komputer widzi jej utwór jako „tylko w chmurze". */
+  async function cloudOnlySetup(net) {
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = makeEnv({
+      desktop: true, fs: shared, withPanel: true,
+      tracks: [track({ netId: 'youtube:OTHERVIDEO1', title: 'Inna piosenka', artist: 'Ktoś inny' })],
+    });
+    const phonePane = phone.api.openPanel();
+    phonePane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    phone.api.setEnabled(true);
+    await phone.api.sync();
+
+    const pc = makeEnv({ desktop: true, fs: shared, tracks: [track({})], withPanel: true });
+    const pane = pc.api.openPanel();
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    if (net) pc.sandbox.window.__player = { __net: net };
+    pc.api.setEnabled(true);
+    await pc.api.sync();
+    return { pc, pane, phone, shared, button: pane.querySelector('[data-cloud-download]') };
+  }
+
   { // 29. desktop: adapter rejestruje się i pokazuje się w panelu jako folder
     const env = makeEnv({ desktop: true, tracks: [track({})], withPanel: true });
     const adapter = env.sandbox ? null : null;
@@ -961,6 +1006,121 @@ async function checkRuntimeHooks() {
     check('storage is corrected too',
       JSON.parse(env.storage.getItem('pulsarCloudSync')).mode === 'folder',
       env.storage.getItem('pulsarCloudSync'));
+  }
+
+  { // 34. utwory tylko w chmurze są wypisane z nazwy, nie tylko policzone
+    const setup = await cloudOnlySetup(null);
+    const { pc, pane } = setup;
+    const card = pane.querySelector('[data-cloud-section="cloudOnly"]');
+    check('cloud-only card appears after a sync', !card.classList.contains('sm-hide'));
+    const text = card.textContent.replace(/\s+/g, ' ');
+    check('cloud-only card names the track', text.includes('Inna piosenka') && text.includes('Ktoś inny'), text.slice(0, 90));
+    const button = setup.button;
+    check('the YouTube track gets a download button',
+      !!button && button.getAttribute('data-cloud-download') === 'youtube:OTHERVIDEO1',
+      button ? button.getAttribute('data-cloud-download') : 'brak przycisku');
+    check('the status line points at the list',
+      /niżej|below/i.test(pane.querySelector('[data-cloud="status"]').textContent));
+    check('the cloud-only list is kept in state',
+      pc.api.cloudOnly().length === 1 && pc.api.cloudOnly()[0].key === 'youtube:OTHERVIDEO1',
+      JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+  }
+
+  { // 35. klik „Pobierz tutaj" pobiera przez runtime i synchronizuje ponownie
+    const net = makeNet({
+      results: [{ provider: 'youtube', id: 'OTHERVIDEO1', ytId: 'OTHERVIDEO1', title: 'Inna piosenka', artist: 'Ktoś inny', stream: 'https://example.invalid/audio' }],
+      onImport: () => {
+        // Runtime dopisuje utwór z netId — dokładnie ten klucz, co w chmurze.
+        net.imported = true;
+      },
+    });
+    const setup = await cloudOnlySetup(net);
+    const { pc, button } = setup;
+    net.onImportHook = () => pc.library.state.tracks.push(
+      track({ netId: 'youtube:OTHERVIDEO1', title: 'Inna piosenka', artist: 'Ktoś inny' }));
+    // Podmieniamy import na taki, który naprawdę dokłada utwór do biblioteki.
+    net.importIdx = function (index) {
+      net.calls.push(['import', index]);
+      this.onImportHook();
+      return Promise.resolve();
+    };
+    button.click();
+    await wait(250);
+    check('download searches for exactly this video',
+      net.calls[0] && net.calls[0][0] === 'search' && net.calls[0][1] === 'https://www.youtube.com/watch?v=OTHERVIDEO1',
+      JSON.stringify(net.calls[0]));
+    check('download imports the matching result', net.calls[1] && net.calls[1][0] === 'import' && net.calls[1][1] === 0,
+      JSON.stringify(net.calls[1]));
+    check('after the download it is no longer cloud-only',
+      !pc.api.cloudOnly().some((entry) => entry.key === 'youtube:OTHERVIDEO1'),
+      JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+    check('the panel confirms the download', pc.toasts.some((text) => /Pobrano|Downloaded/i.test(text)),
+      JSON.stringify(pc.toasts.map((text) => text.slice(0, 40))));
+  }
+
+  { // 36. brak API sieciowego to komunikat, nie cisza
+    const setup = await cloudOnlySetup(null);
+    const { pc, button } = setup;
+    pc.sandbox.window.__player = undefined;
+    button.click();
+    await wait(80);
+    check('missing network API is explained',
+      /__player\.__net/.test(pc.api.state().lastError || '') || pc.toasts.some((text) => /__player\.__net/.test(text)),
+      pc.api.state().lastError || JSON.stringify(pc.toasts));
+    check('nothing was pushed as if it worked', !pc.toasts.some((text) => /Pobrano|Downloaded/i.test(text)),
+      JSON.stringify(pc.toasts.map((text) => text.slice(0, 30))));
+  }
+
+  { // 37. brak wyniku w YouTube / wyłączona sieć / niepotwierdzony import
+    const empty = await cloudOnlySetup(makeNet({ results: [] }));
+    empty.button.click();
+    await wait(120);
+    check('empty search result is reported', /pobrano|downloaded/i.test(empty.pc.api.state().lastError || ''),
+      empty.pc.api.state().lastError);
+
+    const off = await cloudOnlySetup(makeNet({ enabled: false, results: [] }));
+    off.button.click();
+    await wait(120);
+    check('network switched off is reported', /wyłączone|switched off/i.test(off.pc.api.state().lastError || ''),
+      off.pc.api.state().lastError);
+
+    const stub = makeNet({
+      results: [{ provider: 'youtube', id: 'OTHERVIDEO1', ytId: 'OTHERVIDEO1', title: 'Inna piosenka', artist: 'Ktoś inny' }],
+    });
+    const unconfirmed = await cloudOnlySetup(stub);
+    unconfirmed.pc.api.setImportWait(0);
+    unconfirmed.button.click();
+    await wait(150);
+    check('an import that never lands is reported',
+      /nie potwierdził|not confirmed/i.test(unconfirmed.pc.api.state().lastError || ''),
+      unconfirmed.pc.api.state().lastError);
+  }
+
+  { // 38. utwór z dysku innego urządzenia nie udaje, że da się go pobrać
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = makeEnv({
+      desktop: true, fs: shared, withPanel: true,
+      tracks: [track({ netId: '', size: 4096, hash: 'abc123', title: 'Plik z telefonu', artist: 'Ktoś' })],
+    });
+    const phonePane = phone.api.openPanel();
+    phonePane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    phone.api.setEnabled(true);
+    await phone.api.sync();
+
+    const pc = makeEnv({ desktop: true, fs: shared, tracks: [track({})], withPanel: true });
+    const pane = pc.api.openPanel();
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    pc.api.setEnabled(true);
+    await pc.api.sync();
+
+    const card = pane.querySelector('[data-cloud-section="cloudOnly"]');
+    check('a file from another device is listed too', card.textContent.includes('Plik z telefonu'),
+      card.textContent.replace(/\s+/g, ' ').slice(0, 90));
+    check('no download button for a file that only exists on the phone',
+      card.querySelectorAll('[data-cloud-download]').length === 0);
+    check('the panel says why it cannot be downloaded', /nie da się go pobrać|another device/i.test(card.textContent));
   }
 
   await checkRuntimeHooks();

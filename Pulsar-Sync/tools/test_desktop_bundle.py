@@ -135,6 +135,19 @@ def audit(platform: str, archive: Path) -> None:
     check(f"[{platform}] panel chmury ma zaczepy w ustawieniach", not absent,
           ", ".join(absent) or f"{len(footholds)} zaczepów OK")
 
+    # Przycisk „Pobierz tutaj" woła API sieciowe runtime'u. Jeśli zamknięta
+    # aplikacja przestanie je wystawiać, przycisk przestanie działać — dlatego
+    # sprawdzamy zaczepy, a nie tylko obecność naszego kodu.
+    net_api = {
+        'API sieciowe (__player.__net)': '__net: {',
+        'import utworu (importIdx)': 'importIdx: (i) => netImport(i, null)',
+        'klucz netId po imporcie': "netId: r.provider + ':' + r.id",
+        'rozpoznanie linku YouTube': 'function ytIdFromText(t)',
+    }
+    net_missing = [label for label, needle in net_api.items() if needle not in html]
+    check(f"[{platform}] runtime wystawia API potrzebne do pobrania utworu", not net_missing,
+          ", ".join(net_missing) or f"{len(net_api)} zaczepów OK")
+
     check(f"[{platform}] silnik w archiwum = źródło",
           files.get("resources/drive-sync.js") == ENGINE.read_bytes(),
           f"{ENGINE.stat().st_size} B")

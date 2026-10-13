@@ -53,6 +53,10 @@ must be signed into the same Google account *and* have the same folder picked â€
 grant does not copy across devices, and the app waits for the Drive client to download the
 manifest before it sees new changes.
 
+A track saved on one device is metadata on the others â€” audio files never travel. Those entries
+are listed in the panel with a **Download here** button: for YouTube tracks the app fetches its own
+copy on that machine, and files that live on the other device say so instead of pretending.
+
 Signing in with a Google account inside the app is Android-only: Google no longer allows the
 browser-based flow the desktop build could perform, so on Windows and Linux the panel simply
 asks for the synced folder instead.

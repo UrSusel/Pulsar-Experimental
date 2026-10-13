@@ -75,6 +75,17 @@
       signIn: 'Zaloguj się kontem Google', signOut: 'Wyloguj', syncNow: 'Synchronizuj teraz',
       syncing: 'Synchronizuję…', lastSync: 'Ostatnia synchronizacja: ', never: 'nigdy',
       sent: 'Wysłane: ', received: 'Odebrane: ', inCloud: 'Tylko w chmurze: ',
+      inCloudHint: ' — z innego urządzenia, możesz je pobrać niżej',
+      cloudOnlyCap: 'Utwory tylko w chmurze',
+      cloudOnlyHint: 'Są już w bibliotece na innym urządzeniu. Pliki audio nie podróżują przez chmurę — utwory z YouTube możesz pobrać tutaj jednym kliknięciem.',
+      cloudOnlyMore: '…i jeszcze ', cloudOnlyMoreTail: ' w chmurze',
+      downloadHere: 'Pobierz tutaj', downloading: 'Pobieram: ',
+      downloaded: 'Pobrano — zaraz zsynchronizuję bibliotekę.',
+      downloadNoResult: 'YouTube nie zwrócił tego utworu — nic nie pobrano.',
+      downloadNoApi: 'Ta kompilacja nie ma wyszukiwarki sieciowej (__player.__net) — pobierz ten utwór ręcznie w zakładce Sieć.',
+      downloadFileOnly: 'To plik z innego urządzenia — dźwięk nie jedzie przez chmurę, więc nie da się go pobrać tutaj.',
+      downloadUnconfirmed: 'Import nie potwierdził się w bibliotece — sprawdź zakładkę Sieć.',
+      downloadOff: 'Wyszukiwanie w sieci jest w tej chwili wyłączone — włącz je w zakładce Sieć.',
       removedElsewhere: 'Usunięte na innym urządzeniu: ',
       mirror: 'Trzymaj czytelną kopię na Dysku (folder Pulsar)',
       enabled: 'Synchronizuj automatycznie',
@@ -119,6 +130,17 @@
       signIn: 'Sign in with Google', signOut: 'Sign out', syncNow: 'Sync now',
       syncing: 'Syncing…', lastSync: 'Last sync: ', never: 'never',
       sent: 'Sent: ', received: 'Received: ', inCloud: 'Cloud only: ',
+      inCloudHint: ' — from another device; you can download them below',
+      cloudOnlyCap: 'Tracks only in the cloud',
+      cloudOnlyHint: 'They are already in the library on another device. Audio files never travel through the cloud — YouTube tracks can be downloaded here with one click.',
+      cloudOnlyMore: '…and ', cloudOnlyMoreTail: ' more in the cloud',
+      downloadHere: 'Download here', downloading: 'Downloading: ',
+      downloaded: 'Downloaded — syncing the library in a moment.',
+      downloadNoResult: 'YouTube did not return this track — nothing was downloaded.',
+      downloadNoApi: 'This build has no network search (__player.__net) — download this track by hand in the Network tab.',
+      downloadFileOnly: 'This file lives on another device — its audio never travels through the cloud, so it cannot be downloaded here.',
+      downloadUnconfirmed: 'The import was not confirmed in the library — check the Network tab.',
+      downloadOff: 'Network search is switched off right now — switch it on in the Network tab.',
       removedElsewhere: 'Removed on another device: ',
       mirror: 'Keep a readable copy in Drive (Pulsar folder)',
       enabled: 'Sync automatically',
@@ -643,6 +665,12 @@
   };
   var busy = false;
   var counters = { sent: 0, received: 0, cloud: 0, removed: 0 };
+  // Utwory, które są w chmurze, ale nie ma ich na tym urządzeniu. Panel pokazuje
+  // ich listę, a utwory z YouTube można tu pobrać jednym kliknięciem.
+  var cloudEntries = [];
+  var MAX_CLOUD_ROWS = 25;
+  var IMPORT_WAIT_MS = 120000;  // ile czekamy, aż import pojawi się w bibliotece
+  var IMPORT_POLL_MS = 1500;
   var scheduledTimer = null;
   var listenersReady = false;
   var panel = null;
@@ -864,7 +892,7 @@
               }
             }
             return applyStep.then(function () {
-              var cloudEntries = cloudOnlyOf(mergedManifest, snapshot);
+              cloudEntries = cloudOnlyOf(mergedManifest, snapshot);
               counters = {
                 sent: (mergedManifest.tracks || []).length,
                 received: plan.trackUpdates.length + plan.newAlbums.length + plan.albumUpdates.length,
@@ -872,6 +900,7 @@
                 removed: merged.stats.remoteRemoved.length
               };
               return cloudReplace(cloudEntries).then(function () {
+              renderPanelStatus();
                 return pushRemote(JSON.stringify(mergedManifest));
               });
             });
@@ -1033,6 +1062,11 @@
       '      <span class="sm-desc" data-cloud="status"></span></div>' +
       '    <button type="button" class="sm-act" data-cloud="sync" data-cloud-text="syncNow"></button>' +
       '  </div>' +
+      '</div>' +
+      '<div class="sm-card sm-hide" data-cloud-section="cloudOnly">' +
+      '  <h3 class="sm-cap" data-cloud-text="cloudOnlyCap"></h3>' +
+      '  <div class="sm-row"><div class="sm-txt"><span class="sm-desc" data-cloud-text="cloudOnlyHint"></span></div></div>' +
+      '  <div data-cloud="cloudOnlyList"></div>' +
       '</div>' +
       '<div class="sm-card" data-cloud-section="folder">' +
       '  <h3 class="sm-cap" data-cloud-text="folderCap"></h3>' +
@@ -1239,6 +1273,135 @@
     });
   }
 
+  function netApi() {
+    // Runtime trzyma wyszukiwanie sieciowe pod __player.__net — to samo na
+    // Androidzie i na desktopie, więc pobieranie działa na każdej platformie.
+    var player = window.__player;
+    var net = player && player.__net;
+    if (!net || typeof net.search !== 'function' || typeof net.importIdx !== 'function') return null;
+    return net;
+  }
+
+  /** Identyfikator YouTube z wpisu w chmurze (albo pusty, gdy to plik z dysku). */
+  function downloadIdOf(entry) {
+    if (entry && entry.provider === 'youtube' && entry.ytId) return String(entry.ytId);
+    var match = /^youtube:([\w-]{6,})$/.exec(String((entry && entry.key) || ''));
+    return match ? match[1] : '';
+  }
+
+  function cloudLoad() {
+    return withStore('cloud', 'readonly', function (store) {
+      return typeof store.getAll === 'function' ? store.getAll() : { result: [] };
+    }).then(function (rows) {
+      cloudEntries = Array.isArray(rows) ? rows : [];
+    }).catch(function () {});
+  }
+
+  /** Import jest asynchroniczny — czekamy, aż utwór naprawdę będzie w bibliotece. */
+  function waitForTrack(key, waitMs) {
+    return new Promise(function (resolve) {
+      var deadline = nowMs() + waitMs;
+      function step() {
+        var snapshot = null;
+        try {
+          snapshot = typeof window.__pulsarSyncSnapshot === 'function' ? window.__pulsarSyncSnapshot() : null;
+        } catch (error) {
+          snapshot = null;
+        }
+        var found = !!(snapshot && (snapshot.tracks || []).some(function (item) {
+          return item && item.key === key;
+        }));
+        if (found) { resolve(true); return; }
+        if (nowMs() >= deadline) { resolve(false); return; }
+        setTimeout(step, IMPORT_POLL_MS);
+      }
+      step();
+    });
+  }
+
+  /**
+   * Dociąga utwór z YouTube na tym urządzeniu. Wyszukiwanie i zapis robi sam
+   * runtime (z netId, okładką i tagami), a potem biblioteka idzie do chmury —
+   * dzięki temu znika z listy „tylko w chmurze" po obu stronach.
+   */
+  function downloadCloudTrack(key) {
+    var entry = null;
+    (cloudEntries || []).forEach(function (item) { if (!entry && item && item.key === key) entry = item; });
+    var id = downloadIdOf(entry || { key: key });
+    if (!id) { fail(T('downloadFileOnly')); return Promise.resolve({ skipped: 'no-audio' }); }
+    var net = netApi();
+    if (!net) { fail(T('downloadNoApi')); return Promise.resolve({ skipped: 'no-api' }); }
+    if (typeof net.enabled === 'function' && net.enabled() === false) {
+      fail(T('downloadOff'));
+      return Promise.resolve({ skipped: 'net-off' });
+    }
+    note(T('downloading') + ((entry && entry.title) || ('YouTube ' + id)));
+    return Promise.resolve().then(function () {
+      return net.search('https://www.youtube.com/watch?v=' + id);
+    }).then(function () {
+      var results = typeof net.results === 'function' ? (net.results() || []) : [];
+      var index = -1;
+      results.forEach(function (item, i) {
+        if (index >= 0 || !item) return;
+        if (String(item.ytId || item.id || '') === id) index = i;
+      });
+      if (index < 0) throw new Error(T('downloadNoResult'));
+      return net.importIdx(index);
+    }).then(function () {
+      return waitForTrack(key, IMPORT_WAIT_MS);
+    }).then(function (found) {
+      if (!found) { fail(T('downloadUnconfirmed')); return { skipped: 'unconfirmed' }; }
+      note(T('downloaded'));
+      return runSync({ force: true });
+    }).catch(function (error) {
+      fail(message(error));
+      return { error: message(error) };
+    });
+  }
+
+  function renderCloudOnly(pane) {
+    var card = pane.querySelector('[data-cloud-section="cloudOnly"]');
+    var list = pane.querySelector('[data-cloud="cloudOnlyList"]');
+    if (!card || !list) return;
+    var entries = cloudEntries || [];
+    card.classList.toggle('sm-hide', !entries.length);
+    if (!entries.length) { list.innerHTML = ''; return; }
+
+    var shown = entries.slice(0, MAX_CLOUD_ROWS);
+    var html = '';
+    shown.forEach(function (entry) {
+      var id = downloadIdOf(entry);
+      var title = String((entry && entry.title) || (entry && entry.key) || '');
+      var artist = String((entry && entry.artist) || '');
+      html += '<div class="sm-row"><div class="sm-txt">' +
+        '<span class="sm-lab">' + escapeHtml(title) + '</span>' +
+        '<span class="sm-desc">' + escapeHtml(artist) + '</span>' +
+        '</div>';
+      if (id) {
+        html += '<button type="button" class="sm-act" data-cloud-download="' + escapeHtml(entry.key) + '">' +
+          escapeHtml(T('downloadHere')) + '</button>';
+      } else {
+        html += '<div class="sm-txt"><span class="sm-desc">' + escapeHtml(T('downloadFileOnly')) + '</span></div>';
+      }
+      html += '</div>';
+    });
+    if (entries.length > shown.length) {
+      html += '<div class="sm-row"><div class="sm-txt"><span class="sm-desc">' +
+        escapeHtml(T('cloudOnlyMore') + (entries.length - shown.length) + T('cloudOnlyMoreTail')) +
+        '</span></div></div>';
+    }
+    list.innerHTML = html;
+    // innerHTML nie przenosi nasłuchów, więc podpinamy je po każdym renderze.
+    list.querySelectorAll('[data-cloud-download]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        button.disabled = true;
+        downloadCloudTrack(button.getAttribute('data-cloud-download') || '').then(function () {
+          button.disabled = false;
+        }).catch(function () { button.disabled = false; });
+      });
+    });
+  }
+
   function renderPanelStatus() {
     var pane = ensurePanel();
     if (!pane) return;
@@ -1270,7 +1433,7 @@
       lines.push(T('lastSync') + (state.lastSyncAt ? new Date(state.lastSyncAt).toLocaleString() : T('never')));
       if (counters.sent || counters.received || counters.cloud || counters.removed) {
         lines.push(T('sent') + counters.sent + ' · ' + T('received') + counters.received);
-        if (counters.cloud) lines.push(T('inCloud') + counters.cloud);
+        if (counters.cloud) lines.push(T('inCloud') + counters.cloud + T('inCloudHint'));
         if (counters.removed) lines.push(T('removedElsewhere') + counters.removed);
       }
       if (busy) lines.push(T('syncing'));
@@ -1283,6 +1446,8 @@
     if (enabled) enabled.checked = !!state.enabled;
     var mirror = pane.querySelector('[data-cloud="mirror"]');
     if (mirror) mirror.checked = state.mirror !== false;
+
+    renderCloudOnly(pane);
   }
 
   // --------------------------------------------------------------- rozruch
@@ -1298,6 +1463,7 @@
     ensurePanel();
     refreshStatus();
     deviceInfo().catch(function () {});
+    cloudLoad().then(function () { renderPanelStatus(); }).catch(function () {});
     stateGet('counters').then(function (stored) {
       if (stored && stored.value) {
         counters = Object.assign(counters, stored.value);
@@ -1351,6 +1517,9 @@
     mode: function () { return state.mode; },
     state: function () { return state; },
     counters: function () { return counters; },
+    download: downloadCloudTrack,
+    cloudOnly: function () { return cloudEntries.slice(); },
+    setImportWait: function (ms) { IMPORT_WAIT_MS = Math.max(0, Number(ms) || 0); return IMPORT_WAIT_MS; },
     _pure: {
       trackKey: trackKey,
       albumKey: albumKey,
