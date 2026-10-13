@@ -35,7 +35,7 @@ public class PulsarPlaybackService extends Service {
 
     private static final String CHANNEL_ID = "pulsar_media_playback";
     private static final int NOTIFICATION_ID = 7314;
-    private static final int SESSION_ACTIONS = PlaybackState.ACTION_PLAY
+    private static final long SESSION_ACTIONS = PlaybackState.ACTION_PLAY
         | PlaybackState.ACTION_PAUSE
         | PlaybackState.ACTION_PLAY_PAUSE
         | PlaybackState.ACTION_SKIP_TO_NEXT

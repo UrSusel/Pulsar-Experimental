@@ -15,7 +15,7 @@ This is a separate Android project; it does not change the Windows or Linux app 
 
 ## Build
 
-Requirements: Node.js 22+/npm, Python 3, Android Studio with Android SDK 36, and JDK 17+.
+Requirements: Node.js 22+/npm, Python 3, Android Studio with Android SDK 36, and JDK 21+.
 
 ```bash
 npm ci

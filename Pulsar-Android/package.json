@@ -7,7 +7,7 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "prepare:web": "python3 tools/build_web_assets.py",
+    "prepare:web": "python tools/build_web_assets.py",
     "android:sync": "npm run prepare:web && cap sync android",
     "android:open": "cap open android",
     "android:run": "npm run android:sync && cap run android"
