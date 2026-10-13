@@ -1587,6 +1587,11 @@
     }
     var body = document.getElementById('smBody');
     if (body) body.scrollTop = 0;
+    if (id === 'cloud') {
+      // Okno ustawień animuje się, więc mierzymy też chwilę później.
+      setTimeout(ensureCloudScroll, 60);
+      setTimeout(ensureCloudScroll, 420);
+    }
     // Wyszukiwarka ustawień: czyścimy filtr i pozwalamy runtime'owi go przeliczyć.
     var search = document.getElementById('smSearch');
     if (search && search.value) {
@@ -1594,6 +1599,140 @@
       try { search.dispatchEvent(new Event('input')); } catch (error) {}
     }
     try { localStorage.setItem('pulsarSettingsTab', id); } catch (error) {}
+  }
+
+  /**
+   * Przewijanie panelu chmury. Runtime trzyma panele ustawień w #smBody
+   * (`overflow-y: auto`), ale gdy ten kontener nie dostanie ograniczonej
+   * wysokości, treść ucieka poza ekran i nie ma jak do niej dotrzeć palcem —
+   * widać tylko górę zakładki. Dlatego: (1) nie pozwalamy jednemu wpisowi
+   * rozepchnąć wiersza w poziomie, (2) gdy kontener nie przewija, sam panel
+   * staje się kontenerem przewijania o wysokości zmierzonej do okna ustawień,
+   * (3) jeśli WebView i tego nie przewinie, przewijamy treść za palcem sami.
+   */
+  var CLOUD_STYLE_ID = 'pulsarCloudPanelStyles';
+  var CLOUD_SCROLL_ATTR = 'data-cloud-scroll';
+  var cloudTouch = { active: false, startY: 0, startTop: 0, lastTop: 0, still: 0 };
+
+  function ensureCloudStyles() {
+    if (document.getElementById(CLOUD_STYLE_ID)) return;
+    var head = document.head || document.body;
+    if (!head || typeof document.createElement !== 'function') return;
+    var style = document.createElement('style');
+    style.setAttribute('id', CLOUD_STYLE_ID);
+    style.textContent = [
+      '.sm-pane[data-pane="cloud"] .sm-row, .sm-pane[data-pane="cloud"] .sm-txt { min-width: 0; }',
+      '.sm-pane[data-pane="cloud"] .sm-lab, .sm-pane[data-pane="cloud"] .sm-desc { overflow-wrap: anywhere; }',
+      '.sm-pane[data-pane="cloud"][' + CLOUD_SCROLL_ATTR + '="self"] { overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; padding-bottom: 18px; }'
+    ].join('\n');
+    head.appendChild(style);
+  }
+
+  function pixels(value) {
+    var number = Number(value);
+    return isFinite(number) && number > 0 ? number : 0;
+  }
+
+  /** Najbliższy przodek, który przewija (w runtime to #smBody). */
+  function cloudScrollHost(pane) {
+    var node = pane ? pane.parentNode : null;
+    while (node && node !== document.body && node.nodeType !== 9) {
+      try {
+        var style = typeof window.getComputedStyle === 'function' ? window.getComputedStyle(node) : null;
+        if (style && /auto|scroll/.test(String(style.overflowY || ''))) return node;
+      } catch (error) { /* brak getComputedStyle — idziemy wyżej */ }
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  /** Pomiar: czy panel jest widoczny, czy się nie mieści i czy kontener przewija. */
+  function cloudScrollInfo(pane) {
+    var rect = null;
+    try {
+      rect = pane && typeof pane.getBoundingClientRect === 'function' ? pane.getBoundingClientRect() : null;
+    } catch (error) { rect = null; }
+    var height = pixels(rect && rect.height);
+    var top = Number(rect && rect.top) || 0;
+    var host = cloudScrollHost(pane);
+    var viewport = pixels(window.innerHeight);
+    var hostHeight = pixels(host && host.clientHeight) || viewport;
+    var content = pixels(pane && pane.scrollHeight);
+    var hostScrolls = false;
+    if (host) {
+      try { hostScrolls = pixels(host.scrollHeight) > pixels(host.clientHeight) + 2; } catch (error) { hostScrolls = false; }
+    }
+    var bottom = 0;
+    try {
+      var dialog = pane && typeof pane.closest === 'function' ? pane.closest('.sm-dialog') : null;
+      if (dialog && typeof dialog.getBoundingClientRect === 'function') {
+        bottom = Number(dialog.getBoundingClientRect().bottom) || 0;
+      }
+    } catch (error) { bottom = 0; }
+    if (!bottom) bottom = viewport || (top + height);
+    if (viewport && bottom > viewport) bottom = viewport - 8;
+    return {
+      visible: height > 0,
+      overflows: !!content && !!hostHeight && content > hostHeight + 2,
+      hostScrolls: hostScrolls,
+      host: !!host,
+      hostHeight: hostHeight,
+      content: content,
+      top: Math.round(top),
+      bottom: Math.round(bottom),
+      room: Math.max(160, Math.round(bottom - top - 8)),
+      mode: (pane && pane.getAttribute(CLOUD_SCROLL_ATTR)) || 'host'
+    };
+  }
+
+  /** Panel sam się przewija, gdy kontener ustawień tego nie potrafi. */
+  function ensureCloudScroll() {
+    var pane = panel;
+    if (!pane || typeof pane.getAttribute !== 'function') return;
+    var info = cloudScrollInfo(pane);
+    if (!info.visible || !info.overflows || info.hostScrolls) {
+      if (pane.style && pane.style.maxHeight) pane.style.maxHeight = '';
+      pane.removeAttribute(CLOUD_SCROLL_ATTR);
+      return;
+    }
+    pane.style.maxHeight = info.room + 'px';
+    pane.setAttribute(CLOUD_SCROLL_ATTR, 'self');
+  }
+
+  /** Ostatnia deska ratunku: gdy WebView nie przewinie panelu, robimy to sami. */
+  function armCloudTouchScroll(pane) {
+    if (!pane || pane.__pulsarCloudTouch) return;
+    pane.__pulsarCloudTouch = true;
+    pane.addEventListener('touchstart', function (event) {
+      var touch = event.touches && event.touches[0];
+      if (!touch || pane.getAttribute(CLOUD_SCROLL_ATTR) !== 'self') { cloudTouch.active = false; return; }
+      cloudTouch.active = true;
+      cloudTouch.still = 0;
+      cloudTouch.startY = Number(touch.clientY) || 0;
+      cloudTouch.startTop = Number(pane.scrollTop) || 0;
+      cloudTouch.lastTop = cloudTouch.startTop;
+    }, { passive: true });
+    pane.addEventListener('touchmove', function (event) {
+      if (!cloudTouch.active) return;
+      var touch = event.touches && event.touches[0];
+      if (!touch) return;
+      var moved = Math.abs((Number(pane.scrollTop) || 0) - cloudTouch.lastTop) > 0.5;
+      if (moved) {
+        // WebView przewija sam — nie wchodzimy mu w drogę.
+        cloudTouch.lastTop = Number(pane.scrollTop) || 0;
+        cloudTouch.startTop = cloudTouch.lastTop;
+        cloudTouch.startY = Number(touch.clientY) || 0;
+        cloudTouch.still = 0;
+        return;
+      }
+      cloudTouch.still++;
+      if (cloudTouch.still < 2) return;
+      var max = Math.max(0, pixels(pane.scrollHeight) - pixels(pane.clientHeight));
+      var next = cloudTouch.startTop - ((Number(touch.clientY) || 0) - cloudTouch.startY);
+      pane.scrollTop = Math.max(0, Math.min(max, next));
+    }, { passive: true });
+    pane.addEventListener('touchend', function () { cloudTouch.active = false; }, { passive: true });
+    pane.addEventListener('touchcancel', function () { cloudTouch.active = false; }, { passive: true });
   }
 
   function panelHtml() {
@@ -1752,12 +1891,20 @@
       panelTab = tab;
       tab.addEventListener('click', function () { showPane('cloud'); });
 
+      ensureCloudStyles();
+      armCloudTouchScroll(pane);
       wirePanel(pane);
     } else if (!panelTab) {
       panelTab = settingsMenu.querySelector('.sm-tab[data-pane="cloud"]');
     }
 
     panel = pane;
+    // Panel musi wisieć w kontenerze, który przewija (#smBody) — gdy trafił
+    // gdzie indziej, wracamy na miejsce.
+    var scrollBody = document.getElementById('smBody');
+    if (scrollBody && pane.parentNode !== scrollBody) scrollBody.appendChild(pane);
+    ensureCloudStyles();
+    armCloudTouchScroll(pane);
     applyLabels(pane);
     renderPanelStatus();
     return pane;
@@ -2254,6 +2401,7 @@
     if (mirror) mirror.checked = state.mirror !== false;
 
     renderCloudOnly(pane);
+    ensureCloudScroll();
   }
 
   // --------------------------------------------------------------- rozruch
@@ -2338,6 +2486,7 @@
     ownFile: function () { return cloudMeta.ownFile || ''; },
     _fileHelpers: { platformKey: platformKey, ownFileName: ownFileName, fileLabel: fileLabel },
     cloudMeta: function () { return Object.assign({}, cloudMeta); },
+    scrollInfo: function () { return panel ? cloudScrollInfo(panel) : null; },
     setImportWait: function (ms) { IMPORT_WAIT_MS = Math.max(0, Number(ms) || 0); return IMPORT_WAIT_MS; },
     setReadRetry: function (ms) { READ_RETRY_MS = Math.max(0, Number(ms) || 0); return READ_RETRY_MS; },
     cloudMemory: function () {

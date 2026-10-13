@@ -31,6 +31,7 @@ REPO = SYNC_DIR.parent
 sys.path.insert(0, str(SYNC_DIR / "tools"))
 from cloud_runtime_patches import (  # noqa: E402
     apply_cloud_runtime_patches,
+    cloud_hooks_current,
     cloud_runtime_patched,
 )
 ENGINE = SYNC_DIR / "drive-sync.js"
@@ -135,14 +136,14 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
         # 1) Poprawki runtime'u: zapis netId/metadanych, zdarzenia biblioteki
         # i hooki scalania. Bez nich synchronizacja nie ma czego wysłać i nie
         # wie, kiedy się uruchomić.
-        runtime_changed = not cloud_runtime_patched(html)
+        runtime_changed = not cloud_runtime_patched(html) or not cloud_hooks_current(html)
         html = apply_cloud_runtime_patches(html)
         # 2) Znaczniki <script>: adapter przed silnikiem.
         patched, changed = patch_index(html)
         already = not changed
 
         print(f"[{platform}] {archive.name}: {len(files)} plików, {before_size} B")
-        print(f"[{platform}]   runtime: {'już poprawiony' if not runtime_changed else 'wstrzykuję poprawki'};"
+        print(f"[{platform}]   runtime: {'już poprawiony' if not runtime_changed else 'wstrzykuję poprawki (albo nowsze hooki)'};"
               f" znaczniki: {'już są' if already else 'wstawiam'}")
 
         if check_only:

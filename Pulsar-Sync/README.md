@@ -148,6 +148,10 @@ What the script does inside the archive:
    (it registers before the engine starts).
 4. The same runtime patches Android gets: `netId` and album/year are persisted, library
    changes emit `pulsar:library`, and the merge hooks are attached to the host API.
+   The hook block is delimited by `/* ---- Cloud sync hooks … end cloud sync hooks ---- */`,
+   so a package that already carries the patches still gets a **newer** `cloud_sync_hooks.js`;
+   without that, a package built once kept its hooks frozen forever while every build reported
+   "already patched".
 
 Neutralino verifies a SHA-256 checksum for every file at startup, and `neu.py` recomputes
 them, so nothing else in the archive may change — the script re-checks the untouched files
@@ -163,8 +167,8 @@ which keeps one copy of the engine on the page.
 ## Checks
 
 ```bash
-node Pulsar-Sync/tools/test_drive_sync.js          # 203 checks: engine, panel, plugins, desktop adapter
-python Pulsar-Sync/tools/test_desktop_bundle.py    # 36 checks on the two packed archives
+node Pulsar-Sync/tools/test_drive_sync.js          # 211 checks: engine, panel, plugins, desktop adapter
+python Pulsar-Sync/tools/test_desktop_bundle.py    # 38 checks on the two packed archives
 python Pulsar-Sync/tools/refresh_download_zips.py --check
 node Pulsar-Android/tools/test_background_watchdog.js
 ```

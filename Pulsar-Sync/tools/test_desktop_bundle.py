@@ -151,6 +151,17 @@ def audit(platform: str, archive: Path) -> None:
     check(f"[{platform}] silnik w archiwum = źródło",
           files.get("resources/drive-sync.js") == ENGINE.read_bytes(),
           f"{ENGINE.stat().st_size} B")
+    # Sam znacznik hooków nie wystarcza: paczki (i zbudowany z nich projekt
+    # Androida) muszą nieść dokładnie tę wersję, która leży w repozytorium.
+    hooks_source = (SYNC_DIR / "cloud_sync_hooks.js").read_text(encoding="utf-8").strip()
+    hooks_start = html.find("/* ---- Cloud sync hooks")
+    hooks_end = html.find("/* ---- end cloud sync hooks ---- */", hooks_start)
+    hooks_block = (html[hooks_start:hooks_end + len("/* ---- end cloud sync hooks ---- */")].strip()
+                   if hooks_start > -1 and hooks_end > -1 else "")
+    check(f"[{platform}] hooki scalania w archiwum = źródło",
+          hooks_block == hooks_source,
+          f"{len(hooks_block)} B vs {len(hooks_source)} B")
+
     check(f"[{platform}] adapter w archiwum = źródło",
           files.get("resources/cloud-sync.js") == ADAPTER.read_bytes(),
           f"{ADAPTER.stat().st_size} B")

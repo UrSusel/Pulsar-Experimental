@@ -22,11 +22,47 @@ from pathlib import Path
 HOOKS = Path(__file__).resolve().parents[1] / "cloud_sync_hooks.js"
 # Poprawki zostawiają ten znacznik; po nim wiadomo, że są już w środku.
 MARKER = "window.__pulsarSyncSnapshot"
+# Blok hooków jest oznaczony z obu stron, żeby dało się go wymienić na nowszy.
+HOOKS_START = "/* ---- Cloud sync hooks"
+HOOKS_END = "/* ---- end cloud sync hooks ---- */"
 
 
 def cloud_runtime_patched(html: str) -> bool:
     """Czy ten index.html ma już poprawki runtime'u."""
     return MARKER in html
+
+
+def _hooks_block(html: str) -> str:
+    """Wstrzyknięty blok hooków (albo pusty łańcuch, gdy go nie ma)."""
+    start = html.find(HOOKS_START)
+    if start == -1:
+        return ""
+    end = html.find(HOOKS_END, start)
+    if end == -1:
+        return ""
+    return html[start:end + len(HOOKS_END)].strip()
+
+
+def cloud_hooks_current(html: str) -> bool:
+    """Czy paczka niesie dokładnie tę wersję hooków, która leży w repozytorium."""
+    return _hooks_block(html) == HOOKS.read_text(encoding="utf-8").strip()
+
+
+def refresh_cloud_hooks(html: str) -> tuple[str, bool]:
+    """Podmienia wstrzyknięty blok hooków na aktualny.
+
+    Sam znacznik nie wystarcza za bramkę: hooki zmieniają się znacznie częściej
+    niż reszta poprawek, a poprzednie wersje paczek (i zbudowany z nich projekt
+    Androida) zostawiały w środku starszy blok — czyli nowy kod nigdy nie
+    docierał do aplikacji, choć build meldował „już poprawiony”.
+    """
+    current = _hooks_block(html)
+    if not current:
+        return html, False
+    source = HOOKS.read_text(encoding="utf-8").strip()
+    if current == source:
+        return html, False
+    return html.replace(current, source, 1), True
 
 
 def apply_cloud_runtime_patches(html: str) -> str:
@@ -37,7 +73,10 @@ def apply_cloud_runtime_patches(html: str) -> str:
     (np. build Androida czyta Pulsar-Linux/resources.neu).
     """
     if cloud_runtime_patched(html):
-        return html
+        # Reszta poprawek jest już w środku — ale hooki wymieniamy zawsze, gdy
+        # w repozytorium jest nowsza wersja (patrz refresh_cloud_hooks).
+        refreshed, _changed = refresh_cloud_hooks(html)
+        return refreshed
     # --- Cloud sync -----------------------------------------
     # The runtime keeps network metadata (netId, album, year) in memory only, so
     # a restart loses the YouTube identifier. Cloud sync needs that identifier

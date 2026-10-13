@@ -10,10 +10,36 @@
  * Nothing here uploads or downloads audio: only metadata is exposed.
  */
 
+/**
+ * Identyfikator filmu YouTube. Rekord zapisany przed poprawką zachowującą
+ * `netId` nie ma go już wcale, ale zwykle zostaje `netLink` (adres, z którego
+ * utwór pobrano) — dzięki temu stara piosenka z telefonu znów ma wspólny
+ * klucz z innymi urządzeniami i da się ją pobrać po drugiej stronie.
+ */
+function pulsarCloudYoutubeId(track) {
+  if (!track) return '';
+  const netId = String(track.netId || '');
+  if (netId) return netId.indexOf('youtube:') === 0 ? netId.slice(8) : '';
+  const link = String(track.netLink || track.link || track.url || track.src || '');
+  if (!/youtu\.?be|youtube\.com/i.test(link)) return '';
+  const patterns = [
+    /[?&]v=([A-Za-z0-9_-]{6,20})/,
+    /youtu\.be\/([A-Za-z0-9_-]{6,20})/,
+    /youtube\.com\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/
+  ];
+  for (let i = 0; i < patterns.length; i++) {
+    const found = patterns[i].exec(link);
+    if (found) return found[1];
+  }
+  return '';
+}
+
 function pulsarCloudTrackKey(track) {
   if (!track) return '';
   const netId = track.netId || '';
   if (netId) return String(netId);
+  const videoId = pulsarCloudYoutubeId(track);
+  if (videoId) return 'youtube:' + videoId;
   const size = track.file ? (track.file.size || 0) : 0;
   const name = track.file ? (track.file.name || '') : '';
   if (!name && !size) return '';
@@ -48,8 +74,8 @@ window.__pulsarSyncSnapshot = function () {
       artist: track.artist || '',
       album: track.album || '',
       year: track.year || '',
-      provider: track.netId ? String(track.netId).split(':')[0] : '',
-      ytId: track.netId && String(track.netId).indexOf('youtube:') === 0 ? String(track.netId).slice(8) : '',
+      provider: track.netId ? String(track.netId).split(':')[0] : (pulsarCloudYoutubeId(track) ? 'youtube' : ''),
+      ytId: pulsarCloudYoutubeId(track),
       durMs: Math.round(Number(track.durMs || 0) || 0),
       fav: !!track.fav,
       plays: Number(track.plays || 0) || 0,

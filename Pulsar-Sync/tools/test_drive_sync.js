@@ -646,6 +646,11 @@ async function checkRuntimeHooks() {
         netId: 'youtube:dQw4w9WgXcQ', title: 'Giants', artist: 'Imagine Dragons', album: 'Evolve', year: '2017',
         fav: true, plays: 7, durMs: 200000 },
       { id: 't2', file: { name: 'Local.mp3', size: 8192 }, folder: 'Muzyka', title: 'Local', artist: 'X', fav: false, plays: 1 },
+      // Rekord zapisany, zanim runtime zachowywał netId: zostaje po nim link.
+      { id: 't3', file: { name: 'Stara piosenka.mp3', size: 1024 }, folder: 'Sieć/youtube', title: 'Stara', artist: 'Y',
+        netLink: 'https://www.youtube.com/watch?v=aaaaaaaaaaa' },
+      // Źródło spoza YouTube i bez pliku nie ma po czym się skojarzyć między urządzeniami.
+      { id: 't4', title: 'Obca', artist: 'Z', netLink: 'https://soundcloud.com/ktoś/obca' },
     ],
     albums: [
       { id: 'a1', name: 'Evolve', trackIds: ['t1'], coverBlob: cover, customCover: true, createdAt: 111 },
@@ -659,6 +664,13 @@ async function checkRuntimeHooks() {
     JSON.stringify(snapshot).slice(0, 120));
   check('snapshot keys YouTube tracks by video id', snapshot.tracks[0].key === 'youtube:dQw4w9WgXcQ', snapshot.tracks[0].key);
   check('snapshot keys local files by fingerprint', /^fp:8192:/.test(snapshot.tracks[1].key), snapshot.tracks[1].key);
+  check('a legacy track without netId still syncs through its YouTube link',
+    !!snapshot.tracks[2] && snapshot.tracks[2].key === 'youtube:aaaaaaaaaaa' &&
+      snapshot.tracks[2].ytId === 'aaaaaaaaaaa' && snapshot.tracks[2].provider === 'youtube',
+    JSON.stringify(snapshot.tracks[2]));
+  check('a source that is not YouTube and has no file stays out of the manifest',
+    snapshot.tracks.length === 3 && !snapshot.tracks.some((entry) => /obca|soundcloud/i.test(entry.title)),
+    String(snapshot.tracks.length));
   check('album membership is expressed as track keys',
     JSON.stringify(snapshot.albums[0].trackKeys) === JSON.stringify(['youtube:dQw4w9WgXcQ']),
     JSON.stringify(snapshot.albums.map((album) => album.trackKeys)));
@@ -1822,6 +1834,59 @@ async function checkRuntimeHooks() {
       /Mostek do YouTube nie odpowiada/.test(status), status.slice(-200));
     check('and the reason for the failure stays in the panel',
       /Ostatnie pobieranie nie udało się: Bez mostka/.test(status), status.slice(-260));
+  }
+
+  { // 59. zakładka Cloud na telefonie przewija się palcem do samego dołu
+    const env = makeEnv({
+      withPanel: true, folderPicked: true,
+      tracks: [track({ netId: 'youtube:SCROLL0001', title: 'Przewijanie', artist: 'X' })],
+    });
+    const pane = env.api.openPanel();
+    const smBody = env.dom.smBody;
+
+    // Telefon: treść zakładki nie mieści się w oknie ustawień, a kontener
+    // (#smBody) nie przewija — wtedy dolna część panelu była nieosiągalna.
+    env.sandbox.window.innerHeight = 420;
+    env.sandbox.window.getComputedStyle = (node) => ({
+      overflowY: node && node.getAttribute && node.getAttribute('id') === 'smBody' ? 'auto' : 'visible',
+    });
+    smBody.clientHeight = 360;
+    smBody.scrollHeight = 360;
+    pane.getBoundingClientRect = () => ({ top: 40, bottom: 400, height: 360 });
+    pane.scrollHeight = 2400;
+    pane.clientHeight = 360;
+
+    env.api.showPane('cloud');
+    await wait(480);
+    check('the cloud tab scrolls by touch on a phone',
+      pane.getAttribute('data-cloud-scroll') === 'self', String(env.api.scrollInfo().mode));
+    const room = Number(String(pane.style.maxHeight || '').replace('px', ''));
+    check('and it is capped to the settings window height',
+      room >= 160 && room <= 420, String(pane.style.maxHeight));
+    check('the pane really hangs in the scrolling body of settings',
+      pane.parentNode === smBody, String(pane.parentNode && pane.parentNode.getAttribute('id')));
+
+    // Gdyby WebView i tak nie przewinął panelu, przewijamy treść sami.
+    pane.dispatchEvent({ type: 'touchstart', touches: [{ clientY: 300 }] });
+    pane.dispatchEvent({ type: 'touchmove', touches: [{ clientY: 200 }] });
+    pane.dispatchEvent({ type: 'touchmove', touches: [{ clientY: 100 }] });
+    check('a finger drag moves the tab when the WebView will not', pane.scrollTop > 0, String(pane.scrollTop));
+    pane.dispatchEvent({ type: 'touchend' });
+
+    // Gdy kontener ustawień przewija sam (szersze okno), panelu nie ruszamy.
+    smBody.scrollHeight = 2000;
+    env.api.showPane('cloud');
+    await wait(480);
+    check('a container that already scrolls keeps its own scrolling',
+      pane.getAttribute('data-cloud-scroll') === null && !pane.style.maxHeight,
+      String(pane.style.maxHeight));
+
+    // Style panelu wchodzą raz, choćby panel powstawał wielokrotnie.
+    env.api.openPanel();
+    const styles = env.document.querySelectorAll('style').filter((node) => node.getAttribute('id') === 'pulsarCloudPanelStyles');
+    check('the cloud styles are attached exactly once',
+      styles.length === 1 && /overflow-scrolling: touch/.test(styles[0].textContent),
+      String(styles.length));
   }
 
   await checkRuntimeHooks();

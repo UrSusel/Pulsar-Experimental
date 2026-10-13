@@ -75,6 +75,7 @@ class FakeElement {
     if (name === 'class') this.className = value;
   }
   getAttribute(name) { return this.attributes.has(name) ? this.attributes.get(name) : null; }
+  removeAttribute(name) { this.attributes.delete(name); }
   hasAttribute(name) { return this.attributes.has(name); }
   appendChild(child) {
     child.parentNode = this;

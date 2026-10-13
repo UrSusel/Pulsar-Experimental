@@ -188,8 +188,10 @@ def build(archive: Path, out_dir: Path, bridge: Path, drive_sync: Path) -> None:
     # lives once in Pulsar-Sync/tools/cloud_runtime_patches.py. The source
     # archive may already carry them (both desktop packages do), so this is a
     # no-op when they are in place.
-    if not cloud_runtime_patched(html):
-        html = apply_cloud_runtime_patches(html)
+    # Wołane bezwarunkowo: poprawki są idempotentne, a blok hooków musi być
+    # wymieniony, gdy w repozytorium jest nowsza wersja (inaczej Android
+    # dostawał hooki zamrożone w paczce desktopowej).
+    html = apply_cloud_runtime_patches(html)
 
 
     # The packed desktop runtime ships an old Cobalt client (stale instance-list
