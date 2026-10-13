@@ -120,6 +120,28 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
             raise ValueError(f"expected exactly one MediaSession source fragment: {old[:100]!r}")
         html = html.replace(old, new, 1)
 
+    # The Android build exposes the existing network-library view but cannot
+    # reach the desktop-only yt-dlp bridge on loopback. Skip that probe and use
+    # the runtime's public search/stream fallbacks instead.
+    android_network_replacements = [
+        (
+            "  const BRIDGE_BASE = 'http://127.0.0.1:' + BRIDGE_PORT;",
+            "  const BRIDGE_BASE = '';",
+        ),
+        (
+            "  async function ytBridgePing(force){\n    // true → zawsze odśwież; bez force: dodatni cache wiarygodny, ujemny wygasa po 15 s (mostek mógł właśnie wystartować)",
+            "  async function ytBridgePing(force){\n    if (window.__pulsarAndroid){ ytBridgeOk = false; ytBridgeFfmpeg = false; ytBridgeAt = Date.now(); return false; }\n    // true → zawsze odśwież; bez force: dodatni cache wiarygodny, ujemny wygasa po 15 s (mostek mógł właśnie wystartować)",
+        ),
+        (
+            "  function bridgeHintHtml(r){\n    const cmd = 'node ytdl-bridge.mjs';",
+            "  function bridgeHintHtml(r){\n    if (window.__pulsarAndroid) return t('Na Androidzie pobieranie z YouTube zależy od dostępnych źródeł online; YouTube lub dostawcy mogą blokować niektóre utwory.');\n    const cmd = 'node ytdl-bridge.mjs';",
+        ),
+    ]
+    for old, new in android_network_replacements:
+        if html.count(old) != 1:
+            raise ValueError(f"expected exactly one Android network source fragment: {old[:100]!r}")
+        html = html.replace(old, new, 1)
+
     input_pattern = re.compile(r'<input type="file" id="folderInput"[^>]*>')
     html, count = input_pattern.subn(
         '<input type="file" id="folderInput" accept="audio/*" multiple hidden>', html, count=1
@@ -153,6 +175,11 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
             "Wybierz pliki audio",
             2,
         ),
+        (
+            "YouTube: wklej link w pole wyszukiwania albo szukaj frazą. Podgląd i „Zapisz” (MP3) wymagają lokalnego mostka yt-dlp — status w górnym pasku („● yt-dlp”). Linki do playlist wklej w to samo pole. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.",
+            "Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera dostępny plik audio do biblioteki aplikacji; publiczni dostawcy mogą blokować niektóre utwory. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.",
+            2,
+        ),
     ]
     for old, new, expected in mobile_text:
         if html.count(old) != expected:
@@ -176,15 +203,26 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
         raise ValueError("could not update the Android add-files translation")
     html = html.replace(old_add_translation, new_add_translation, 1)
 
+    old_footer_translation = "    'Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera dostępny plik audio do biblioteki aplikacji; publiczni dostawcy mogą blokować niektóre utwory. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.': { en: 'YouTube: paste a link into the search box or search by phrase. Preview and “Save” (MP3) need the local yt-dlp bridge — status in the top bar (“● yt-dlp”). Paste playlist links into the same box. iTunes and Deezer serve 30-second previews. Audius, Internet Archive and Wikimedia Commons may serve full files.', es: 'YouTube: pega un enlace en el cuadro de búsqueda o busca por frase. La vista previa y «Guardar» (MP3) necesitan el puente local yt-dlp — estado en la barra superior («● yt-dlp»). Los enlaces a listas se pegan en el mismo cuadro. iTunes y Deezer ofrecen vistas previas de 30 s. Audius, Internet Archive y Wikimedia Commons pueden ofrecer archivos completos.' },"
+    new_footer_translation = "    'Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera dostępny plik audio do biblioteki aplikacji; publiczni dostawcy mogą blokować niektóre utwory. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.': { en: 'Android: paste a YouTube link or search by phrase. “Save” fetches available audio into the app library; public providers may block some tracks. iTunes and Deezer offer 30-second previews. Audius, Internet Archive, and Wikimedia Commons may offer full tracks.', es: 'Android: pega un enlace de YouTube o busca por frase. «Guardar» descarga el audio disponible a la biblioteca de la app; los proveedores públicos pueden bloquear algunas canciones. iTunes y Deezer ofrecen vistas previas de 30 segundos. Audius, Internet Archive y Wikimedia Commons pueden ofrecer canciones completas.' },"
+    if html.count(old_footer_translation) != 1:
+        raise ValueError("could not update the Android network-view translation")
+    html = html.replace(old_footer_translation, new_footer_translation, 1)
+
     dictionary = "  var I18N_DICT = {\n"
     mobile_hint_translation = (
         "    'Wybierz pliki audio przyciskiem „Dodaj muzykę” poniżej. Obsługiwane formaty: MP3, WAV, OGG, M4A i FLAC.': "
         "{ en: 'Use the “Add music” button below to choose audio files. Supported formats: MP3, WAV, OGG, M4A, and FLAC.', "
         "es: 'Usa el botón «Añadir música» de abajo para elegir archivos de audio. Formatos compatibles: MP3, WAV, OGG, M4A y FLAC.' },\n"
     )
+    android_hint_translation = (
+        "    'Na Androidzie pobieranie z YouTube zależy od dostępnych źródeł online; YouTube lub dostawcy mogą blokować niektóre utwory.': "
+        "{ en: 'On Android, YouTube downloads depend on available online sources; YouTube or those providers may block some tracks.', "
+        "es: 'En Android, las descargas de YouTube dependen de fuentes en línea; YouTube o esos proveedores pueden bloquear algunas canciones.' },\n"
+    )
     if html.count(dictionary) != 1:
         raise ValueError("could not find the app translation dictionary")
-    html = html.replace(dictionary, dictionary + mobile_hint_translation, 1)
+    html = html.replace(dictionary, dictionary + mobile_hint_translation + android_hint_translation, 1)
 
     if out_dir.exists():
         shutil.rmtree(out_dir)
