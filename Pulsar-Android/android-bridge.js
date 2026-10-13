@@ -1,7 +1,7 @@
 /* Android-only adapter for the existing Pulsar web runtime.
  * Desktop/Neutralino APIs are deliberately not loaded on Android; YouTube
- * resolves through public providers, then the native media plugin caches the
- * resolved audio locally for preview and in-app import.
+ * streams are resolved by the built-in native InnerTube extractor first, with
+ * public providers as fallbacks, then cached locally for preview and import.
  */
 (function () {
   'use strict';
@@ -50,6 +50,16 @@
   window.__pulsarDesktop = undefined;
   window.__pulsarFs = undefined;
   window.__pulsarAndroid = true;
+  window.__pulsarAndroidYouTube = {
+    resolve: function (videoId) {
+      var capacitor = window.Capacitor;
+      var plugin = capacitor && capacitor.Plugins && capacitor.Plugins.PulsarMedia;
+      if (!plugin || typeof plugin.resolveYoutubeAudio !== 'function') {
+        return Promise.reject(new Error('The built-in YouTube extractor is unavailable.'));
+      }
+      return plugin.resolveYoutubeAudio({ videoId: String(videoId || '') });
+    }
+  };
 
   function installNativeMediaControls() {
     var capacitor = window.Capacitor;

@@ -1,5 +1,6 @@
 node_modules/
 www/
+__pycache__/
 android/.gradle/
 android/local.properties
 android/.idea/

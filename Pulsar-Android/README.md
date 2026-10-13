@@ -4,15 +4,15 @@ This is a separate Android project; it does not change the Windows or Linux app 
 
 ## Current milestone
 
-- Loads the packed Pulsar web runtime inside a Capacitor Android shell.
-- Keeps the existing player UI and browser-based playback/library logic.
-- Changes the desktop folder picker into Android's multi-file audio picker.
-- Hides desktop-only controls, while keeping the network-library view available on Android. YouTube search uses public Piped endpoints; playback/import fan out across more Piped instances and public Cobalt fallbacks. Once a stream URL resolves, Android fetches it natively into app-private cache and uses the same local file for preview and in-app library import, avoiding WebView CORS/header restrictions.
+- Loads the packed Pulsar web runtime inside a Capacitor Android shell and keeps the existing player UI and browser-based library logic.
+- Changes the desktop folder picker into Android's multi-file audio picker and keeps the network-library view available on Android.
+- Resolves YouTube audio with a built-in native Android InnerTube extractor first. It bootstraps the current public player API key/visitor data from YouTube and tries several player-client profiles; no user-run bridge, self-hosted server, yt-dlp, Python runtime, or extra extractor package is required. Public Piped/Cobalt endpoints remain fallbacks.
+- Downloads each resolved candidate natively into app-private cache with the matching client User-Agent, then uses that local audio for preview/playback and in-app library import. This avoids WebView CORS and missing-CDN-header failures when YouTube returns a direct URL.
 - Adds Android safe-area handling for settings and dialogs, plus a compact three-row mobile control bar that retains the track text and transport controls.
 - Adds an Android media-playback foreground service, `MediaSession`, media notification, lock-screen/notification transport controls, and a partial wake lock while audio is playing. Controls are wired back to the existing WebView player; notification permission is requested on first playback where Android requires it.
-- Extracted web assets are generated locally from `../Pulsar-Linux/resources.neu` into the ignored `www/` folder; do not commit `www/` or unpacked app HTML/JS.
+- Extracted web assets are generated locally from `../Pulsar-Linux/resources.neu` into the ignored `www/` folder; do not commit `www/` or unpacked app HTML/JS. The app UI/runtime source remains closed-source.
 
-**Not release-ready yet:** This change has not been built or tested on an Android device. Stream resolution still depends on public Piped/Cobalt services and can fail when those providers return no audio for a video; the native cache fixes only the final media fetch after a URL is resolved. Android does not run the desktop yt-dlp bridge and does not export MP3 files to a user-selected device folder. Verify YouTube resolution, playback, import, screen-off playback, notification permission denial, media buttons, seeking, service/process lifecycle, and Android-version compatibility before relying on it. A native Android mini-player is still not implemented.
+**Not release-ready yet:** This change has not been built or tested on an Android device because the current workspace has no JDK/Android SDK. YouTube changes its private InnerTube API and player-client rules; the built-in resolver currently accepts direct HTTPS formats and already-signed URLs, but does not implement YouTube's encrypted `s` signature decipher or mint proof-of-origin tokens. It falls through across client profiles and public providers, but some videos or networks may still be blocked. Verify playback and in-app saving against the user's affected videos, downloads with Wi-Fi/mobile data, screen-off playback, notification permission denial, media buttons, seeking, and Android-version compatibility before relying on it. Android still does not export MP3 files to a user-selected device folder, and a native Android mini-player is not implemented.
 
 ## Build
 

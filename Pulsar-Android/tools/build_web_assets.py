@@ -126,7 +126,7 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
     android_network_replacements = [
         (
             "  /* ---- YouTube: mostek yt-dlp (zalecany) + Cobalt/Piped/Invidious jako kaskada awaryjna ----\n     Publiczne instancje Piped/Invidious są często blokowane przez YouTube (audioStreams: 0 / 302),\n     dlatego pierwszym źródłem jest lokalny mostek ytdl-bridge.mjs (yt-dlp), a reszta to fallback. */",
-            "  /* ---- Android: wyszukiwanie i import YouTube przez dostępne publiczne instancje; lokalny yt-dlp nie działa w tym porcie. ---- */",
+            "  /* ---- Android: built-in InnerTube extraction first; public Piped/Cobalt providers remain as fallbacks. ---- */",
         ),
         (
             "  const BRIDGE_BASE = 'http://127.0.0.1:' + BRIDGE_PORT;",
@@ -138,7 +138,7 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
         ),
         (
             "  function bridgeHintHtml(r){\n    const cmd = 'node ytdl-bridge.mjs';",
-            "  function bridgeHintHtml(r){\n    if (window.__pulsarAndroid) return t('Nie znaleziono strumienia audio. Android sprawdził publiczne źródła Piped/Cobalt, ale żadne nie udostępniło audio dla tego filmu. Spróbuj ponownie później.');\n    const cmd = 'node ytdl-bridge.mjs';",
+            "  function bridgeHintHtml(r){\n    if (window.__pulsarAndroid) return t('Nie znaleziono strumienia audio. Wbudowany ekstraktor Androida i publiczne źródła nie udostępniły audio dla tego filmu. Spróbuj ponownie później.') + (ytAndroidExtractError ? ' — ' + ytAndroidExtractError : '');\n    const cmd = 'node ytdl-bridge.mjs';",
         ),
     ]
     for old, new in android_network_replacements:
@@ -146,10 +146,9 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
             raise ValueError(f"expected exactly one Android network source fragment: {old[:100]!r}")
         html = html.replace(old, new, 1)
 
-    # The packed desktop runtime still ships an old Cobalt client (stale
-    # instance-list schema, mandatory JWT/session flow, and an invalid bitrate).
-    # Android discovers current public Cobalt instances for the fallback after
-    # the multi-instance Piped stream pass; the local yt-dlp bridge stays disabled.
+    # The packed desktop runtime ships an old Cobalt client (stale instance-list
+    # schema, mandatory JWT/session flow, and an invalid bitrate). Android uses
+    # native InnerTube first, then current public Piped/Cobalt fallback instances.
     youtube_provider_replacements = [
         (
             "  const YT_PIPED = ['https://api.piped.private.coffee', 'https://pipedapi.ducks.party', 'https://pipedapi.kavin.rocks']; // tylko wyszukiwanie (CORS OK)",
@@ -318,12 +317,46 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
     const mime = String(best.mimeType || best.format || best.codec || '');
     return { url: streamUrl, ext: /mp4|m4a|aac/i.test(mime) ? 'm4a' : (/webm|opus/i.test(mime) ? 'webm' : 'm4a'), via: 'piped', base: base };
   }
-  async function netYtStream(ytId){
-    // Keep the local bridge first on desktop; Android skips it and fans out to
-    // public Piped stream endpoints before trying Cobalt.
-    if (await ytBridgePing()){
-      return { url: BRIDGE_BASE + '/audio?id=' + encodeURIComponent(ytId), ext: 'm4a', via: 'bridge' };
+  let ytAndroidExtractError = '';
+  const ytAndroidResolve = new Map();
+  async function netYtAndroidStream(ytId){
+    if (!window.__pulsarAndroid) return null;
+    const native = window.__pulsarAndroidYouTube;
+    if (!native || typeof native.resolve !== 'function'){
+      ytAndroidExtractError = 'The built-in YouTube extractor is unavailable.';
+      return null;
     }
+    const key = String(ytId || '').trim();
+    if (!ytAndroidResolve.has(key)){
+      const pending = Promise.resolve().then(function(){
+        return native.resolve(key);
+      }).then(function(response){
+        const candidates = response && Array.isArray(response.streams) ? response.streams.filter(function(stream){
+          return stream && typeof stream.url === 'string' && /^https:\/\//i.test(stream.url);
+        }).map(function(stream){
+          return {
+            url: String(stream.url),
+            ext: String(stream.ext || 'm4a'),
+            mimeType: String(stream.mimeType || ''),
+            via: 'android-extractor',
+            client: String(stream.client || ''),
+            userAgent: String(stream.userAgent || ''),
+            itag: String(stream.itag || '')
+          };
+        }) : [];
+        if (!candidates.length) throw new Error('No direct audio URL was returned.');
+        ytAndroidExtractError = '';
+        return Object.assign({}, candidates[0], { fallbacks: candidates.slice(1) });
+      }).catch(function(error){
+        ytAndroidExtractError = String(error && error.message || error || 'Built-in YouTube extraction failed').slice(0, 220);
+        ytAndroidResolve.delete(key);
+        return null;
+      });
+      ytAndroidResolve.set(key, pending);
+    }
+    return await ytAndroidResolve.get(key);
+  }
+  async function netYtExternalStream(ytId){
     const pipedBases = [ytLastGood.piped].concat(YT_PIPED_STREAM).filter(function(base, index, all){
       return base && all.indexOf(base) === index;
     });
@@ -336,6 +369,18 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
     const cobalt = await netYtCobalt(ytId);
     if (cobalt) return cobalt;
     return null;
+  }
+  async function netYtStream(ytId){
+    // Desktop keeps its local yt-dlp bridge. Android first resolves directly
+    // through its built-in InnerTube extractor, then falls back to public APIs.
+    if (await ytBridgePing()){
+      return { url: BRIDGE_BASE + '/audio?id=' + encodeURIComponent(ytId), ext: 'm4a', via: 'bridge' };
+    }
+    if (window.__pulsarAndroid){
+      const nativeStream = await netYtAndroidStream(ytId);
+      if (nativeStream) return nativeStream;
+    }
+    return await netYtExternalStream(ytId);
   }
   /* Wklejony link YouTube'''
     html, stream_count = youtube_stream_pattern.subn(lambda _match: youtube_stream_replacement, html, count=1)
@@ -355,7 +400,10 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
     const key = String(ytId || '') + '|' + String(stream.url || '');
     if (!ytAndroidPrepare.has(key)){
       const pending = Promise.resolve().then(function(){
-        return plugin.prepareYoutubeAudio({ videoId: String(ytId || ''), url: String(stream.url), ext: String(stream.ext || 'm4a') });
+        return plugin.prepareYoutubeAudio({
+          videoId: String(ytId || ''), url: String(stream.url), ext: String(stream.ext || 'm4a'),
+          userAgent: String(stream.userAgent || '')
+        });
       }).then(function(result){
         if (!result || !result.path) throw new Error('Android returned no cached audio file.');
         const path = String(result.path);
@@ -363,6 +411,7 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
         const localUrl = capacitor.convertFileSrc(fileUri);
         if (!localUrl) throw new Error('Capacitor could not map the cached audio file.');
         ytAndroidCacheError = '';
+        ytAndroidExtractError = '';
         return Object.assign({}, stream, { url: localUrl, ext: result.ext || stream.ext || 'm4a', via: 'android-native' });
       }).catch(function(error){
         ytAndroidCacheError = String(error && error.message || error || 'Android audio cache failed').slice(0, 180);
@@ -373,6 +422,18 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
     }
     return await ytAndroidPrepare.get(key);
   }
+  async function netYtAndroidCacheTry(plugin, capacitor, ytId, stream){
+    if (!stream || !stream.url) return { local: null, fallback: stream };
+    let fallback = stream;
+    const candidates = [stream].concat(Array.isArray(stream.fallbacks) ? stream.fallbacks : []).slice(0, 4);
+    for (const candidate of candidates){
+      if (!candidate || !candidate.url) continue;
+      fallback = candidate;
+      const local = await netYtAndroidCacheOne(plugin, capacitor, ytId, candidate);
+      if (local) return { local: local, fallback: candidate };
+    }
+    return { local: null, fallback: fallback };
+  }
   async function netYtAndroidCache(ytId, stream){
     if (!window.__pulsarAndroid || !stream || !stream.url) return stream;
     ytAndroidCacheError = '';
@@ -380,23 +441,24 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
     const plugin = capacitor && capacitor.Plugins && capacitor.Plugins.PulsarMedia;
     if (!plugin || typeof plugin.prepareYoutubeAudio !== 'function' || typeof capacitor.convertFileSrc !== 'function') return stream;
     netSetHint(t('Przygotowuję audio YouTube na urządzeniu…'));
-    let fallback = stream;
-    const candidates = [stream].concat(Array.isArray(stream.fallbacks) ? stream.fallbacks : []).slice(0, 4);
-    for (const candidate of candidates){
-      if (!candidate || !candidate.url) continue;
-      fallback = candidate;
-      const local = await netYtAndroidCacheOne(plugin, capacitor, ytId, candidate);
-      if (local) return local;
-    }
-    if (stream.via === 'piped'){
-      const cobalt = await netYtCobalt(ytId);
-      const cobaltCandidates = cobalt ? [cobalt].concat(Array.isArray(cobalt.fallbacks) ? cobalt.fallbacks : []).slice(0, 4) : [];
-      for (const candidate of cobaltCandidates){
-        if (!candidate || !candidate.url) continue;
-        fallback = candidate;
-        const local = await netYtAndroidCacheOne(plugin, capacitor, ytId, candidate);
-        if (local) return local;
+
+    let attempt = await netYtAndroidCacheTry(plugin, capacitor, ytId, stream);
+    if (attempt.local) return attempt.local;
+    let fallback = attempt.fallback || stream;
+    let externalStream = null;
+    if (stream.via === 'android-extractor'){
+      externalStream = await netYtExternalStream(ytId);
+      if (externalStream){
+        attempt = await netYtAndroidCacheTry(plugin, capacitor, ytId, externalStream);
+        if (attempt.local) return attempt.local;
+        fallback = attempt.fallback || externalStream;
       }
+    }
+    if (stream.via === 'piped' || (externalStream && externalStream.via === 'piped')){
+      const cobalt = await netYtCobalt(ytId);
+      const cobaltAttempt = await netYtAndroidCacheTry(plugin, capacitor, ytId, cobalt);
+      if (cobaltAttempt.local) return cobaltAttempt.local;
+      if (cobaltAttempt.fallback) fallback = cobaltAttempt.fallback;
     }
     return fallback;
   }
@@ -463,7 +525,7 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
         ),
         (
             "YouTube: wklej link w pole wyszukiwania albo szukaj frazą. Podgląd i „Zapisz” (MP3) wymagają lokalnego mostka yt-dlp — status w górnym pasku („● yt-dlp”). Linki do playlist wklej w to samo pole. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.",
-            "Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera dostępny plik audio do biblioteki aplikacji; publiczni dostawcy mogą blokować niektóre utwory. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.",
+            "Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera audio do biblioteki aplikacji. Wbudowany ekstraktor Androida działa bez własnego serwera, a publiczne źródła są rezerwowe; niektóre filmy mogą być niedostępne. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.",
             2,
         ),
     ]
@@ -489,8 +551,8 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
         raise ValueError("could not update the Android add-files translation")
     html = html.replace(old_add_translation, new_add_translation, 1)
 
-    old_footer_translation = "    'Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera dostępny plik audio do biblioteki aplikacji; publiczni dostawcy mogą blokować niektóre utwory. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.': { en: 'YouTube: paste a link into the search box or search by phrase. Preview and “Save” (MP3) need the local yt-dlp bridge — status in the top bar (“● yt-dlp”). Paste playlist links into the same box. iTunes and Deezer serve 30-second previews. Audius, Internet Archive and Wikimedia Commons may serve full files.', es: 'YouTube: pega un enlace en el cuadro de búsqueda o busca por frase. La vista previa y «Guardar» (MP3) necesitan el puente local yt-dlp — estado en la barra superior («● yt-dlp»). Los enlaces a listas se pegan en el mismo cuadro. iTunes y Deezer ofrecen vistas previas de 30 s. Audius, Internet Archive y Wikimedia Commons pueden ofrecer archivos completos.' },"
-    new_footer_translation = "    'Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera dostępny plik audio do biblioteki aplikacji; publiczni dostawcy mogą blokować niektóre utwory. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.': { en: 'Android: paste a YouTube link or search by phrase. “Save” fetches available audio into the app library; public providers may block some tracks. iTunes and Deezer offer 30-second previews. Audius, Internet Archive, and Wikimedia Commons may offer full tracks.', es: 'Android: pega un enlace de YouTube o busca por frase. «Guardar» descarga el audio disponible a la biblioteca de la app; los proveedores públicos pueden bloquear algunas canciones. iTunes y Deezer ofrecen vistas previas de 30 segundos. Audius, Internet Archive y Wikimedia Commons pueden ofrecer canciones completas.' },"
+    old_footer_translation = "    'Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera audio do biblioteki aplikacji. Wbudowany ekstraktor Androida działa bez własnego serwera, a publiczne źródła są rezerwowe; niektóre filmy mogą być niedostępne. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.': { en: 'YouTube: paste a link into the search box or search by phrase. Preview and “Save” (MP3) need the local yt-dlp bridge — status in the top bar (“● yt-dlp”). Paste playlist links into the same box. iTunes and Deezer serve 30-second previews. Audius, Internet Archive and Wikimedia Commons may serve full files.', es: 'YouTube: pega un enlace en el cuadro de búsqueda o busca por frase. La vista previa y «Guardar» (MP3) necesitan el puente local yt-dlp — estado en la barra superior («● yt-dlp»). Los enlaces a listas se pegan en el mismo cuadro. iTunes y Deezer ofrecen vistas previas de 30 s. Audius, Internet Archive y Wikimedia Commons pueden ofrecer archivos completos.' },"
+    new_footer_translation = "    'Android: wklej link YouTube albo wyszukaj frazę. „Zapisz” pobiera audio do biblioteki aplikacji. Wbudowany ekstraktor Androida działa bez własnego serwera, a publiczne źródła są rezerwowe; niektóre filmy mogą być niedostępne. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.': { en: 'Android: paste a YouTube link or search by phrase. “Save” downloads audio to the app library. The built-in extractor requires no server you run; public providers are fallbacks, and some videos may be unavailable. iTunes and Deezer offer 30-second previews. Audius, Internet Archive, and Wikimedia Commons may offer full tracks.', es: 'Android: pega un enlace de YouTube o busca por frase. «Guardar» descarga audio a la biblioteca de la app. El extractor integrado no necesita un servidor propio; los proveedores públicos son una alternativa y algunos vídeos pueden no estar disponibles. iTunes y Deezer ofrecen vistas previas de 30 segundos. Audius, Internet Archive y Wikimedia Commons pueden ofrecer canciones completas.' },"
     if html.count(old_footer_translation) != 1:
         raise ValueError("could not update the Android network-view translation")
     html = html.replace(old_footer_translation, new_footer_translation, 1)
@@ -502,13 +564,18 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
         "es: 'Usa el botón «Añadir música» de abajo para elegir archivos de audio. Formatos compatibles: MP3, WAV, OGG, M4A y FLAC.' },\n"
     )
     android_hint_translation = (
-        "    'Na Androidzie pobieranie z YouTube zależy od dostępnych źródeł online; YouTube lub dostawcy mogą blokować niektóre utwory.': "
-        "{ en: 'On Android, YouTube downloads depend on available online sources; YouTube or those providers may block some tracks.', "
-        "es: 'En Android, las descargas de YouTube dependen de fuentes en línea; YouTube o esos proveedores pueden bloquear algunas canciones.' },\n"
+        "    'Na Androidzie YouTube używa wbudowanego ekstraktora, a publiczne źródła są rezerwowe; dostępność może się zmieniać.': "
+        "{ en: 'Android uses its built-in YouTube extractor first and public providers as fallbacks; availability can change.', "
+        "es: 'Android usa primero el extractor integrado de YouTube y los proveedores públicos como alternativa; la disponibilidad puede cambiar.' },\n"
+    )
+    android_stream_error_translation = (
+        "    'Nie znaleziono strumienia audio. Wbudowany ekstraktor Androida i publiczne źródła nie udostępniły audio dla tego filmu. Spróbuj ponownie później.': "
+        "{ en: 'No audio stream was found. The built-in Android extractor and public providers did not return audio for this video. Please try again later.', "
+        "es: 'No se encontró ningún flujo de audio. El extractor integrado de Android y los proveedores públicos no devolvieron audio para este vídeo. Inténtalo de nuevo más tarde.' },\n"
     )
     if html.count(dictionary) != 1:
         raise ValueError("could not find the app translation dictionary")
-    html = html.replace(dictionary, dictionary + mobile_hint_translation + android_hint_translation, 1)
+    html = html.replace(dictionary, dictionary + mobile_hint_translation + android_hint_translation + android_stream_error_translation, 1)
 
     if out_dir.exists():
         shutil.rmtree(out_dir)

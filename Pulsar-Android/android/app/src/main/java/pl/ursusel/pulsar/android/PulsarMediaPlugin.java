@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
+import org.json.JSONArray;
 
 @CapacitorPlugin(
     name = "PulsarMedia",
@@ -100,6 +101,51 @@ public class PulsarMediaPlugin extends Plugin {
     }
 
     /**
+     * Resolve YouTube audio on-device using YouTube's InnerTube player API.
+     * No user-run bridge/server or extra runtime package is required. Each
+     * returned stream carries the client User-Agent needed for its CDN fetch.
+     */
+    @PluginMethod
+    public void resolveYoutubeAudio(PluginCall call) {
+        final String videoId = call.getString("videoId", "").trim();
+        if (!YOUTUBE_ID.matcher(videoId).matches()) {
+            call.reject("Invalid YouTube video ID.");
+            return;
+        }
+
+        String defaultUserAgent;
+        try { defaultUserAgent = WebSettings.getDefaultUserAgent(getContext()); }
+        catch (Exception ignored) { defaultUserAgent = ""; }
+        final String webViewUserAgent = defaultUserAgent;
+        youtubeAudioExecutor.execute(() -> {
+            try {
+                java.util.List<YoutubeInnertubeResolver.Stream> streams =
+                    YoutubeInnertubeResolver.resolve(videoId, webViewUserAgent);
+                JSONArray candidates = new JSONArray();
+                for (YoutubeInnertubeResolver.Stream stream : streams) {
+                    JSObject candidate = new JSObject();
+                    candidate.put("url", stream.url);
+                    candidate.put("ext", stream.extension);
+                    candidate.put("mimeType", stream.mimeType);
+                    candidate.put("client", stream.clientName);
+                    candidate.put("clientVersion", stream.clientVersion);
+                    candidate.put("userAgent", stream.userAgent);
+                    candidate.put("itag", stream.itag);
+                    candidate.put("bitrate", stream.bitrate);
+                    candidate.put("audioOnly", stream.audioOnly);
+                    candidates.put(candidate);
+                }
+                JSObject result = new JSObject();
+                result.put("streams", candidates);
+                call.resolve(result);
+            } catch (Exception error) {
+                String message = error.getMessage();
+                call.reject(message == null ? "The built-in YouTube extractor found no audio stream." : message);
+            }
+        });
+    }
+
+    /**
      * Fetch a resolved YouTube audio URL into app-private cache storage.
      * WebView fetch/audio requests can be blocked by provider CORS or missing
      * CDN headers; performing this final hop natively avoids both problems.
@@ -123,7 +169,10 @@ public class PulsarMediaPlugin extends Plugin {
         String defaultUserAgent;
         try { defaultUserAgent = WebSettings.getDefaultUserAgent(getContext()); }
         catch (Exception ignored) { defaultUserAgent = ""; }
-        final String userAgent = defaultUserAgent;
+        String requestedUserAgent = call.getString("userAgent", "").trim();
+        if (requestedUserAgent.length() > 512 || requestedUserAgent.indexOf('\r') >= 0
+            || requestedUserAgent.indexOf('\n') >= 0) requestedUserAgent = "";
+        final String userAgent = requestedUserAgent.isEmpty() ? defaultUserAgent : requestedUserAgent;
         youtubeAudioExecutor.execute(() -> {
             try {
                 File audio = downloadYoutubeAudio(appContext, videoId, sourceUrl, requestedExtension, userAgent);
