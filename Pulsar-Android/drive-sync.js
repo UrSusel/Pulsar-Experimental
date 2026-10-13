@@ -45,9 +45,20 @@
       folderChosen: 'Folder: ', folderMissing: 'Nie wskazano jeszcze folderu — wybierz go raz i gotowe.',
       folderHint: 'Wskaż raz folder na swoim Dysku i ten sam folder na drugim urządzeniu. Plik pulsar-library.json pojawi się w Twoim Dysku z listą utworów, albumów i polubień — bez plików audio. Konto Google wybierasz w systemowym oknie, nie w aplikacji.',
       googleCap: 'Konto Google',
-      googleHint: 'Wymaga własnego projektu w Google Cloud (Client ID i sekret poniżej) oraz konta dodanego jako tester.',
+      googleHint: 'Warstwa Drive (wysyłka i odbiór manifestu) jest gotowa, ale logowania w przeglądarce nie da się już użyć na Androidzie — Google je wycofał. Obsługiwane logowanie kontem Google wymaga Play Services (Credential Manager) i jest do dopisania. Teraz działa tryb „Folder na Dysku”.',
+      googleHintFields: 'Pola poniżej zostają na przyszłość (własny projekt w Google Cloud); obecnie nic nie robią.',
       googleHelp: 'Jak włączyć: w Google Cloud utwórz projekt, włącz Drive API, dodaj typ klienta OAuth „Aplikacja komputerowa”, wklej Client ID i sekret, ustaw adres przekierowania pl.ursusel.pulsar.android:/oauth2redirect i dodaj swoje konto jako testera.',
       statusCap: 'Stan',
+      layers: 'Warstwy: ',
+      needConfig: 'Najpierw wklej Client ID i Client secret, potem kliknij Zapisz.',
+      noPlugin: 'Ta kompilacja nie ma warstwy „{name}” — zbuduj aplikację ponownie (npm run android:sync, potem Android Studio).',
+      openingBrowser: 'Otwieram przeglądarkę Google…',
+      signedInToast: 'Zalogowano na konto Google.',
+      syncDone: 'Zsynchronizowano.',
+      syncDisabled: 'Najpierw włącz „Synchronizuj automatycznie”.',
+      folderReadyToast: 'Folder wybrany.',
+      configSaved: 'Konfiguracja zapisana.',
+      browserSignInRetired: 'Google wycofał logowanie przez przeglądarkę w aplikacjach na Androida (niestandardowe adresy przekierowania nie są już obsługiwane — błąd „Custom URI scheme is not supported”). Użyj trybu „Folder na Dysku”: działa od razu, bez konfiguracji i bez logowania w aplikacji.',
       signInLab: 'Logowanie',
       signedOut: 'Nie zalogowano na konto Google.', signedInAs: 'Zalogowano jako ',
       signIn: 'Zaloguj się kontem Google', signOut: 'Wyloguj', syncNow: 'Synchronizuj teraz',
@@ -74,9 +85,20 @@
       folderChosen: 'Folder: ', folderMissing: 'No folder chosen yet — pick one once and you are done.',
       folderHint: 'Point once at a folder on your Drive and at the same folder on the second device. pulsar-library.json appears in your Drive with the list of tracks, albums and favourites — no audio files. The Google account is chosen in the system picker, not in the app.',
       googleCap: 'Google account',
-      googleHint: 'Needs your own Google Cloud project (Client ID and secret below) and your account added as a test user.',
+      googleHint: 'The Drive layer (upload and download of the manifest) is ready, but browser sign-in can no longer be used on Android — Google retired it. Supported Google sign-in needs Play Services (Credential Manager) and is still to be added. For now the “Drive folder” mode works.',
+      googleHintFields: 'The fields below are kept for the future (own Google Cloud project); right now they do nothing.',
       googleHelp: 'How to enable: create a Google Cloud project, enable the Drive API, add an OAuth client of type “Desktop app”, paste the Client ID and secret, set the redirect URI to pl.ursusel.pulsar.android:/oauth2redirect and add your account as a test user.',
       statusCap: 'Status',
+      layers: 'Layers: ',
+      needConfig: 'Paste the Client ID and secret first, then press Save.',
+      noPlugin: 'This build has no “{name}” layer — rebuild the app (npm run android:sync, then Android Studio).',
+      openingBrowser: 'Opening Google in the browser…',
+      signedInToast: 'Signed in to Google.',
+      syncDone: 'Synced.',
+      syncDisabled: 'Turn on “Sync automatically” first.',
+      folderReadyToast: 'Folder selected.',
+      configSaved: 'Configuration saved.',
+      browserSignInRetired: 'Google retired browser sign-in for Android apps (custom redirect URIs are no longer supported — the “Custom URI scheme is not supported” error). Use the “Drive folder” mode: it works right away, with no configuration and no sign-in in the app.',
       signInLab: 'Sign-in',
       notConfigured: 'Sync is not configured — paste the Client ID and Client secret from Google Cloud.',
       signedOut: 'Not signed in to Google.', signedInAs: 'Signed in as ',
@@ -759,11 +781,14 @@
   }
 
   /** Pełny cykl: pobierz zdalny manifest, scal, zastosuj u siebie, wypchnij wynik. */
-  function runSync() {
+  function runSync(options) {
+    var force = !!(options && options.force);
     if (busy) return Promise.resolve({ skipped: 'busy' });
     transport = transportFor(state.mode);
     if (!transport) return Promise.resolve({ skipped: 'no-plugin' });
-    if (!state.enabled) return Promise.resolve({ skipped: 'disabled' });
+    // Ręczne „Synchronizuj teraz" działa też przy wyłączonym automacie —
+    // użytkownik klika świadomie i chce zobaczyć wynik.
+    if (!state.enabled && !force) return Promise.resolve({ skipped: 'disabled' });
 
     busy = true;
     renderPanelStatus();
@@ -845,6 +870,72 @@
   }
 
   /**
+   * Każda akcja w panelu musi dać widoczny skutek. Status na dole bywa poza
+   * ekranem na telefonie, więc komunikaty idą też jako toast runtime'u —
+   * dzięki temu przycisk nigdy „nic nie robi".
+   */
+  function toast(text) {
+    if (!text) return;
+    try {
+      var host = window.__pulsarHost;
+      if (host && typeof host.toast === 'function') host.toast(String(text));
+    } catch (error) {}
+  }
+
+  function note(text) {
+    toast(text);
+    renderPanelStatus();
+  }
+
+  function fail(text) {
+    var message = String(text || '');
+    toast(message);
+    setStatus({ lastError: message });
+  }
+
+  function layerMissing(name) {
+    return T('noPlugin').replace('{name}', String(name));
+  }
+
+  function pluginAvailable(name) {
+    var capacitor = window.Capacitor;
+    if (capacitor && typeof capacitor.isPluginAvailable === 'function') {
+      try { return !!capacitor.isPluginAvailable(name); } catch (error) { return false; }
+    }
+    return !!plugins()[name];
+  }
+
+  var LAYERS = [{ name: FOLDER_PLUGIN, kind: 'folder' }, { name: DRIVE_PLUGIN, kind: 'google' }];
+
+  /** „folder ✔ · google ✖ (PulsarDrive)”: nazwa pluginu pojawia się tylko wtedy,
+   *  gdy go brakuje — wtedy właśnie trzeba ją zgłosić. */
+  function layersLine() {
+    return T('layers') + LAYERS.map(function (layer) {
+      return layer.kind + (pluginAvailable(layer.name) ? ' ✔' : ' (' + layer.name + ') ✖');
+    }).join(' · ');
+  }
+
+  /** Wywołanie natywnego pluginu z jednym, przewidywalnym komunikatem błędu. */
+  function pluginCall(name, method, args) {
+    return new Promise(function (resolve, reject) {
+      if (!pluginAvailable(name)) {
+        reject(new Error(layerMissing(name)));
+        return;
+      }
+      var api = plugins()[name];
+      if (!api || typeof api[method] !== 'function') {
+        reject(new Error(layerMissing(name)));
+        return;
+      }
+      try {
+        Promise.resolve(api[method](args || {})).then(resolve, reject);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
    * Zakładka i pane ustawień budowane są tak, jak zrobił to runtime:
    *  - panele mieszkają w #smBody (nie w menu), klasy: sm-pane/sm-card/sm-row,
    *  - zakładki w .sm-nav, a aktywną stronę pokazuje klasa `active`,
@@ -897,6 +988,11 @@
       '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="enabled"></span></div>' +
       '    <label class="switch"><input type="checkbox" data-cloud="enabled"><span class="slider"></span></label>' +
       '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="statusCap"></span>' +
+      '      <span class="sm-desc" data-cloud="status"></span></div>' +
+      '    <button type="button" class="sm-act" data-cloud="sync" data-cloud-text="syncNow"></button>' +
+      '  </div>' +
       '</div>' +
       '<div class="sm-card" data-cloud-section="folder">' +
       '  <h3 class="sm-cap" data-cloud-text="folderCap"></h3>' +
@@ -937,16 +1033,13 @@
       '    <input class="sm-select" type="text" data-cloud="redirectUri" autocomplete="off" spellcheck="false">' +
       '  </div>' +
       '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-desc" data-cloud-text="googleHintFields"></span></div>' +
+      '  </div>' +
+      '  <div class="sm-row">' +
       '    <div class="sm-txt"><span class="sm-desc" data-cloud-text="googleHelp"></span></div>' +
       '    <button type="button" class="sm-act" data-cloud="save" data-cloud-text="save"></button>' +
       '  </div>' +
       '</div>' +
-      '<div class="sm-card">' +
-      '  <h3 class="sm-cap" data-cloud-text="statusCap"></h3>' +
-      '  <div class="sm-row">' +
-      '    <div class="sm-txt"><span class="sm-desc" data-cloud="status"></span></div>' +
-      '    <button type="button" class="sm-act" data-cloud="sync" data-cloud-text="syncNow"></button>' +
-      '  </div>' +
       '</div>';
   }
 
@@ -1026,7 +1119,13 @@
     if (enabled) enabled.addEventListener('change', function () {
       state.enabled = !!enabled.checked;
       saveSettings();
-      if (state.enabled) runSync().catch(function () {});
+      if (!state.enabled) { renderPanelStatus(); return; }
+      if (!readyToSync()) {
+        // Zamiast cichego nic-nie-robienia: powiedz, czego brakuje.
+        fail(state.mode === 'folder' ? T('folderMissing') : T('needConfig'));
+        return;
+      }
+      runSync().catch(function () {});
     });
 
     var mirror = find('mirror');
@@ -1038,46 +1137,55 @@
 
     var choose = find('choose');
     if (choose) choose.addEventListener('click', function () {
-      var api = plugins()[FOLDER_PLUGIN];
-      if (!api) return;
-      api.pickFolder().then(refreshStatus).then(function () {
-        if (state.folderReady && state.enabled) return runSync();
+      pluginCall(FOLDER_PLUGIN, 'pickFolder').then(refreshStatus).then(function () {
+        if (!state.folderReady) return null; // np. użytkownik zamknął okno wyboru
+        note(T('folderReadyToast'));
+        if (state.enabled) return runSync();
         return null;
-      }).catch(function (error) { setStatus({ lastError: message(error) }); });
+      }).catch(function (error) { fail(message(error)); });
     });
 
     var forget = find('forget');
     if (forget) forget.addEventListener('click', function () {
-      var api = plugins()[FOLDER_PLUGIN];
-      if (api && api.forget) api.forget().then(refreshStatus).catch(function () {});
+      pluginCall(FOLDER_PLUGIN, 'forget').then(refreshStatus).catch(function (error) { fail(message(error)); });
     });
 
     var signin = find('signin');
     if (signin) signin.addEventListener('click', function () {
-      var api = plugins()[DRIVE_PLUGIN];
-      if (!api) return;
-      api.signIn().then(refreshStatus).then(function () {
-        if (state.googleSignedIn && state.enabled) return runSync();
-        return null;
-      }).catch(function (error) { setStatus({ lastError: message(error) }); });
+      // Nie otwieramy przeglądarki bez sensu: Google odrzuca teraz ten sposób
+      // logowania w aplikacjach na Androida, więc przycisk tłumaczy sytuację
+      // i wskazuje tryb, który działa. Warstwa Drive zostaje gotowa do
+      // podłączenia obsługiwanego logowania (Play Services).
+      fail(T('browserSignInRetired'));
     });
 
     var signout = find('signout');
     if (signout) signout.addEventListener('click', function () {
-      var api = plugins()[DRIVE_PLUGIN];
-      if (api) api.signOut().then(refreshStatus).catch(function () {});
+      pluginCall(DRIVE_PLUGIN, 'signOut').then(refreshStatus).catch(function (error) { fail(message(error)); });
     });
-
-    var sync = find('sync');
-    if (sync) sync.addEventListener('click', function () { runSync().catch(function () {}); });
 
     var save = find('save');
     if (save) save.addEventListener('click', function () {
-      var api = plugins()[DRIVE_PLUGIN];
-      if (!api || !api.configure) return;
-      api.configure({ clientId: field('clientId'), clientSecret: field('clientSecret'), redirectUri: field('redirectUri') })
-        .then(refreshStatus)
-        .catch(function (error) { setStatus({ lastError: message(error) }); });
+      pluginCall(DRIVE_PLUGIN, 'configure', {
+        clientId: field('clientId'), clientSecret: field('clientSecret'), redirectUri: field('redirectUri')
+      }).then(refreshStatus).then(function () {
+        note(T('configSaved'));
+      }).catch(function (error) { fail(message(error)); });
+    });
+
+    var sync = find('sync');
+    if (sync) sync.addEventListener('click', function () {
+      runSync({ force: true }).then(function (result) {
+        result = result || {};
+        if (result.skipped === 'no-plugin') { fail(T('noTransport')); return; }
+        if (result.skipped === 'disabled') { fail(T('syncDisabled')); return; }
+        if (result.error) { fail(result.error); return; }
+        if (result.counters) {
+          note(T('syncDone') + ' ' + T('sent') + result.counters.sent + ' · ' + T('received') + result.counters.received);
+        } else if (result.skipped === 'busy') {
+          note(T('syncing'));
+        }
+      }).catch(function (error) { fail(message(error)); });
     });
   }
 
@@ -1114,6 +1222,7 @@
       }
       if (busy) lines.push(T('syncing'));
       if (state.lastError) lines.push(T('error') + state.lastError);
+      lines.push(layersLine());
       box.textContent = lines.join('\n');
     }
 

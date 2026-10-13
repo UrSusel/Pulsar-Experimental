@@ -129,7 +129,10 @@ class FakeElement {
     }
   }
   change(value) {
-    if (value !== undefined) this.value = value;
+    if (value !== undefined) {
+      if (String(this.getAttribute('type') || '') === 'checkbox') this.checked = !!value;
+      else this.value = value;
+    }
     let node = this;
     while (node) {
       node.dispatchEvent({ type: 'change', target: this });

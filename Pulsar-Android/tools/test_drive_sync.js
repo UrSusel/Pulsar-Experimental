@@ -269,8 +269,10 @@ function makeEnv(options) {
   if (options.withDrive !== false) pluginTable.PulsarDrive = plugin;
   if (options.withFolder !== false) pluginTable.PulsarFolder = folder;
 
+  const toasts = [];
   sandbox.window = {
     Capacitor: { Plugins: pluginTable },
+    __pulsarHost: { toast: (text) => toasts.push(String(text)) },
     __pulsarSyncSnapshot: library.snapshot,
     __pulsarSyncApply: library.apply,
     addEventListener() {},
@@ -286,12 +288,14 @@ function makeEnv(options) {
   vm.runInContext(fs.readFileSync(SOURCE, 'utf8'), sandbox, { filename: 'drive-sync.js' });
   return {
     api: sandbox.window.__pulsarDrive, drive, plugin, folder, library, plugins: pluginTable,
-    storage: sandbox.localStorage, dom: settingsDom, document,
+    storage: sandbox.localStorage, dom: settingsDom, document, toasts,
     fireDocumentEvent(type) { (docListeners[type] || []).forEach((handler) => handler({ type })); },
   };
 }
 
 // -------------------------------------------------------------------- testy
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const results = [];
 function check(name, ok, extra) {
@@ -746,6 +750,74 @@ async function checkRuntimeHooks() {
       check('panel CSS classes exist in the runtime', unknown.length === 0,
         unknown.length ? 'nieznane: ' + unknown.join(', ') : Array.from(used).length + ' klas OK');
     }
+  }
+
+  { // 24. „Zaloguj się kontem Google" nigdy nie jest cichym klikiem
+    const env = makeEnv({ withDrive: true, withPanel: true, tracks: [track({})] });
+    const pane = env.api.openPanel();
+    const signin = pane.querySelector('[data-cloud="signin"]');
+    check('sign-in button exists in the panel', !!signin);
+    signin.click();
+    const message = env.api.state().lastError || '';
+    check('sign-in click explains itself in the status', /wycofa|retired/i.test(message), message.slice(0, 90));
+    check('sign-in click also raises a toast', env.toasts.some((text) => /wycofa|retired/i.test(text)),
+      JSON.stringify(env.toasts.map((text) => text.slice(0, 40))));
+    check('sign-in click does not throw', true);
+  }
+
+  { // 25. brakująca warstwa natywna jest nazwana, a nie przemilczana
+    const env = makeEnv({ withDrive: false, withPanel: true, tracks: [track({})] });
+    const pane = env.api.openPanel();
+    pane.querySelector('[data-cloud="signin"]').click();
+    check('missing Google layer is reported with its name',
+      /PulsarDrive|wycofa|retired/i.test(env.api.state().lastError || ''), String(env.api.state().lastError).slice(0, 80));
+
+    const folder = makeEnv({ withFolder: false, withDrive: true, withPanel: true, tracks: [track({})] });
+    const folderPane = folder.api.openPanel();
+    folderPane.querySelector('[data-cloud="choose"]').click();
+    await wait(30);
+    check('missing folder layer is reported with its name',
+      /PulsarFolder/.test(folder.api.state().lastError || ''), String(folder.api.state().lastError).slice(0, 90));
+    check('the error names the fix (rebuild)', /zbuduj|rebuild/i.test(folder.api.state().lastError || ''));
+    const folderStatus = folderPane.querySelector('[data-cloud="status"]').textContent;
+    check('the layers line names the missing plugin', /PulsarFolder/.test(folderStatus),
+      folderStatus.replace(/\n/g, ' | ').slice(0, 110));
+  }
+
+  { // 26. „Synchronizuj teraz" działa przy wyłączonym automacie i zdaje relację
+    const env = makeEnv({ withFolder: true, withPanel: true, folderPicked: true, tracks: [track({})] });
+    const pane = env.api.openPanel();
+    pane.querySelector('[data-cloud="sync"]').click();
+    await wait(80);
+    check('manual sync writes without the auto toggle', env.drive.files.has('folder'));
+    check('manual sync reports the result', env.toasts.some((text) => /zsynchronizowano|synced/i.test(text)),
+      JSON.stringify(env.toasts.map((text) => text.slice(0, 50))));
+  }
+
+  { // 27. włączenie automatu bez folderu mówi, czego brakuje
+    const env = makeEnv({ withFolder: true, withPanel: true, tracks: [track({})] });
+    const pane = env.api.openPanel();
+    pane.querySelector('[data-cloud="enabled"]').change(true);
+    await wait(30);
+    check('turning sync on without a folder explains what is missing',
+      /folder/i.test(env.api.state().lastError || ''), String(env.api.state().lastError).slice(0, 80));
+    check('the explanation is a toast too', env.toasts.some((text) => /folder/i.test(text)));
+  }
+
+  { // 28. panel pokazuje, które warstwy ma ta kompilacja
+    const env = makeEnv({ withDrive: true, withFolder: true, withPanel: true, tracks: [track({})] });
+    const pane = env.api.openPanel();
+    env.api.status();
+    await wait(20);
+    const status = pane.querySelector('[data-cloud="status"]').textContent;
+    check('status lists the sync layers of this build',
+      /folder ✔/.test(status) && /google ✔/.test(status), status.replace(/\n/g, ' | ').slice(0, 110));
+    const firstCard = pane.querySelector('.sm-card');
+    check('status sits in the first card, visible without scrolling',
+      !!firstCard && firstCard.contains(pane.querySelector('[data-cloud="status"]')) &&
+      firstCard.contains(pane.querySelector('[data-cloud="sync"]')));
+    check('status comes before the folder and Google cards in the pane',
+      pane.children.indexOf(firstCard) === 1, 'index=' + pane.children.indexOf(firstCard));
   }
 
   await checkRuntimeHooks();
