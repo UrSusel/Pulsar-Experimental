@@ -175,6 +175,21 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
           const id = /^[\w-]{6,}$/.test(rawId) ? rawId : (m ? m[1] : '');''',
         ),
         (
+            r'''  function ytIdFromText(t){
+    const m = String(t || '').trim().match(/(?:youtube\.com\/(?:watch\?[^\s]*v=|shorts\/|live\/)|youtu\.be\/)([\w-]{6,})/);
+    if (m) return m[1];
+    const bare = String(t || '').trim().match(/^([\w-]{11})$/);
+    return bare ? bare[1] : null;
+  }''',
+            r'''  function ytIdFromText(t){
+    const raw = String(t || '').trim();
+    const bare = raw.match(/^([\w-]{11})$/);
+    if (bare) return bare[1];
+    const match = raw.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?[^\s#]*?v=|shorts\/|live\/|embed\/|v\/)|youtu\.be\/)([\w-]{11})/i);
+    return match ? match[1] : null;
+  }''',
+        ),
+        (
             "    for (const base of [ytLastGood.piped, 'https://api.piped.private.coffee']){",
             "    const pipedStreams = [ytLastGood.piped].concat(YT_PIPED).filter(function(base, index, all){ return base && all.indexOf(base) === index; });\n    for (const base of pipedStreams){",
         ),
