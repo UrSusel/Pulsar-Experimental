@@ -6,11 +6,18 @@
  * Czego NIGDY nie wysyłamy: plików audio, okładek-blobów, ścieżek lokalnych
  * ani adresów strumieni (te wygasają po kilku godzinach i są przypisane do IP).
  *
- * Warstwa natywna (PulsarDrivePlugin) robi logowanie i wywołania Drive.
  * Ten plik ma całą logikę: zbudowanie manifestu, scalenie dwóch manifestów
  * (ostatnia zmiana wygrywa, kasowanie wygrywa z wpisem), zastosowanie wyniku
  * w bibliotece i panel w ustawieniach. Ładowany tylko na Androidzie, przez
  * build_web_assets.py.
+ *
+ * Dwa transporty, ten sam silnik:
+ *  - „folder” (domyślny, zero konfiguracji): użytkownik raz wskazuje folder na
+ *    swoim Dysku w systemowym oknie Dokumentów (PulsarFolderPlugin) i apka
+ *    trzyma tam plik pulsar-library.json. Bez Client ID i bez ekranu zgody.
+ *  - „google” (opcjonalny): logowanie OAuth i Drive REST (PulsarDrivePlugin).
+ * Wskazanie folderu jest jednorazowe na urządzenie — dalej wszystko dzieje się
+ * samo: przy starcie, po powrocie do apki i po zmianach w bibliotece.
  */
 (function () {
   'use strict';
@@ -29,7 +36,12 @@
       title: 'Chmura', tab: 'Chmura',
       intro: 'Biblioteka (utwory, albumy, polubienia) synchronizuje się przez Twoje konto Google. Pliki audio zostają na urządzeniu.',
       neverDeletes: 'Kasowanie nigdy nie rusza plików: utwory usunięte na innym urządzeniu są tylko oznaczone.',
-      notConfigured: 'Synchronizacja nie jest skonfigurowana — wklej Client ID i Client secret z Google Cloud.',
+      modeFolder: 'Folder na Dysku', modeGoogle: 'Konto Google',
+      chooseFolder: 'Wybierz folder', forgetFolder: 'Zapomnij folder',
+      folderChosen: 'Folder: ', folderMissing: 'Nie wskazano jeszcze folderu — wybierz go raz i gotowe.',
+      folderHint: 'Wskaż folder na swoim Dysku Google (albo dowolnym innym miejscu z systemowego okna Dokumentów). Apka trzyma tam plik pulsar-library.json. Ten sam folder wskaż na drugim urządzeniu — potem wszystko dzieje się automatycznie. Nic nie trzeba konfigurować: konto Google wybiera system, nie apka.',
+      googleHint: 'Tryb dla osób z własnym projektem w Google Cloud: pełne logowanie i Drive REST. Wymaga Client ID i sekretu poniżej.',
+      folderMissingSync: 'Najpierw wskaż folder na Dysku.',
       signedOut: 'Nie zalogowano na konto Google.', signedInAs: 'Zalogowano jako ',
       signIn: 'Zaloguj się kontem Google', signOut: 'Wyloguj', syncNow: 'Synchronizuj teraz',
       syncing: 'Synchronizuję…', lastSync: 'Ostatnia synchronizacja: ', never: 'nigdy',
@@ -40,12 +52,18 @@
       advanced: 'Konfiguracja (Google Cloud)', clientId: 'Client ID', clientSecret: 'Client secret',
       redirectUri: 'Adres przekierowania', save: 'Zapisz',
       help: 'Jak włączyć: utwórz projekt w Google Cloud, dodaj typ klienta OAuth „Aplikacja komputerowa”, wklej Client ID i secret powyżej, jako adres przekierowania podaj pl.ursusel.pulsar.android:/oauth2redirect i dodaj swoje konto jako testera.',
-      missingLibrary: 'Nie widzę biblioteki aplikacji.', error: 'Błąd: '
+      missingLibrary: 'Nie widzę biblioteki aplikacji.', error: 'Błąd: ',
+      noTransport: 'Ta wersja nie ma warstwy synchronizacji.'
     },
     en: {
       title: 'Cloud', tab: 'Cloud',
       intro: 'Your library (tracks, albums, favourites) syncs through your own Google account. Audio files stay on the device.',
       neverDeletes: 'Deleting never touches files: tracks removed on another device are only flagged.',
+      modeFolder: 'Drive folder', modeGoogle: 'Google sign-in',
+      chooseFolder: 'Choose folder', forgetFolder: 'Forget folder',
+      folderChosen: 'Folder: ', folderMissing: 'No folder chosen yet — pick one once and you are done.',
+      folderHint: 'Point at a folder on your Google Drive (or anywhere else the system Documents picker offers). The app keeps pulsar-library.json there. Pick the same folder on your second device and everything happens automatically from then on. Nothing to configure: the Google account is chosen by the system, not by the app.',
+      googleHint: 'For people with their own Google Cloud project: full OAuth sign-in and Drive REST. Needs the Client ID and secret below.',
       notConfigured: 'Sync is not configured — paste the Client ID and Client secret from Google Cloud.',
       signedOut: 'Not signed in to Google.', signedInAs: 'Signed in as ',
       signIn: 'Sign in with Google', signOut: 'Sign out', syncNow: 'Sync now',
@@ -57,7 +75,8 @@
       advanced: 'Setup (Google Cloud)', clientId: 'Client ID', clientSecret: 'Client secret',
       redirectUri: 'Redirect URI', save: 'Save',
       help: 'How to enable: create a Google Cloud project, add an OAuth client of type “Desktop app”, paste its Client ID and secret above, set the redirect URI to pl.ursusel.pulsar.android:/oauth2redirect and add your account as a test user.',
-      missingLibrary: 'The app library is not available.', error: 'Error: '
+      missingLibrary: 'The app library is not available.', error: 'Error: ',
+      noTransport: 'This build has no sync layer.'
     }
   };
 
@@ -557,18 +576,51 @@
 
   // ------------------------------------------------------------- stan i UI
 
-  var plugin = null;
-  var status = { configured: false, signedIn: false, email: '', lastSyncAt: 0, lastError: '', mirror: true };
-  var settings = { enabled: false };
+  var DRIVE_PLUGIN = 'PulsarDrive';
+  var FOLDER_PLUGIN = 'PulsarFolder';
+
+  var transport = { kind: 'folder', api: null };
+  var state = {
+    mode: 'folder',
+    enabled: false,
+    folderReady: false,
+    folderLabel: '',
+    googleConfigured: false,
+    googleSignedIn: false,
+    googleEmail: '',
+    lastSyncAt: 0,
+    lastError: '',
+    mirror: true
+  };
   var busy = false;
   var counters = { sent: 0, received: 0, cloud: 0, removed: 0 };
   var scheduledTimer = null;
   var listenersReady = false;
   var panel = null;
 
-  function pluginApi() {
+  function plugins() {
     var capacitor = window.Capacitor;
-    return (capacitor && capacitor.Plugins && capacitor.Plugins.PulsarDrive) || null;
+    return (capacitor && capacitor.Plugins) || {};
+  }
+
+  /**
+   * Dwa sposoby dotarcia do Dysku:
+   *  - „folder” (domyślny): użytkownik raz wskazuje folder w systemowym oknie
+   *    Dokumentów i apka pisze tam plik pulsar-library.json. Żadnego Client ID,
+   *    żadnego ekranu zgody, żadnego limitu testerów.
+   *  - „google”: pełne logowanie OAuth, wymaga własnego projektu w Google Cloud.
+   */
+  function transportFor(mode) {
+    var available = plugins();
+    if (mode === 'google' && available[DRIVE_PLUGIN]) return { kind: 'google', api: available[DRIVE_PLUGIN] };
+    if (available[FOLDER_PLUGIN]) return { kind: 'folder', api: available[FOLDER_PLUGIN] };
+    return null;
+  }
+
+  /** Czy w bieżącym trybie jest wszystko, czego trzeba, żeby wysłać dane. */
+  function readyToSync() {
+    if (!transport) return false;
+    return transport.kind === 'folder' ? state.folderReady : (state.googleSignedIn && state.googleConfigured);
   }
 
   function hostSnapshot() {
@@ -579,16 +631,32 @@
   function loadSettings() {
     try {
       var raw = localStorage.getItem('pulsarCloudSync');
-      if (raw) settings.enabled = !!JSON.parse(raw).enabled;
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        state.enabled = !!parsed.enabled;
+        if (parsed.mode === 'google' || parsed.mode === 'folder') state.mode = parsed.mode;
+      }
     } catch (error) {}
   }
 
   function saveSettings() {
-    try { localStorage.setItem('pulsarCloudSync', JSON.stringify({ enabled: settings.enabled })); } catch (error) {}
+    try {
+      localStorage.setItem('pulsarCloudSync', JSON.stringify({ enabled: state.enabled, mode: state.mode }));
+    } catch (error) {}
+  }
+
+  function setMode(mode) {
+    if (mode !== 'folder' && mode !== 'google') return;
+    state.mode = mode;
+    saveSettings();
+    transport = transportFor(mode);
+    state.lastError = '';
+    renderPanelStatus();
+    refreshStatus().catch(function () {});
   }
 
   function setStatus(patch) {
-    status = Object.assign({}, status, patch || {});
+    state = Object.assign({}, state, patch || {});
     renderPanelStatus();
   }
 
@@ -612,15 +680,30 @@
   }
 
   function refreshStatus() {
-    plugin = pluginApi();
-    if (!plugin) return Promise.resolve(status);
-    return plugin.status().then(function (result) {
-      status = Object.assign({}, status, result || {});
-      renderPanelStatus();
-      return status;
+    transport = transportFor(state.mode);
+    if (!transport || !transport.api.status) return Promise.resolve(state);
+    return transport.api.status().then(function (result) {
+      var patch;
+      if (transport.kind === 'folder') {
+        patch = {
+          folderReady: !!(result && result.picked),
+          folderLabel: String((result && result.label) || ''),
+          lastError: String((result && result.lastError) || '')
+        };
+      } else {
+        patch = {
+          googleConfigured: !!(result && result.configured),
+          googleSignedIn: !!(result && result.signedIn),
+          googleEmail: String((result && result.email) || ''),
+          lastError: String((result && result.lastError) || '')
+        };
+        if (result && result.lastSyncAt) patch.lastSyncAt = Number(result.lastSyncAt) || state.lastSyncAt;
+      }
+      setStatus(patch);
+      return state;
     }).catch(function (error) {
       setStatus({ lastError: message(error) });
-      return status;
+      return state;
     });
   }
 
@@ -629,7 +712,7 @@
   }
 
   function scheduleSync(delayMs) {
-    if (!settings.enabled || busy) return;
+    if (!state.enabled || busy) return;
     if (scheduledTimer) clearTimeout(scheduledTimer);
     scheduledTimer = setTimeout(function () {
       scheduledTimer = null;
@@ -637,12 +720,37 @@
     }, Math.max(1000, delayMs || 20000));
   }
 
+  /**
+   * Oba transporty mają swój „odczyt" i „zapis":
+   *  - folder (SAF): read()/write() na pliku w wybranym folderze,
+   *  - google: pull()/push() przez Drive REST.
+   * Reszta silnika nie musi wiedzieć, gdzie fizycznie leży manifest.
+   */
+  function pullRemote() {
+    if (!transport || !transport.api) return Promise.resolve(null);
+    var api = transport.api;
+    if (transport.kind === 'folder' && api.read) return Promise.resolve(api.read());
+    if (api.pull) return Promise.resolve(api.pull());
+    return Promise.resolve(null);
+  }
+
+  function pushRemote(manifest) {
+    if (!transport || !transport.api) return Promise.reject(new Error(T('noTransport')));
+    var api = transport.api;
+    if (transport.kind === 'folder') {
+      if (!api.write) return Promise.reject(new Error(T('noTransport')));
+      return Promise.resolve(api.write({ manifest: manifest }));
+    }
+    var payload = { manifest: manifest, mirror: !!state.mirror };
+    return Promise.resolve(api.push(payload));
+  }
+
   /** Pełny cykl: pobierz zdalny manifest, scal, zastosuj u siebie, wypchnij wynik. */
   function runSync() {
     if (busy) return Promise.resolve({ skipped: 'busy' });
-    plugin = pluginApi();
-    if (!plugin) return Promise.resolve({ skipped: 'no-plugin' });
-    if (!settings.enabled) return Promise.resolve({ skipped: 'disabled' });
+    transport = transportFor(state.mode);
+    if (!transport) return Promise.resolve({ skipped: 'no-plugin' });
+    if (!state.enabled) return Promise.resolve({ skipped: 'disabled' });
 
     busy = true;
     renderPanelStatus();
@@ -650,7 +758,9 @@
 
     return refreshStatus()
       .then(function () {
-        if (!status.signedIn) throw new Error(T('signedOut'));
+        if (!readyToSync()) {
+          throw new Error(transport.kind === 'folder' ? T('folderMissing') : T('signedOut'));
+        }
         return deviceInfo();
       })
       .then(function (device) {
@@ -661,7 +771,7 @@
           var localManifest = buildManifest(snapshot, previous, {
             id: device.deviceId, name: device.name, platform: 'android'
           });
-          return plugin.pull().then(function (remote) {
+          return pullRemote().then(function (remote) {
             var remoteManifest = null;
             if (remote && remote.manifest) {
               try { remoteManifest = JSON.parse(remote.manifest); } catch (error) { remoteManifest = null; }
@@ -689,7 +799,7 @@
                 removed: merged.stats.remoteRemoved.length
               };
               return cloudReplace(cloudEntries).then(function () {
-                return plugin.push({ manifest: JSON.stringify(mergedManifest), mirror: !!status.mirror });
+                return pushRemote(JSON.stringify(mergedManifest));
               });
             });
           });
@@ -704,7 +814,7 @@
       .then(function () {
         busy = false;
         setStatus({ lastError: '', lastSyncAt: nowMs() });
-        return { counters: counters };
+        return { counters: counters, mode: transport.kind };
       })
       .catch(function (error) {
         busy = false;
@@ -734,20 +844,28 @@
       pane.innerHTML =
         '<div class="sm-section-cap">' + escapeHtml(T('title')) + '</div>' +
         '<div class="sm-note" data-cloud="intro"></div>' +
+        '<div class="sm-btns"><button class="sm-btn" data-cloud="mode-folder">' + escapeHtml(T('modeFolder')) + '</button>' +
+        '<button class="sm-btn" data-cloud="mode-google">' + escapeHtml(T('modeGoogle')) + '</button></div>' +
         '<label class="sm-check"><input type="checkbox" data-cloud="enabled"><span>' + escapeHtml(T('enabled')) + '</span></label>' +
-        '<label class="sm-check"><input type="checkbox" data-cloud="mirror"><span>' + escapeHtml(T('mirror')) + '</span></label>' +
-        '<div class="sm-note" data-cloud="status"></div>' +
-        '<div class="sm-btns">' +
-        '<button class="sm-btn" data-cloud="signin">' + escapeHtml(T('signIn')) + '</button>' +
-        '<button class="sm-btn" data-cloud="sync">' + escapeHtml(T('syncNow')) + '</button>' +
-        '<button class="sm-btn" data-cloud="signout">' + escapeHtml(T('signOut')) + '</button>' +
+        '<div data-cloud="section-folder">' +
+        '  <div class="sm-note" data-cloud="folder-hint"></div>' +
+        '  <div class="sm-btns"><button class="sm-btn" data-cloud="choose">' + escapeHtml(T('chooseFolder')) + '</button>' +
+        '  <button class="sm-btn" data-cloud="forget">' + escapeHtml(T('forgetFolder')) + '</button></div>' +
         '</div>' +
-        '<div class="sm-section-cap">' + escapeHtml(T('advanced')) + '</div>' +
-        '<input class="sm-input" data-cloud="clientId" placeholder="' + escapeHtml(T('clientId')) + '">' +
-        '<input class="sm-input" data-cloud="clientSecret" type="password" placeholder="' + escapeHtml(T('clientSecret')) + '">' +
-        '<input class="sm-input" data-cloud="redirectUri" placeholder="' + escapeHtml(T('redirectUri')) + '">' +
-        '<div class="sm-btns"><button class="sm-btn" data-cloud="save">' + escapeHtml(T('save')) + '</button></div>' +
-        '<div class="sm-note" data-cloud="help"></div>';
+        '<div data-cloud="section-google">' +
+        '  <div class="sm-note" data-cloud="google-hint"></div>' +
+        '  <label class="sm-check"><input type="checkbox" data-cloud="mirror"><span>' + escapeHtml(T('mirror')) + '</span></label>' +
+        '  <div class="sm-btns"><button class="sm-btn" data-cloud="signin">' + escapeHtml(T('signIn')) + '</button>' +
+        '  <button class="sm-btn" data-cloud="signout">' + escapeHtml(T('signOut')) + '</button></div>' +
+        '  <div class="sm-section-cap">' + escapeHtml(T('advanced')) + '</div>' +
+        '  <input class="sm-input" data-cloud="clientId" placeholder="' + escapeHtml(T('clientId')) + '">' +
+        '  <input class="sm-input" data-cloud="clientSecret" type="password" placeholder="' + escapeHtml(T('clientSecret')) + '">' +
+        '  <input class="sm-input" data-cloud="redirectUri" placeholder="' + escapeHtml(T('redirectUri')) + '">' +
+        '  <div class="sm-btns"><button class="sm-btn" data-cloud="save">' + escapeHtml(T('save')) + '</button></div>' +
+        '  <div class="sm-note" data-cloud="help"></div>' +
+        '</div>' +
+        '<div class="sm-btns"><button class="sm-btn" data-cloud="sync">' + escapeHtml(T('syncNow')) + '</button></div>' +
+        '<div class="sm-note" data-cloud="status"></div>';
       settingsMenu.appendChild(pane);
 
       var tabs = settingsMenu.querySelector('.sm-tabs') ||
@@ -766,6 +884,10 @@
     panel = pane;
     var intro = pane.querySelector('[data-cloud="intro"]');
     if (intro) intro.textContent = T('intro') + ' ' + T('neverDeletes');
+    var folderHint = pane.querySelector('[data-cloud="folder-hint"]');
+    if (folderHint) folderHint.textContent = T('folderHint');
+    var googleHint = pane.querySelector('[data-cloud="google-hint"]');
+    if (googleHint) googleHint.textContent = T('googleHint');
     var help = pane.querySelector('[data-cloud="help"]');
     if (help) help.textContent = T('help');
     var redirect = pane.querySelector('[data-cloud="redirectUri"]');
@@ -779,31 +901,52 @@
 
     var enabled = find('enabled');
     if (enabled) enabled.addEventListener('change', function () {
-      settings.enabled = !!enabled.checked;
+      state.enabled = !!enabled.checked;
       saveSettings();
-      if (settings.enabled) runSync().catch(function () {});
+      if (state.enabled) runSync().catch(function () {});
     });
+
+    var folderMode = find('mode-folder');
+    if (folderMode) folderMode.addEventListener('click', function () { setMode('folder'); });
+    var googleMode = find('mode-google');
+    if (googleMode) googleMode.addEventListener('click', function () { setMode('google'); });
 
     var mirror = find('mirror');
     if (mirror) mirror.addEventListener('change', function () {
-      status.mirror = !!mirror.checked;
-      var api = pluginApi();
-      if (api && api.setMirror) api.setMirror({ enabled: status.mirror }).catch(function () {});
+      state.mirror = !!mirror.checked;
+      var api = plugins()[DRIVE_PLUGIN];
+      if (api && api.setMirror) api.setMirror({ enabled: state.mirror }).catch(function () {});
+    });
+
+    var choose = find('choose');
+    if (choose) choose.addEventListener('click', function () {
+      var api = plugins()[FOLDER_PLUGIN];
+      if (!api) return;
+      api.pickFolder().then(refreshStatus).then(function () {
+        if (state.folderReady && state.enabled) return runSync();
+        return null;
+      }).catch(function (error) { setStatus({ lastError: message(error) }); });
+    });
+
+    var forget = find('forget');
+    if (forget) forget.addEventListener('click', function () {
+      var api = plugins()[FOLDER_PLUGIN];
+      if (api && api.forget) api.forget().then(refreshStatus).catch(function () {});
     });
 
     var signin = find('signin');
     if (signin) signin.addEventListener('click', function () {
-      var api = pluginApi();
+      var api = plugins()[DRIVE_PLUGIN];
       if (!api) return;
       api.signIn().then(refreshStatus).then(function () {
-        if (status.signedIn) return runSync();
+        if (state.googleSignedIn && state.enabled) return runSync();
         return null;
       }).catch(function (error) { setStatus({ lastError: message(error) }); });
     });
 
     var signout = find('signout');
     if (signout) signout.addEventListener('click', function () {
-      var api = pluginApi();
+      var api = plugins()[DRIVE_PLUGIN];
       if (api) api.signOut().then(refreshStatus).catch(function () {});
     });
 
@@ -812,7 +955,7 @@
 
     var save = find('save');
     if (save) save.addEventListener('click', function () {
-      var api = pluginApi();
+      var api = plugins()[DRIVE_PLUGIN];
       if (!api || !api.configure) return;
       api.configure({ clientId: field('clientId'), clientSecret: field('clientSecret'), redirectUri: field('redirectUri') })
         .then(refreshStatus)
@@ -823,34 +966,55 @@
   function renderPanelStatus() {
     var pane = ensurePanel();
     if (!pane) return;
+    var isFolder = state.mode === 'folder';
+
+    var folderSection = pane.querySelector('[data-cloud="section-folder"]');
+    if (folderSection) folderSection.style.display = isFolder ? '' : 'none';
+    var googleSection = pane.querySelector('[data-cloud="section-google"]');
+    if (googleSection) googleSection.style.display = isFolder ? 'none' : '';
+
+    var modeFolder = pane.querySelector('[data-cloud="mode-folder"]');
+    if (modeFolder) modeFolder.setAttribute('data-active', isFolder ? '1' : '');
+    var modeGoogle = pane.querySelector('[data-cloud="mode-google"]');
+    if (modeGoogle) modeGoogle.setAttribute('data-active', isFolder ? '' : '1');
+
     var box = pane.querySelector('[data-cloud="status"]');
     if (box) {
       var lines = [];
-      if (!status.configured) lines.push(T('notConfigured'));
-      else if (!status.signedIn) lines.push(T('signedOut'));
-      else lines.push(T('signedInAs') + (status.email || 'Google'));
-      lines.push(T('lastSync') + (status.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString() : T('never')));
+      if (isFolder) {
+        lines.push(state.folderReady
+          ? T('folderChosen') + (state.folderLabel || '')
+          : T('folderMissing'));
+      } else if (!state.googleConfigured) {
+        lines.push(T('notConfigured'));
+      } else if (!state.googleSignedIn) {
+        lines.push(T('signedOut'));
+      } else {
+        lines.push(T('signedInAs') + (state.googleEmail || 'Google'));
+      }
+      lines.push(T('lastSync') + (state.lastSyncAt ? new Date(state.lastSyncAt).toLocaleString() : T('never')));
       if (counters.sent || counters.received || counters.cloud || counters.removed) {
         lines.push(T('sent') + counters.sent + ' · ' + T('received') + counters.received);
         if (counters.cloud) lines.push(T('inCloud') + counters.cloud);
         if (counters.removed) lines.push(T('removedElsewhere') + counters.removed);
       }
       if (busy) lines.push(T('syncing'));
-      if (status.lastError) lines.push(T('error') + status.lastError);
+      if (state.lastError) lines.push(T('error') + state.lastError);
       box.textContent = lines.join('\n');
     }
+
     var enabled = pane.querySelector('[data-cloud="enabled"]');
-    if (enabled) enabled.checked = !!settings.enabled;
+    if (enabled) enabled.checked = !!state.enabled;
     var mirror = pane.querySelector('[data-cloud="mirror"]');
-    if (mirror) mirror.checked = !!status.mirror;
+    if (mirror) mirror.checked = state.mirror !== false;
   }
 
   // --------------------------------------------------------------- rozruch
 
   function start() {
-    plugin = pluginApi();
-    if (!plugin) return;
     loadSettings();
+    transport = transportFor(state.mode);
+    if (!transport) return;
     ensurePanel();
     refreshStatus();
     deviceInfo().catch(function () {});
@@ -867,16 +1031,22 @@
       document.addEventListener('visibilitychange', function () { if (!document.hidden) scheduleSync(5000); });
       var settingsBtn = document.getElementById('settingsBtn');
       if (settingsBtn) settingsBtn.addEventListener('click', function () { setTimeout(renderPanelStatus, 60); });
-      if (plugin.addListener) {
-        plugin.addListener('driveAuth', function () {
-          refreshStatus().then(function () { if (status.signedIn && settings.enabled) return runSync(); return null; });
+      var drive = plugins()[DRIVE_PLUGIN];
+      if (drive && drive.addListener) {
+        drive.addListener('driveAuth', function () {
+          refreshStatus().then(function () { if (state.googleSignedIn && state.enabled) return runSync(); return null; });
         });
       }
     }
 
-    if (settings.enabled) setTimeout(function () { runSync().catch(function () {}); }, 6000);
+    if (state.enabled && readyToSync()) setTimeout(function () { runSync().catch(function () {}); }, 6000);
     else renderPanelStatus();
   }
+
+  // Ustawienia czytamy od razu, żeby transport był właściwy jeszcze przed
+  // pierwszym renderem panelu (start() i tak je potem odświeży).
+  loadSettings();
+  transport = transportFor(state.mode);
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(start, 400);
   else document.addEventListener('DOMContentLoaded', function () { setTimeout(start, 400); });
@@ -885,7 +1055,10 @@
   window.__pulsarDrive = {
     sync: runSync,
     status: refreshStatus,
-    settings: settings,
+    setMode: setMode,
+    setEnabled: function (flag) { state.enabled = !!flag; saveSettings(); renderPanelStatus(); },
+    mode: function () { return state.mode; },
+    state: function () { return state; },
     counters: function () { return counters; },
     _pure: {
       trackKey: trackKey,

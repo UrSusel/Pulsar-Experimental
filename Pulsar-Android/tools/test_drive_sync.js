@@ -116,6 +116,46 @@ function makeDrive() {
   return { files: new Map(), pushes: 0 };
 }
 
+/**
+ * Fałszywy folder na Dysku: to samo miejsce widziane przez oba urządzenia.
+ * Odpowiada natywnemu PulsarFolderPlugin (systemowe okno Dokumentów).
+ */
+function makeFolder(drive) {
+  const api = {
+    _picked: false,
+    _label: '',
+    _files: drive.files,
+    status() {
+      return Promise.resolve({
+        picked: api._picked,
+        label: api._label,
+        file: 'pulsar-library.json',
+        fileReady: api._files.has('folder'),
+        lastError: '',
+      });
+    },
+    pickFolder() {
+      api._picked = true;
+      api._label = 'Pulsar (Dysk Google)';
+      return api.status();
+    },
+    forget() {
+      api._picked = false;
+      api._label = '';
+      return Promise.resolve({ picked: false, label: '', lastError: '' });
+    },
+    read() {
+      return Promise.resolve({ manifest: api._files.get('folder') || null, modifiedTime: Date.now() });
+    },
+    write(payload) {
+      if (!api._picked) return Promise.reject(new Error('Nie wskazano folderu.'));
+      api._files.set('folder', payload.manifest);
+      return Promise.resolve({ modifiedTime: Date.now() });
+    },
+  };
+  return api;
+}
+
 function makePlugin(drive) {
   return {
     _configured: { clientId: '', clientSecret: '' },
@@ -161,6 +201,9 @@ function makeEnv(options) {
   plugin._configured = options.config || { clientId: 'id', clientSecret: 'secret' };
   plugin._signedIn = !!options.signedIn;
   if (options.seed) drive.files.set('appdata', JSON.stringify(options.seed));
+  const folder = makeFolder(drive);
+  folder._picked = !!options.folderPicked;
+  if (options.seed) drive.files.set('folder', JSON.stringify(options.seed));
 
   const library = makeLibrary(options.tracks || [], options.albums || []);
 
@@ -195,7 +238,7 @@ function makeEnv(options) {
     isFinite,
     navigator: { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/UQ1A) AppleWebKit/537.36' },
     localStorage: {
-      _data: {},
+      _data: Object.assign({}, options.storage || {}),
       getItem(key) { return Object.prototype.hasOwnProperty.call(this._data, key) ? this._data[key] : null; },
       setItem(key, value) { this._data[key] = String(value); },
     },
@@ -203,8 +246,12 @@ function makeEnv(options) {
     location: { href: 'https://localhost/' },
     File: class File {},
   };
+  const pluginTable = {};
+  if (options.withDrive !== false) pluginTable.PulsarDrive = plugin;
+  if (options.withFolder !== false) pluginTable.PulsarFolder = folder;
+
   sandbox.window = {
-    Capacitor: { Plugins: { PulsarDrive: plugin } },
+    Capacitor: { Plugins: pluginTable },
     __pulsarSyncSnapshot: library.snapshot,
     __pulsarSyncApply: library.apply,
     addEventListener() {},
@@ -218,7 +265,10 @@ function makeEnv(options) {
 
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(SOURCE, 'utf8'), sandbox, { filename: 'drive-sync.js' });
-  return { api: sandbox.window.__pulsarDrive, drive, plugin, library };
+  return {
+    api: sandbox.window.__pulsarDrive, drive, plugin, folder, library, plugins: pluginTable,
+    storage: sandbox.localStorage,
+  };
 }
 
 // -------------------------------------------------------------------- testy
@@ -244,7 +294,8 @@ function containsAudioLike(value, depth) {
 
   { // 1. manifest zawiera tylko metadane — bez audio, bez ścieżek
     const env = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: true, tracks: [track({})] });
-    env.api.settings.enabled = true;
+    env.api.setMode('google');
+    env.api.setEnabled(true);
     await env.api.sync();
     const manifest = JSON.parse(env.drive.files.get('appdata'));
     check('manifest holds no audio payload', !containsAudioLike(manifest, 0), 'bytes=' + JSON.stringify(manifest).length);
@@ -255,7 +306,8 @@ function containsAudioLike(value, depth) {
 
   { // 2. drugie urządzenie dostaje pozycję z chmury i scalone polubienie
     const first = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: true, tracks: [track({ fav: true, plays: 9 })] });
-    first.api.settings.enabled = true;
+    first.api.setMode('google');
+    first.api.setEnabled(true);
     await first.api.sync();
 
     const second = makeEnv({
@@ -263,7 +315,8 @@ function containsAudioLike(value, depth) {
       tracks: [track({ fav: false, plays: 1 })],
       drive: first.drive,
     });
-    second.api.settings.enabled = true;
+    second.api.setMode('google');
+    second.api.setEnabled(true);
     const outcome = await second.api.sync();
     check('second device pulls the newer favourite', second.library.state.tracks[0].fav === true, JSON.stringify(outcome.counters || outcome));
     check('play counts merge upwards', second.library.state.tracks[0].plays === 9, String(second.library.state.tracks[0].plays));
@@ -277,7 +330,8 @@ function containsAudioLike(value, depth) {
       albums: [], removed: [],
     };
     const env = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: true, tracks: [], seed: remote });
-    env.api.settings.enabled = true;
+    env.api.setMode('google');
+    env.api.setEnabled(true);
     await env.api.sync();
     const counters = env.api.counters();
     check('cloud-only track is counted, not materialised', counters.cloud === 1 && env.library.state.tracks.length === 0,
@@ -287,7 +341,8 @@ function containsAudioLike(value, depth) {
   { // 4. kasowanie na innym urządzeniu nie kasuje pliku, ale jest raportowane
     const local = track({});
     const env = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: true, tracks: [local] });
-    env.api.settings.enabled = true;
+    env.api.setMode('google');
+    env.api.setEnabled(true);
     await env.api.sync();
     const manifest = JSON.parse(env.drive.files.get('appdata'));
     manifest.removed = [{ key: 'youtube:dQw4w9WgXcQ', deletedAt: Date.now() + 1000, device: 'other-device' }];
@@ -306,7 +361,8 @@ function containsAudioLike(value, depth) {
       removed: [],
     };
     const env = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: true, tracks: [track({})], seed: remote });
-    env.api.settings.enabled = true;
+    env.api.setMode('google');
+    env.api.setEnabled(true);
     await env.api.sync();
     const album = env.library.state.albums[0];
     check('album from the cloud lands locally', !!album && album.name === 'Evolve', JSON.stringify(env.library.state.albums));
@@ -314,7 +370,8 @@ function containsAudioLike(value, depth) {
 
   { // 6. usunięcie lokalne wysyła znacznik kasowania i nie wraca z chmury
     const env = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: true, tracks: [track({})] });
-    env.api.settings.enabled = true;
+    env.api.setMode('google');
+    env.api.setEnabled(true);
     await env.api.sync();
     env.library.state.tracks.length = 0; // użytkownik usuwa utwór na tym urządzeniu
     await env.api.sync();
@@ -326,7 +383,8 @@ function containsAudioLike(value, depth) {
 
   { // 7. brak logowania: nic nie leci do Drive, tylko komunikat
     const env = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: false, tracks: [track({})] });
-    env.api.settings.enabled = true;
+    env.api.setMode('google');
+    env.api.setEnabled(true);
     const outcome = await env.api.sync();
     check('signed-out sync uploads nothing', env.drive.pushes === 0 && /zalogow|sign in/i.test(outcome.error || ''),
       'pushes=' + env.drive.pushes + ' error=' + (outcome.error || ''));
@@ -340,7 +398,8 @@ function containsAudioLike(value, depth) {
 
   { // 9. błąd sieci nie gubi zmian: następny cykl wysyła ten sam stan
     const env = makeEnv({ config: { clientId: 'id', clientSecret: 'secret' }, signedIn: true, tracks: [track({})] });
-    env.api.settings.enabled = true;
+    env.api.setMode('google');
+    env.api.setEnabled(true);
     await env.api.sync();
     const first = JSON.parse(env.drive.files.get('appdata'));
     const realPush = env.plugin.push.bind(env.plugin);
@@ -512,6 +571,72 @@ async function checkRuntimeHooks() {
     check('un-favouriting wins when it is the newer change',
       unFav.merged.tracks[0].fav === false && reverseUnFav.merged.tracks[0].fav === false,
       JSON.stringify({ a: unFav.merged.tracks[0].fav, b: reverseUnFav.merged.tracks[0].fav }));
+  }
+
+  { // 13. domyślnie tryb folderu: działa bez Client ID, bez logowania i bez pluginu Drive
+    const env = makeEnv({ withDrive: false, folderPicked: true, tracks: [track({})] });
+    check('folder mode is the default', env.api.mode() === 'folder', env.api.mode());
+    env.api.setEnabled(true);
+    const outcome = await env.api.sync();
+    const written = env.drive.files.get('folder');
+    check('folder sync works with no Google setup', !!written && !outcome.error, outcome.error || 'ok');
+    check('folder sync uploads no audio', written && !containsAudioLike(JSON.parse(written), 0));
+    check('folder sync keeps the cross-device key', written && JSON.parse(written).tracks[0].key === 'youtube:dQw4w9WgXcQ');
+    check('panel sees the folder as ready after a sync', env.api.state().folderReady === true);
+  }
+
+  { // 14. drugie urządzenie wskazuje ten sam folder i dostaje scaloną bibliotekę
+    const first = makeEnv({ withDrive: false, folderPicked: true, tracks: [track({ fav: true, plays: 9 })] });
+    first.api.setEnabled(true);
+    await first.api.sync();
+
+    const second = makeEnv({
+      withDrive: false, folderPicked: true, drive: first.drive,
+      tracks: [track({ fav: false, plays: 1 })],
+    });
+    second.api.setEnabled(true);
+    const outcome = await second.api.sync();
+    check('second device syncs through the same folder',
+      second.library.state.tracks[0].fav === true && second.library.state.tracks[0].plays === 9,
+      JSON.stringify(outcome.counters || outcome));
+  }
+
+  { // 15. bez wskazanego folderu nic nie leci na Dysk, tylko komunikat
+    const env = makeEnv({ withDrive: false, tracks: [track({})] });
+    env.api.setEnabled(true);
+    const outcome = await env.api.sync();
+    check('folder mode without a folder refuses to write',
+      !env.drive.files.has('folder') && /folder/i.test(outcome.error || ''),
+      'error=' + (outcome.error || 'brak') + ' plik=' + env.drive.files.has('folder'));
+    check('folder status is surfaced to the panel', env.api.state().folderReady === false);
+  }
+
+  { // 16. wybór folderu jest zapamiętywany i widoczny w stanie
+    const env = makeEnv({ withDrive: false, tracks: [track({})] });
+    await env.folder.pickFolder();
+    await env.api.status();
+    check('chosen folder is visible in the panel state',
+      env.api.state().folderReady === true && /Pulsar/.test(env.api.state().folderLabel || ''),
+      env.api.state().folderLabel);
+  }
+
+  { // 17. tryb jest zapamiętywany między uruchomieniami
+    const env = makeEnv({ withDrive: true, folderPicked: true, tracks: [track({})] });
+    env.api.setMode('google');
+    env.api.setEnabled(true);
+    const saved = JSON.parse(env.storage.getItem('pulsarCloudSync'));
+    check('mode switch is stored', saved.mode === 'google' && saved.enabled === true, JSON.stringify(saved));
+    const second = makeEnv({ withDrive: true, tracks: [track({})], storage: { pulsarCloudSync: env.storage.getItem('pulsarCloudSync') } });
+    check('mode is read back from storage', second.api.mode() === 'google', second.api.mode());
+  }
+
+  { // 18. brak pluginu Google przy trybie google nie wywala synchronizacji w powietrze
+    const env = makeEnv({ withDrive: false, folderPicked: true, tracks: [track({})] });
+    env.api.setMode('google');
+    env.api.setEnabled(true);
+    const outcome = await env.api.sync();
+    check('missing Google plugin falls back to the folder transport',
+      !!env.drive.files.get('folder') && !outcome.error, JSON.stringify(outcome));
   }
 
   await checkRuntimeHooks();
