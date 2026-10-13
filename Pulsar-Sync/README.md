@@ -19,7 +19,14 @@ engine and one set of runtime hooks; Android, Windows and Linux all ship the sam
 
 Only metadata: track titles, artists, albums, years, favourites, play counts, the YouTube
 identifier, album names and album membership. Audio files, covers and local paths stay on
-the device that owns them. The manifest is a single file, `pulsar-library.json`.
+the device that owns them.
+
+Each device writes **its own file** — `pulsar-library-windows.json`,
+`pulsar-library-linux.json`, `pulsar-library-android.json` — and reads all of them. Nobody ever
+overwrites somebody else's file, so a device that cannot see the folder for a moment cannot
+destroy the other device's library. The library is the sum of those files; the old single
+`pulsar-library.json` is still read (so nothing written by an older build is lost), just never
+written again.
 
 ## Tracks that only exist on the other device
 
@@ -66,13 +73,14 @@ it as deleted. The engine keeps a record of the keys that were in *this* library
   on the first sync after the update those are dropped, and the merge restores the entries from
   the file, which is how an already-broken library heals itself.
 
-### When Drive does not show the file
+### When Drive does not show the files
 
-A missing file is not an empty cloud. Drive's folder listing on Android (SafetyNet/SAF) refreshes
-with a delay, and the desktop client may not have downloaded the file yet, so for a moment a
-device sees a folder with no `pulsar-library.json` in it — right after the other device created
-one. Writing its own manifest at that point replaced the other device's library with this device's
-copy, and if the write then won in Drive, the other device lost what it had just saved.
+A missing file is not an empty cloud. Drive's folder listing on Android (SAF) refreshes with a
+delay, and the desktop client may not have downloaded a file yet, so for a moment a device sees a
+folder with nothing in it — right after the other device wrote. Writing a shared manifest at that
+point replaced the other device's library with a local copy, and if that write then won in Drive,
+the other device lost what it had just saved. That is why the files are per device now: a bad
+read can only make this device's own mirror smaller, never the other device's file.
 
 The engine keeps a memory of the last cloud manifest it saw or wrote (refreshed on every sync and
 dropped when the folder is forgotten or changed) and treats a bad read carefully:
@@ -85,13 +93,17 @@ dropped when the folder is forgotten or changed) and treats a bad read carefully
 * a memory older than the tombstone window restores nothing, so nothing is resurrected years later;
 * an empty library with no file to read and no memory writes nothing at all.
 
+Names follow the system, so the folder stays readable; a second device of the same system (two
+Windows machines) detects that the plain name is taken and moves to
+`pulsar-library-windows-<id>.json` instead of sharing it.
+
 ## How a device joins the library
 
 Folder mode needs no Google Cloud project, no OAuth screen and no tester list — the app
 asks the system file picker for a folder once and remembers it:
 
 * **Android** — *Settings → Cloud → Choose folder*, pick the Drive folder. The app keeps
-  `pulsar-library.json` there through Storage Access Framework permissions.
+  all `pulsar-library*.json` files there through Storage Access Framework permissions.
 * **Windows** — install *Google Drive for desktop*, let it sync (or mirror) a folder, then
   *Settings → Cloud → Choose folder* and pick that folder.
 * **Linux** — mount or sync your Drive with `rclone`, `Insync`, `rclone bisync` or an
@@ -151,7 +163,7 @@ which keeps one copy of the engine on the page.
 ## Checks
 
 ```bash
-node Pulsar-Sync/tools/test_drive_sync.js          # 169 checks: engine, panel, plugins, desktop adapter
+node Pulsar-Sync/tools/test_drive_sync.js          # 176 checks: engine, panel, plugins, desktop adapter
 python Pulsar-Sync/tools/test_desktop_bundle.py    # 36 checks on the two packed archives
 python Pulsar-Sync/tools/refresh_download_zips.py --check
 node Pulsar-Android/tools/test_background_watchdog.js

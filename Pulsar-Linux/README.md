@@ -61,7 +61,7 @@ desktop flow), so the desktop panel asks for the folder instead — no account s
 screen, no Google Cloud project.
 
 Two things worth knowing: the other device must pick the same folder, and it sees changes only
-after its Drive client has downloaded `pulsar-library.json`, so this is not instant.
+after its Drive client has downloaded the file the other device wrote, so this is not instant.
 
 ## Troubleshooting
 

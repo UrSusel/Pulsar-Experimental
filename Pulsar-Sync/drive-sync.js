@@ -32,6 +32,12 @@
 
   var SCHEMA = 1;
   var MANIFEST_NAME = 'pulsar-library.json';
+  // Każde urządzenie zapisuje WŁASNY plik — nikt nie dotyka cudzego. Dzięki temu
+  // chwilowy brak jednego pliku w odczycie nie może skasować biblioteki drugiego
+  // urządzenia: jego plik leży nietknięty i wystarczy przeczytać go ponownie.
+  var LIBRARY_PREFIX = 'pulsar-library';
+  var LEGACY_FILE = 'pulsar-library.json';
+  var MAX_CLOUD_FILES = 8;
   var SYNC_DB = 'pulsar-sync';
   var SYNC_DB_VERSION = 1;
   var TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000;
@@ -86,7 +92,8 @@
       downloadFileOnly: 'To plik z innego urządzenia — dźwięk nie jedzie przez chmurę, więc nie da się go pobrać tutaj.',
       downloadUnconfirmed: 'Import nie potwierdził się w bibliotece — sprawdź zakładkę Sieć.',
       downloadOff: 'Wyszukiwanie w sieci jest w tej chwili wyłączone — włącz je w zakładce Sieć.',
-      cloudFileInfo: 'Plik w chmurze: ', tracksWord: 'utw.', albumsWord: 'alb.',
+      cloudFileInfo: 'Pliki w chmurze: ', ownFileLabel: 'Twój plik: ',
+      tracksWord: 'utw.', albumsWord: 'alb.',
       lastOtherWrite: 'Ostatnia zmiana z innego urządzenia: ',
       newFromCloud: 'Nowe z innego urządzenia: ',
       newFromCloudHint: ' — w Ustawieniach → Chmura możesz je pobrać na tym urządzeniu.',
@@ -98,8 +105,7 @@
       autoOn: 'Automatyczne pobieranie włączone.', autoOff: 'Automatyczne pobieranie wyłączone.',
       autoDownloading: 'Automatycznie pobieram: ',
       writeBackWarning: 'Uwaga: po zapisie nie widzę swoich danych w pliku — sprawdź, czy oba urządzenia wskazują ten sam folder w tej samej chmurze.',
-      cloudRestored: 'Odtworzone w pliku (odczyt nie pokazał wszystkiego): ',
-      cloudFileMissing: 'Nie widzę pliku pulsar-library.json, choć wcześniej tu był (Dysk może pokazywać folder z opóźnieniem) — nie nadpisuję go, żeby nie skasować biblioteki z drugiego urządzenia. Spróbuj ponownie za chwilę; jeśli plik naprawdę zniknął, kliknij „Zapomnij folder” i wskaż folder ponownie.',
+      cloudRestored: 'Odtworzone z pamięci (odczyt nie pokazał wszystkiego): ',
       nothingToSend: 'Biblioteka jest pusta, a w folderze nie ma jeszcze pliku — nie ma czego wysyłać.',
       removedElsewhere: 'Usunięte na innym urządzeniu: ',
       mirror: 'Trzymaj czytelną kopię na Dysku (folder Pulsar)',
@@ -156,7 +162,8 @@
       downloadFileOnly: 'This file lives on another device — its audio never travels through the cloud, so it cannot be downloaded here.',
       downloadUnconfirmed: 'The import was not confirmed in the library — check the Network tab.',
       downloadOff: 'Network search is switched off right now — switch it on in the Network tab.',
-      cloudFileInfo: 'Cloud file: ', tracksWord: 'tracks', albumsWord: 'albums',
+      cloudFileInfo: 'Cloud files: ', ownFileLabel: 'Your file: ',
+      tracksWord: 'tracks', albumsWord: 'albums',
       lastOtherWrite: 'Last change from another device: ',
       newFromCloud: 'New from another device: ',
       newFromCloudHint: ' — open Settings → Cloud to download them on this device.',
@@ -168,8 +175,7 @@
       autoOn: 'Automatic download switch on.', autoOff: 'Automatic download switch off.',
       autoDownloading: 'Downloading automatically: ',
       writeBackWarning: 'Warning: after writing I cannot see my own data in the file — check that both devices point at the same folder in the same cloud.',
-      cloudRestored: 'Restored in the file (the read did not show everything): ',
-      cloudFileMissing: 'I cannot see pulsar-library.json although it was here before (Drive can show the folder with a delay) — I am not overwriting it and risking the other device’s library. Try again in a moment; if the file is really gone, click “Forget folder” and pick the folder again.',
+      cloudRestored: 'Restored from memory (the read did not show everything): ',
       nothingToSend: 'The library is empty and there is no file in the folder yet — there is nothing to send.',
       removedElsewhere: 'Removed on another device: ',
       mirror: 'Keep a readable copy in Drive (Pulsar folder)',
@@ -833,7 +839,7 @@
   // Co mówi plik w chmurze: ile ma pozycji, kiedy i na jakim urządzeniu
   // powstała ostatnia zmiana. Bez tego „czy zsynchronizowało się?" jest zgadywaniem.
   var cloudMeta = { tracks: 0, albums: 0, updatedAt: 0, device: '', fromOther: false,
-    fileModifiedAt: 0, devices: [], writeBack: '', restored: 0, missingRead: false };
+    fileModifiedAt: 0, files: [], ownFile: '', ownFileAt: 0, devices: [], writeBack: '', restored: 0 };
   // Automatyczne pobieranie nowych utworów: na komputerze domyślnie włączone,
   // na telefonie wyłączone (dane komórkowe) — z przełącznikiem w panelu.
   var AUTO_MAX_PER_SYNC = 3;
@@ -970,6 +976,71 @@
     return desktopAdapter() ? 'desktop' : 'android';
   }
 
+  /** System urządzenia — z tego bierze się nazwa jego pliku w chmurze. */
+  function platformKey() {
+    if (!desktopAdapter()) return 'android';
+    var ua = String((typeof navigator !== 'undefined' && navigator.userAgent) || '');
+    if (/Windows/i.test(ua)) return 'windows';
+    if (/Mac OS X|Macintosh/i.test(ua)) return 'mac';
+    if (/Linux|X11/i.test(ua)) return 'linux';
+    return 'desktop';
+  }
+
+  /**
+   * Nazwa własnego pliku: `pulsar-library-windows.json`, `-android.json` itd.
+   * Jeśli w tym pliku zapisuje już inne urządzenie (dwa komputery z tym samym
+   * systemem), drugie przechodzi na nazwę z własnym identyfikatorem — plików
+   * nikt nie nadpisuje poza swoim.
+   */
+  function ownFileName(device, files) {
+    var key = platformKey();
+    var base = LIBRARY_PREFIX + '-' + key + '.json';
+    var holder = '';
+    (files || []).forEach(function (file) {
+      if (file.name !== base) return;
+      var manifest = file.manifest || {};
+      holder = String((manifest.device && manifest.device.id) || 'unknown');
+    });
+    if (holder && holder !== device.deviceId) {
+      var tail = String(device.deviceId || 'dev').replace(/[^a-z0-9]/gi, '').slice(-8) || 'dev';
+      return LIBRARY_PREFIX + '-' + key + '-' + tail + '.json';
+    }
+    return base;
+  }
+
+  /** Etykiety plików w panelu: „pulsar-library-windows.json" → „windows". */
+  function fileLabel(name) {
+    return String(name || '').replace(LIBRARY_PREFIX + '-', '').replace(/\.json$/, '') || String(name || '');
+  }
+
+  /** Co wnosi każdy plik po odjęciu znaczników kasowania — wiersz w panelu. */
+  function cloudFilesInfo(files, union, ownFile) {
+    var tomb = {};
+    ((union && union.removed) || []).forEach(function (entry) {
+      if (entry && entry.key) tomb[entry.key] = Math.max(tomb[entry.key] || 0, Number(entry.deletedAt || 0));
+    });
+    return (files || []).map(function (file) {
+      var manifest = file.manifest || {};
+      var live = (manifest.tracks || []).filter(function (entry) {
+        if (!entry || !entry.key) return false;
+        var deletedAt = tomb[entry.key];
+        // Wiek nieznany (0) nie jest sam w sobie kasowaniem — liczy się tylko
+        // wtedy, gdy wobec wpisu istnieje znacznik kasowania.
+        if (deletedAt === undefined) return true;
+        return deletedAt < Number(entry.updatedAt || 0);
+      }).length;
+      return {
+        name: file.name,
+        label: fileLabel(file.name),
+        tracks: live,
+        albums: (manifest.albums || []).length,
+        device: String((manifest.device && manifest.device.name) || (manifest.device && manifest.device.id) || ''),
+        modifiedAt: Number(file.modifiedTime || 0) || 0,
+        own: file.name === ownFile
+      };
+    });
+  }
+
   function deviceName() {
     var ua = String((typeof navigator !== 'undefined' && navigator.userAgent) || '');
     if (!desktopAdapter()) {
@@ -1037,42 +1108,84 @@
   }
 
   /**
-   * Odczyt z jedną ponowną próbą: świeżo wgrany plik (albo plik, którego klient
-   * Drive jeszcze nie pobrał) bywa przez chwilę niewidoczny. Gdy i druga próba
-   * nic nie widzi, decyduje pamięć chmury — nigdy „pusty plik".
+   * Wszystkie pliki biblioteki w folderze. Warstwa folderu ma `list()` (jedno
+   * zapytanie do folderu, potem odczyt plików); starsza warstwa zwracała jeden
+   * plik przez `read()` i taki wariant też obsługujemy.
    */
-  function pullRemoteWithRetry(memoryManifest) {
-    return pullRemote().then(function (first) {
-      var parsed = parseManifest(first);
-      if (parsed || !cloudMemoryState(memoryManifest).fresh) return { remote: first, manifest: parsed };
+  function readCloudFiles() {
+    var api = transport && transport.api;
+    if (!api) return Promise.resolve([]);
+    if (typeof api.list === 'function') {
+      return Promise.resolve(api.list()).then(function (result) {
+        var list = (result && result.files) || (Array.isArray(result) ? result : []);
+        return list.slice(0, MAX_CLOUD_FILES).map(function (entry) {
+          var manifest = null;
+          try {
+            manifest = entry && entry.manifest ? JSON.parse(entry.manifest) : null;
+          } catch (error) { manifest = null; }
+          return {
+            name: String((entry && entry.name) || LEGACY_FILE),
+            manifest: manifest,
+            modifiedTime: Number((entry && entry.modifiedTime) || 0) || 0
+          };
+        }).filter(function (file) { return !!file.manifest; });
+      });
+    }
+    if (api.read) {
+      return Promise.resolve(api.read()).then(function (one) {
+        var manifest = parseManifest(one);
+        if (!manifest) return [];
+        return [{ name: LEGACY_FILE, manifest: manifest, modifiedTime: Number((one && one.modifiedTime) || 0) || 0 }];
+      });
+    }
+    if (api.pull) {
+      return Promise.resolve(api.pull()).then(function (one) {
+        var manifest = parseManifest(one);
+        if (!manifest) return [];
+        return [{ name: LEGACY_FILE, manifest: manifest, modifiedTime: Number((one && one.modifiedTime) || 0) || 0 }];
+      });
+    }
+    return Promise.resolve([]);
+  }
+
+  /**
+   * Odczyt z jedną ponowną próbą: świeżo wgrany plik bywa przez chwilę
+   * niewidoczny (SAF na Androidzie, klient Drive na komputerze). Gdy drugi
+   * odczyt też nic nie widzi, obraz chmury uzupełni pamięć.
+   */
+  function readCloudFilesWithRetry(memoryManifest) {
+    return readCloudFiles().then(function (files) {
+      if (files.length || !cloudMemoryState(memoryManifest).fresh) return files;
       return new Promise(function (resolve) {
         setTimeout(function () {
-          pullRemote().then(function (second) {
-            resolve({ remote: second, manifest: parseManifest(second) });
+          readCloudFiles().then(function (again) {
+            resolve(again.length ? again : files);
           }, function () {
-            resolve({ remote: first, manifest: parsed });
+            resolve(files);
           });
         }, Math.max(0, READ_RETRY_MS));
       });
     });
   }
 
-  function pullRemote() {
-    if (!transport || !transport.api) return Promise.resolve(null);
-    var api = transport.api;
-    if (transport.kind === 'folder' && api.read) return Promise.resolve(api.read());
-    if (api.pull) return Promise.resolve(api.pull());
-    return Promise.resolve(null);
+  /** Wszystkie pliki jako jeden obraz chmury: unia wpisów, kasowania wygrywają. */
+  function unionCloudFiles(files) {
+    var merged = null;
+    (files || []).forEach(function (file) {
+      if (!file || !file.manifest) return;
+      merged = merged ? mergeManifests(merged, file.manifest).merged : file.manifest;
+    });
+    return merged;
   }
 
-  function pushRemote(manifest) {
+  function pushRemote(manifest, name) {
     if (!transport || !transport.api) return Promise.reject(new Error(T('noTransport')));
     var api = transport.api;
     if (transport.kind === 'folder') {
       if (!api.write) return Promise.reject(new Error(T('noTransport')));
-      return Promise.resolve(api.write({ manifest: manifest }));
+      return Promise.resolve(api.write({ manifest: manifest, name: name || LEGACY_FILE }));
     }
-    var payload = { manifest: manifest, mirror: !!state.mirror };
+    var payload = { manifest: manifest, mirror: !!state.mirror, name: name || LEGACY_FILE };
     return Promise.resolve(api.push(payload));
   }
 
@@ -1118,45 +1231,50 @@
           var localManifest = buildManifest(snapshot, previous, {
             id: device.deviceId, name: device.name, platform: devicePlatform()
           }, wasLocal);
-          return pullRemoteWithRetry(memoryManifest).then(function (read) {
-            var remote = read.remote;
-            var remoteManifest = read.manifest;
-            if (!remoteManifest && cloudMemoryState(memoryManifest).fresh) {
-              // Plik tu był, a teraz go nie widać. Zapis własnej kopii skasowałby
-              // bibliotekę drugiego urządzenia, więc nic nie zapisujemy.
-              skipped = 'cloud-missing';
-              cloudMeta.missingRead = true;
-              statePut({ id: 'cloudMeta', value: cloudMeta }).catch(function () {});
-              setStatus({ lastError: T('cloudFileMissing') });
-              renderPanelStatus();
-              return null;
-            }
-            if (!remoteManifest && !(localManifest.tracks || []).length && !(localManifest.albums || []).length) {
+          return readCloudFilesWithRetry(memoryManifest).then(function (files) {
+            // Własny plik: ten, który zapiszemy. Cudzych nie ruszamy nigdy.
+            var ownFile = ownFileName(device, files);
+            var fresh = unionCloudFiles(files);
+            if (!fresh && !(localManifest.tracks || []).length && !(localManifest.albums || []).length) {
               // Pusty folder i pusta biblioteka: nie ma czego wysyłać.
               skipped = 'nothing-to-send';
               setStatus({ lastError: T('nothingToSend') });
               renderPanelStatus();
               return null;
             }
-            var withMemory = mergeCloudMemory(remoteManifest, memoryManifest);
-            remoteManifest = withMemory.manifest;
+            // Pamięć uzupełnia to, czego odczyt nie pokazał (np. plik jeszcze
+            // niewidoczny w folderze Drive) — wpisy i urządzenia, nie kasowania.
+            var withMemory = mergeCloudMemory(fresh, memoryManifest);
+            var remoteManifest = withMemory.manifest;
             cloudMeta.restored = withMemory.restored.tracks + withMemory.restored.albums;
-            cloudMeta.missingRead = false;
             if (remoteManifest) {
-              var writer = remoteManifest.device || {};
+              var latestOther = null;
+              files.forEach(function (file) {
+                var manifest = file.manifest || {};
+                var id = (manifest.device && manifest.device.id) || '';
+                if (!id || id === device.deviceId) return;
+                if (!latestOther || Number(manifest.updatedAt || 0) > Number((latestOther.manifest || {}).updatedAt || 0)) {
+                  latestOther = file;
+                }
+              });
+              var ownEntry = null;
+              files.forEach(function (file) { if (file.name === ownFile) ownEntry = file; });
+              var otherWriter = (latestOther && latestOther.manifest.device) || {};
               cloudMeta = {
                 tracks: (remoteManifest.tracks || []).length,
                 albums: (remoteManifest.albums || []).length,
-                updatedAt: Number(remoteManifest.updatedAt || 0) || 0,
-                device: String(writer.name || writer.id || ''),
-                fromOther: !!writer.id && writer.id !== device.deviceId,
-                fileModifiedAt: Number((remote && remote.modifiedTime) || 0) || 0,
+                updatedAt: latestOther ? Number(latestOther.manifest.updatedAt || 0) || 0 : 0,
+                device: String(otherWriter.name || otherWriter.id || ''),
+                fromOther: !!latestOther,
+                fileModifiedAt: Number((latestOther && latestOther.modifiedTime) || 0) || 0,
+                files: cloudFilesInfo(files, remoteManifest, ownFile),
+                ownFile: ownFile,
+                ownFileAt: Number((ownEntry && ownEntry.modifiedTime) || 0) || 0,
                 devices: (remoteManifest.devices || []).map(function (item) {
                   return String((item && item.name) || (item && item.id) || '');
                 }).filter(Boolean),
                 writeBack: cloudMeta.writeBack,
-                restored: cloudMeta.restored,
-                missingRead: false
+                restored: cloudMeta.restored
               };
               statePut({ id: 'cloudMeta', value: cloudMeta }).catch(function () {});
             }
@@ -1201,16 +1319,17 @@
               };
               return cloudReplace(cloudEntries).then(function () {
                 renderPanelStatus();
-                return pushRemote(JSON.stringify(mergedManifest));
+                return pushRemote(JSON.stringify(mergedManifest), ownFile);
               }).then(function () {
                 // Ręczna synchronizacja sprawdza jeszcze, czy własny zapis widać
                 // w pliku: gdy urządzenia patrzą na różne pliki, to jedyny sposób,
                 // żeby to zauważyć.
                 if (!force || typeof transport.api.read !== 'function') return null;
-                return pullRemote().then(function (again) {
-                  var back = parseManifest(again);
-                  var devices = (back && back.devices) || [];
-                  cloudMeta.writeBack = devices.some(function (item) { return item && item.id === device.deviceId; }) ? 'ok' : 'missing';
+                return readCloudFiles().then(function (again) {
+                  var mine = null;
+                  (again || []).forEach(function (file) { if (file.name === ownFile) mine = file; });
+                  var mineId = (mine && mine.manifest && mine.manifest.device) ? mine.manifest.device.id : '';
+                  cloudMeta.writeBack = mineId === device.deviceId ? 'ok' : 'missing';
                   renderPanelStatus();
                   return null;
                 }).catch(function () { return null; });
@@ -1621,7 +1740,6 @@
         result = result || {};
         if (result.skipped === 'no-plugin') { fail(T('noTransport')); return; }
         if (result.skipped === 'disabled') { fail(T('syncDisabled')); return; }
-        if (result.skipped === 'cloud-missing') { fail(T('cloudFileMissing')); return; }
         if (result.skipped === 'nothing-to-send') { note(T('nothingToSend')); return; }
         if (result.error) { fail(result.error); return; }
         if (result.counters) {
@@ -1836,13 +1954,21 @@
         lines.push(T('sent') + counters.sent + ' · ' + T('received') + counters.received);
         if (counters.cloud) lines.push(T('inCloud') + counters.cloud + T('inCloudHint'));
         if (cloudMeta.tracks) {
+          var breakdown = (cloudMeta.files || []).map(function (file) {
+            return file.label + ' ' + file.tracks;
+          }).join(' · ');
           lines.push(T('cloudFileInfo') + cloudMeta.tracks + ' ' + T('tracksWord') +
             (cloudMeta.albums ? ' · ' + cloudMeta.albums + ' ' + T('albumsWord') : '') +
-            (cloudMeta.fileModifiedAt ? T('fileChanged') + new Date(cloudMeta.fileModifiedAt).toLocaleString() : ''));
+            (breakdown ? ' (' + breakdown + ')' : ''));
+        }
+        if (cloudMeta.ownFile) {
+          lines.push(T('ownFileLabel') + cloudMeta.ownFile +
+            (cloudMeta.ownFileAt ? T('fileChanged') + new Date(cloudMeta.ownFileAt).toLocaleString() : ''));
         }
         if (cloudMeta.fromOther && cloudMeta.updatedAt) {
           lines.push(T('lastOtherWrite') + (cloudMeta.device || '') + ' · ' +
-            new Date(cloudMeta.updatedAt).toLocaleString());
+            new Date(cloudMeta.updatedAt).toLocaleString() +
+            (cloudMeta.fileModifiedAt ? T('fileChanged') + new Date(cloudMeta.fileModifiedAt).toLocaleString() : ''));
         }
         if (cloudMeta.devices && cloudMeta.devices.length) {
           lines.push(T('devicesInFile') + cloudMeta.devices.join(', '));
@@ -1943,6 +2069,8 @@
     download: downloadCloudTrack,
     autoDownload: autoDownloadFresh,
     cloudOnly: function () { return cloudEntries.slice(); },
+    ownFile: function () { return cloudMeta.ownFile || ''; },
+    _fileHelpers: { platformKey: platformKey, ownFileName: ownFileName, fileLabel: fileLabel },
     cloudMeta: function () { return Object.assign({}, cloudMeta); },
     setImportWait: function (ms) { IMPORT_WAIT_MS = Math.max(0, Number(ms) || 0); return IMPORT_WAIT_MS; },
     setReadRetry: function (ms) { READ_RETRY_MS = Math.max(0, Number(ms) || 0); return READ_RETRY_MS; },

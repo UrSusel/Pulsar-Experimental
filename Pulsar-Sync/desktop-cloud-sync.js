@@ -1,13 +1,14 @@
 /* Pulsar — warstwa synchronizacji dla Windows i Linuksa (Neutralino).
  *
  * Rejestruje window.__pulsarSyncAdapter, czyli ten sam kontrakt, którego na
- * Androidzie używa PulsarFolderPlugin: odczyt i zapis pliku
- * `pulsar-library.json` w folderze wskazanym raz w systemowym oknie.
+ * Androidzie używa PulsarFolderPlugin: odczyt wszystkich plików biblioteki
+ * z folderu i zapis wyłącznie własnego (`pulsar-library-windows.json`,
+ * `pulsar-library-linux.json`…).
  *
- * Jeśli tym folderem jest folder synchronizowany z Dyskiem Google (klient
- * Drive dla Windows, na Linuksie rclone/Insync/overlay), plik trafia do chmury
- * bez logowania w aplikacji i bez projektu w Google Cloud — a plik jest ten sam,
- * którego używa Android, więc wszystkie trzy platformy widzą jedną bibliotekę.
+ * Każde urządzenie pisze tylko swój plik, więc żadne nie może nadpisać
+ * biblioteki drugiego — nawet gdy Drive przez chwilę nie pokaże zawartości
+ * folderu. Biblioteka jest sumą tych plików, czytaną przez wszystkie platformy
+ * (Android czyta pulsar-library-android.json i pliki komputerów).
  *
  * Neutralino nie ma gniazd sieciowych, więc logowanie OAuth (które wymaga
  * przekierowania na localhost) nie jest tu dostępne; adapter zgłasza to jako
@@ -19,8 +20,22 @@
   if (typeof Neutralino === 'undefined') return;
 
   var FILE_NAME = 'pulsar-library.json';
+  var FILE_PREFIX = 'pulsar-library';
+  var MAX_FILES = 8;
   var KEY_PATH = 'pulsarSyncFolder';
   var KEY_ERROR = 'pulsarSyncFolderError';
+
+  function isLibraryFile(name) {
+    var text = String(name || '');
+    return text.indexOf(FILE_PREFIX) === 0 && text.slice(-5) === '.json';
+  }
+
+  /** Nazwa z żądania, ale wyłącznie w obrębie wzorca plików biblioteki. */
+  function safeName(name) {
+    var cleaned = String(name || '').replace(/[^A-Za-z0-9._-]/g, '');
+    if (cleaned.indexOf(FILE_PREFIX) !== 0 || cleaned.slice(-5) !== '.json') return FILE_NAME;
+    return cleaned;
+  }
 
   function store(key) {
     try { return localStorage.getItem(key) || ''; } catch (error) { return ''; }
@@ -79,7 +94,13 @@
       if (!stats || (stats.isDirectory === false)) {
         return { picked: false, label: '', file: FILE_NAME, fileReady: false, lastError: store(KEY_ERROR) };
       }
-      var ready = await exists(join(dir, FILE_NAME));
+      var ready = false;
+      try {
+        var entries = await Neutralino.filesystem.readDirectory(dir);
+        ready = (entries || []).some(function (entry) { return isLibraryFile(entry && entry.entry); });
+      } catch (error) {
+        ready = false;
+      }
       return { picked: true, label: dir, file: FILE_NAME, fileReady: ready, lastError: store(KEY_ERROR) };
     },
 
@@ -117,16 +138,49 @@
       }
     },
 
+    /** Wszystkie pliki biblioteki w folderze — jedno czytanie katalogu. */
+    async list() {
+      var dir = store(KEY_PATH);
+      if (!dir) throw new Error('Nie wskazano folderu.');
+      var entries;
+      try {
+        entries = await Neutralino.filesystem.readDirectory(dir);
+      } catch (error) {
+        throw new Error(remember(error) || 'Nie można odczytać folderu biblioteki.');
+      }
+      var files = [];
+      for (var i = 0; i < (entries || []).length; i++) {
+        if (files.length >= MAX_FILES) break;
+        var name = String((entries[i] && entries[i].entry) || '');
+        if (!isLibraryFile(name)) continue;
+        var path = join(dir, name);
+        try {
+          var text = await Neutralino.filesystem.readFile(path);
+          var info = await folderStats(path);
+          files.push({
+            name: name,
+            manifest: text,
+            modifiedTime: info && info.modifiedAt ? info.modifiedAt : Date.now()
+          });
+        } catch (error) {
+          // Pojedynczy plik bywa w trakcie pobierania — reszta i tak się przyda.
+          remember(error);
+        }
+      }
+      return files;
+    },
+
     async write(payload) {
       var dir = store(KEY_PATH);
       if (!dir) throw new Error('Nie wskazano folderu.');
+      var name = safeName(payload && payload.name);
       try {
         if (!(await folderStats(dir))) {
           await Neutralino.filesystem.createDirectory(dir);
         }
-        await Neutralino.filesystem.writeFile(join(dir, FILE_NAME), String(payload && payload.manifest || ''));
+        await Neutralino.filesystem.writeFile(join(dir, name), String(payload && payload.manifest || ''));
         clearError();
-        return { file: FILE_NAME, modifiedTime: Date.now() };
+        return { file: name, modifiedTime: Date.now() };
       } catch (error) {
         throw new Error(remember(error) || 'Nie można zapisać pliku biblioteki.');
       }

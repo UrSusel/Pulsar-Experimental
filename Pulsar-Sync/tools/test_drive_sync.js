@@ -163,6 +163,21 @@ function makeNeutralino(fs, state) {
         if (state.writeNoop) return;   // zapis, który nigdzie nie trafia (test)
         fs.files.set(target, String(data));
       },
+      async readDirectory(target) {
+        const prefix = String(target).replace(/[\\/]+$/, '') + '/';
+        const out = [];
+        for (const file of fs.files.keys()) {
+          if (file.indexOf(prefix) === 0 && file.slice(prefix.length).indexOf('/') < 0) {
+            out.push({ entry: file.slice(prefix.length), type: 'FILE', path: file });
+          }
+        }
+        for (const dir of fs.dirs) {
+          if (dir.indexOf(prefix) === 0 && dir.slice(prefix.length).indexOf('/') < 0) {
+            out.push({ entry: dir.slice(prefix.length), type: 'DIRECTORY', path: dir });
+          }
+        }
+        return out;
+      },
       async createDirectory(target) {
         if (state.denied) throw new Error('Brak uprawnień');
         fs.dirs.add(target);
@@ -369,6 +384,38 @@ function makeEnv(options) {
     storage: sandbox.localStorage, dom: settingsDom, document, toasts, sandbox,
     desktopFs: fs, desktopState,
     fireDocumentEvent(type) { (docListeners[type] || []).forEach((handler) => handler({ type })); },
+  };
+}
+
+/** Pliki biblioteki w fałszywym folderze — każde urządzenie pisze swój. */
+function cloudFiles(shared) {
+  return [...shared.files.entries()]
+    .filter(([path]) => /pulsar-library.*\.json$/.test(path))
+    .map(([path, text]) => ({ path, name: path.split('/').pop(), text }));
+}
+
+/** Suma plików: to, co widzi chmura po odjęciu znaczników kasowania. */
+function cloudUnion(shared) {
+  const tracks = new Map(); const albums = new Map(); const devices = new Map(); const removed = new Map();
+  cloudFiles(shared).forEach(({ text }) => {
+    const manifest = JSON.parse(text);
+    (manifest.tracks || []).forEach((entry) => { if (entry && entry.key) tracks.set(entry.key, entry); });
+    (manifest.albums || []).forEach((entry) => { if (entry && entry.key) albums.set(entry.key, entry); });
+    (manifest.devices || []).forEach((entry) => { if (entry && entry.id) devices.set(entry.id, entry); });
+    (manifest.removed || []).forEach((entry) => {
+      if (entry && entry.key) removed.set(entry.key, Math.max(removed.get(entry.key) || 0, Number(entry.deletedAt || 0)));
+    });
+  });
+  const live = (map) => [...map.values()].filter((entry) => {
+    if (!removed.has(entry.key)) return true;
+    return Number(removed.get(entry.key) || 0) < Number(entry.updatedAt || 0);
+  });
+  return {
+    tracks: live(tracks),
+    albums: live(albums),
+    devices: [...devices.values()],
+    removed: [...removed.keys()].map((key) => ({ key })),
+    files: cloudFiles(shared).map((file) => file.name),
   };
 }
 
@@ -963,11 +1010,14 @@ async function checkRuntimeHooks() {
 
     env.api.setEnabled(true);
     const outcome = await env.api.sync();
-    const written = shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json');
-    check('desktop sync writes the manifest file', !!written && !outcome.error, outcome.error || 'ok');
+    const files = cloudFiles(shared);
+    check('desktop sync writes its own manifest file',
+      files.length === 1 && files[0].name === 'pulsar-library-linux.json' && !outcome.error,
+      JSON.stringify({ files: files.map((file) => file.name), error: outcome.error }));
+    const own = JSON.parse(files[0].text);
     check('written manifest keeps the cross-device key',
-      !!written && JSON.parse(written).tracks[0].key === 'youtube:dQw4w9WgXcQ');
-    check('desktop sync uploads no audio', !!written && !containsAudioLike(JSON.parse(written), 0));
+      own.tracks[0].key === 'youtube:dQw4w9WgXcQ', JSON.stringify(own.tracks.map((entry) => entry.key)));
+    check('desktop sync uploads no audio', !containsAudioLike(own, 0));
 
     // Drugi komputer: wskazuje ten sam folder, ma inną bibliotekę — scala się.
     const second = makeEnv({ desktop: true, fs: shared, tracks: [track({ fav: false, plays: 1 })], withPanel: true });
@@ -978,6 +1028,12 @@ async function checkRuntimeHooks() {
     check('second desktop reads the same folder and merges',
       second.library.state.tracks[0].fav === true && second.library.state.tracks[0].plays === 4,
       JSON.stringify(secondOutcome.counters || secondOutcome));
+    check('the second computer does not overwrite the first one\u2019s file',
+      cloudFiles(shared).length === 2 && second.api.ownFile() !== 'pulsar-library-linux.json',
+      JSON.stringify({ files: cloudUnion(shared).files, own: second.api.ownFile() }));
+    check('the folder still holds one library, not two',
+      cloudUnion(shared).tracks.length === 1 && cloudUnion(shared).devices.length === 2,
+      JSON.stringify({ tracks: cloudUnion(shared).tracks.length, devices: cloudUnion(shared).devices.length }));
   }
 
   { // 31. desktop: anulowanie okna i brak pliku nie są błędami
@@ -1009,7 +1065,7 @@ async function checkRuntimeHooks() {
       env.toasts.some((text) => /uprawnie/i.test(text)),
       JSON.stringify(env.toasts.map((text) => text.slice(0, 40))));
     check('no manifest was left behind after the failure',
-      ![...env.desktopFs.files.keys()].some((path) => /pulsar-library\.json$/.test(path)));
+      ![...env.desktopFs.files.keys()].some((path) => /pulsar-library.*\.json$/.test(path)));
   }
 
   { // 33. desktop: zapamiętany tryb Google wraca do folderu
@@ -1142,17 +1198,20 @@ async function checkRuntimeHooks() {
 
     const pane = pc.api.openPanel();
     const status = pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ');
-    check('panel names the size of the cloud file', /Plik w chmurze: 1 utw\./.test(status), status.slice(0, 140));
+    check('panel names the size of the cloud library',
+      /Pliki w chmurze: 1 utw\./.test(status) && /Twój plik: pulsar-library-linux/.test(status),
+      status.slice(0, 180));
     check('panel says who wrote the cloud file, and that it was another device',
       /Ostatnia zmiana z innego urządzenia: Linux PC ·/.test(status), status.slice(0, 160));
     check('cloud details are kept in state',
       pc.api.cloudMeta().tracks === 1 && pc.api.cloudMeta().fromOther === true,
       JSON.stringify(pc.api.cloudMeta()));
 
-    const manifest = JSON.parse(shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json'));
+    const own = cloudFiles(shared)
+      .map((file) => JSON.parse(file.text))
+      .find((manifest) => manifest.device && /PC$/.test(String(manifest.device.name || '')));
     check('a computer does not describe itself as android',
-      manifest.device.platform === 'desktop' && /PC$/.test(manifest.device.name),
-      JSON.stringify(manifest.device));
+      !!own && own.device.platform === 'desktop', JSON.stringify(own && own.device));
   }
 
   { // 40. nowy utwór z drugiego urządzenia jest ogłaszany, a nie milczący
@@ -1325,7 +1384,7 @@ async function checkRuntimeHooks() {
     await pc.api.sync();   // tu wcześniej wpis był uznawany za skasowany
     await pc.api.sync();
 
-    const manifest = JSON.parse(shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json'));
+    const manifest = cloudUnion(shared);
     check('the track from the phone is still in the cloud file',
       manifest.tracks.some((entry) => entry.key === 'youtube:KEEPME00001'),
       JSON.stringify(manifest.tracks.map((entry) => entry.key)));
@@ -1350,7 +1409,7 @@ async function checkRuntimeHooks() {
     pc.library.state.tracks = pc.library.state.tracks.filter((item) => item.netId !== 'youtube:SECOND0001');
     await pc.api.sync();
 
-    const manifest = JSON.parse(shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json'));
+    const manifest = cloudUnion(shared);
     check('a real local deletion becomes a tombstone',
       (manifest.removed || []).some((entry) => entry.key === 'youtube:SECOND0001'),
       JSON.stringify((manifest.removed || []).map((entry) => entry.key)));
@@ -1362,7 +1421,7 @@ async function checkRuntimeHooks() {
       String(phone.library.state.tracks.length));
 
     await pc.api.sync();
-    const later = JSON.parse(shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json'));
+    const later = cloudUnion(shared);
     check('the deletion does not quietly come back on the next sync',
       (later.removed || []).some((entry) => entry.key === 'youtube:SECOND0001') &&
       !later.tracks.some((entry) => entry.key === 'youtube:SECOND0001'),
@@ -1404,9 +1463,8 @@ async function checkRuntimeHooks() {
       JSON.stringify((third.removed || []).map((e) => e.key)));
   }
 
-  { // 49. brak pliku w odczycie to nie zgoda na nadpisanie biblioteki
+  { // 49. każde urządzenie pisze tylko swój plik — brak cudzego nic nie kasuje
     const shared = { files: new Map(), dirs: new Set() };
-    const path = '/home/user/Dysk Google/Pulsar/pulsar-library.json';
     const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:PHONEONLY01', title: 'Z telefonu', artist: 'Y' })] });
     const pc = await folderEnv({ fs: shared, tracks: [track({}), track({ netId: 'youtube:PCLOCAL0001', title: 'Z komputera', artist: 'Z' })] });
     const pane = phone.api.openPanel();
@@ -1414,41 +1472,38 @@ async function checkRuntimeHooks() {
     pane.querySelector('[data-cloud="auto"]').change(false);
     pc.api.openPanel().querySelector('[data-cloud="auto"]').change(false);
     await wait(20);
+    await phone.api.sync();   // telefon widzi już oba pliki (i zapamiętuje całą bibliotekę)
 
-    const before = shared.files.get(path);
+    const before = new Map(cloudFiles(shared).map((file) => [file.name, file.text]));
+    check('each device keeps its own file in the folder',
+      before.size === 2 && !!phone.api.ownFile() && phone.api.ownFile() !== pc.api.ownFile(),
+      JSON.stringify({ files: cloudUnion(shared).files, phone: phone.api.ownFile(), pc: pc.api.ownFile() }));
+    check('together they are the whole library',
+      cloudUnion(shared).tracks.length === 3, JSON.stringify(cloudUnion(shared).tracks.map((entry) => entry.key)));
+
+    // Drive nie pokazuje pliku komputera (świeżo wgrany bywa niewidoczny).
+    const pcPath = '/home/user/Dysk Google/Pulsar/' + pc.api.ownFile();
     const stats = phone.sandbox.Neutralino.filesystem.getStats;
-    // Drive pokazuje folder z opóźnieniem: pliku nie widać przez całą synchronizację.
     phone.sandbox.Neutralino.filesystem.getStats = async (target) => {
-      if (target === path) throw new Error('Nie ma takiej ścieżki: ' + target);
+      if (target === pcPath) throw new Error('Nie ma takiej ścieżki: ' + target);
       return stats(target);
     };
-    const refused = await phone.api.sync();
-    check('a device that cannot see the file does not overwrite it',
-      refused.skipped === 'cloud-missing' && shared.files.get(path) === before,
-      JSON.stringify({ skipped: refused.skipped, untouched: shared.files.get(path) === before }));
-    check('and the panel explains the refusal',
-      /nie nadpisuję go/.test(pane.querySelector('[data-cloud="status"]').textContent),
-      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(0, 110));
+    const missed = await phone.api.sync();
+    check('a device that cannot see another device\u2019s file still syncs', !missed.error, JSON.stringify(missed));
+    check('and that file is left exactly as it was',
+      shared.files.get(pcPath) === before.get(pc.api.ownFile()),
+      JSON.stringify({ before: before.size, now: cloudFiles(shared).length }));
+    check('the whole library is still there',
+      cloudUnion(shared).tracks.length === 3, JSON.stringify(cloudUnion(shared).tracks.map((entry) => entry.key)));
 
-    // Plik już widoczny, ale nie przy pierwszym odczycie: druga próba ma go złapać.
-    let missesLeft = 1;
-    phone.sandbox.Neutralino.filesystem.getStats = async (target) => {
-      if (target === path && missesLeft > 0) { missesLeft--; throw new Error('Nie ma takiej ścieżki: ' + target); }
-      return stats(target);
-    };
-    const retried = await phone.api.sync();
-    check('a single missed read is retried instead of giving up on the file',
-      !retried.skipped && !!retried.counters, JSON.stringify(retried));
-    const after = JSON.parse(shared.files.get(path));
-    check('and the second read keeps the other device’s tracks',
-      after.tracks.some((entry) => entry.key === 'youtube:PCLOCAL0001') &&
-      after.tracks.some((entry) => entry.key === 'youtube:PHONEONLY01'),
-      JSON.stringify(after.tracks.map((entry) => entry.key)));
+    phone.sandbox.Neutralino.filesystem.getStats = stats;
+    await phone.api.sync();
+    check('when the file is visible again nothing is missing',
+      cloudUnion(shared).tracks.length === 3, JSON.stringify(cloudUnion(shared).tracks.map((entry) => entry.key)));
   }
 
-  { // 50. wpis, który zniknął z pliku bez znacznika kasowania, wraca z pamięci
+  { // 50. puste spojrzenie na folder nie kasuje biblioteki
     const shared = { files: new Map(), dirs: new Set() };
-    const path = '/home/user/Dysk Google/Pulsar/pulsar-library.json';
     const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:PHONEONLY01', title: 'Z telefonu', artist: 'Y' })] });
     const pc = await folderEnv({ fs: shared, tracks: [track({}), track({ netId: 'youtube:PCLOCAL0001', title: 'Z komputera', artist: 'Z' })] });
     const pane = phone.api.openPanel();
@@ -1456,34 +1511,32 @@ async function checkRuntimeHooks() {
     pane.querySelector('[data-cloud="auto"]').change(false);
     pc.api.openPanel().querySelector('[data-cloud="auto"]').change(false);
     await wait(20);
+    await phone.api.sync();
 
-    await phone.api.sync();   // telefon widzi już oba wpisy, komputerowy jako „tylko w chmurze"
     const memory = await phone.api.cloudMemory();
     check('a device remembers what it saw in the cloud',
       !!memory && memory.tracks === 3 && memory.devices === 2, JSON.stringify(memory));
 
-    // Ktoś nadpisuje plik niepełną kopią: bez wpisu i bez urządzenia komputera.
-    const full = JSON.parse(shared.files.get(path));
-    const keptDevice = full.devices[0];
-    const lostDevice = full.devices[1];
-    shared.files.set(path, JSON.stringify(Object.assign({}, full, {
-      tracks: full.tracks.filter((entry) => entry.key === 'youtube:PHONEONLY01'),
-      devices: [keptDevice],
-    })));
-    await phone.api.sync();
+    // Drive pokazuje folder jako pusty — dokładnie to, co kasowało bibliotekę.
+    const saved = new Map(shared.files);
+    shared.files.clear();
+    const empty = await phone.api.sync();
+    check('an empty view of the folder does not remove anything', !empty.error, JSON.stringify(empty));
+    const written = cloudFiles(shared).map((file) => JSON.parse(file.text));
+    check('this device writes back what it remembered',
+      written.length === 1 && (written[0].tracks || []).length === 3,
+      JSON.stringify(written.map((manifest) => (manifest.tracks || []).map((entry) => entry.key))));
+    check('and the panel says where the entries came from',
+      /Odtworzone z pami\u0119ci/.test(pane.querySelector('[data-cloud="status"]').textContent),
+      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(0, 120));
 
-    const healed = JSON.parse(shared.files.get(path));
-    check('entries that vanished without a deletion mark come back',
-      healed.tracks.some((entry) => entry.key === 'youtube:PCLOCAL0001') &&
-      healed.tracks.some((entry) => entry.key === 'youtube:dQw4w9WgXcQ'),
-      JSON.stringify(healed.tracks.map((entry) => entry.key)));
-    check('the device list in the file is complete again',
-      (healed.devices || []).length === 2 &&
-      (healed.devices || []).some((entry) => entry.id === lostDevice.id),
-      JSON.stringify((healed.devices || []).map((entry) => entry.id)));
-    check('and the panel reports what it put back',
-      /Odtworzone w pliku \(odczyt nie pokazał wszystkiego\): 2/.test(pane.querySelector('[data-cloud="status"]').textContent),
-      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(0, 110));
+    // Komputer wraca do folderu ze swoim plikiem: nic się nie rozjechało.
+    shared.files.clear();
+    saved.forEach((text, path) => shared.files.set(path, text));
+    await pc.api.sync();
+    check('the two devices are back in agreement',
+      cloudUnion(shared).tracks.length === 3 && cloudUnion(shared).devices.length === 2,
+      JSON.stringify({ tracks: cloudUnion(shared).tracks.map((entry) => entry.key), devices: cloudUnion(shared).devices.length }));
   }
 
   { // 51. pamięć chmury: co wolno odtworzyć, a czego nie
@@ -1523,6 +1576,16 @@ async function checkRuntimeHooks() {
       fromMemory.restored.missing === true && !!fromMemory.manifest &&
       (fromMemory.manifest.tracks || []).length === 2,
       JSON.stringify(fromMemory.restored));
+
+    const desktop = makeEnv({ desktop: true, tracks: [track({})] });
+    const helpers = desktop.api._fileHelpers;
+    const me = { deviceId: 'dev-aaaaaaaa11112222', name: 'Linux PC' };
+    check('the file name follows the system',
+      helpers.ownFileName(me, []) === 'pulsar-library-linux.json', helpers.ownFileName(me, []));
+    check('a name already taken by another device of the same system is not reused',
+      helpers.ownFileName(me, [{ name: 'pulsar-library-linux.json', manifest: { device: { id: 'dev-other' } } }]) ===
+      'pulsar-library-linux-11112222.json',
+      helpers.ownFileName(me, [{ name: 'pulsar-library-linux.json', manifest: { device: { id: 'dev-other' } } }]));
 
     const stale = pure.mergeCloudMemory(fresh, Object.assign({}, memory, { at: now - 400 * 24 * 60 * 60 * 1000 }));
     check('a memory older than deletion marks restores nothing',
