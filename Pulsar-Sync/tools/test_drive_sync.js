@@ -1404,6 +1404,132 @@ async function checkRuntimeHooks() {
       JSON.stringify((third.removed || []).map((e) => e.key)));
   }
 
+  { // 49. brak pliku w odczycie to nie zgoda na nadpisanie biblioteki
+    const shared = { files: new Map(), dirs: new Set() };
+    const path = '/home/user/Dysk Google/Pulsar/pulsar-library.json';
+    const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:PHONEONLY01', title: 'Z telefonu', artist: 'Y' })] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({}), track({ netId: 'youtube:PCLOCAL0001', title: 'Z komputera', artist: 'Z' })] });
+    const pane = phone.api.openPanel();
+    phone.api.setReadRetry(20);
+    pane.querySelector('[data-cloud="auto"]').change(false);
+    pc.api.openPanel().querySelector('[data-cloud="auto"]').change(false);
+    await wait(20);
+
+    const before = shared.files.get(path);
+    const stats = phone.sandbox.Neutralino.filesystem.getStats;
+    // Drive pokazuje folder z opóźnieniem: pliku nie widać przez całą synchronizację.
+    phone.sandbox.Neutralino.filesystem.getStats = async (target) => {
+      if (target === path) throw new Error('Nie ma takiej ścieżki: ' + target);
+      return stats(target);
+    };
+    const refused = await phone.api.sync();
+    check('a device that cannot see the file does not overwrite it',
+      refused.skipped === 'cloud-missing' && shared.files.get(path) === before,
+      JSON.stringify({ skipped: refused.skipped, untouched: shared.files.get(path) === before }));
+    check('and the panel explains the refusal',
+      /nie nadpisuję go/.test(pane.querySelector('[data-cloud="status"]').textContent),
+      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(0, 110));
+
+    // Plik już widoczny, ale nie przy pierwszym odczycie: druga próba ma go złapać.
+    let missesLeft = 1;
+    phone.sandbox.Neutralino.filesystem.getStats = async (target) => {
+      if (target === path && missesLeft > 0) { missesLeft--; throw new Error('Nie ma takiej ścieżki: ' + target); }
+      return stats(target);
+    };
+    const retried = await phone.api.sync();
+    check('a single missed read is retried instead of giving up on the file',
+      !retried.skipped && !!retried.counters, JSON.stringify(retried));
+    const after = JSON.parse(shared.files.get(path));
+    check('and the second read keeps the other device’s tracks',
+      after.tracks.some((entry) => entry.key === 'youtube:PCLOCAL0001') &&
+      after.tracks.some((entry) => entry.key === 'youtube:PHONEONLY01'),
+      JSON.stringify(after.tracks.map((entry) => entry.key)));
+  }
+
+  { // 50. wpis, który zniknął z pliku bez znacznika kasowania, wraca z pamięci
+    const shared = { files: new Map(), dirs: new Set() };
+    const path = '/home/user/Dysk Google/Pulsar/pulsar-library.json';
+    const phone = await folderEnv({ fs: shared, tracks: [track({ netId: 'youtube:PHONEONLY01', title: 'Z telefonu', artist: 'Y' })] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({}), track({ netId: 'youtube:PCLOCAL0001', title: 'Z komputera', artist: 'Z' })] });
+    const pane = phone.api.openPanel();
+    phone.api.setReadRetry(20);
+    pane.querySelector('[data-cloud="auto"]').change(false);
+    pc.api.openPanel().querySelector('[data-cloud="auto"]').change(false);
+    await wait(20);
+
+    await phone.api.sync();   // telefon widzi już oba wpisy, komputerowy jako „tylko w chmurze"
+    const memory = await phone.api.cloudMemory();
+    check('a device remembers what it saw in the cloud',
+      !!memory && memory.tracks === 3 && memory.devices === 2, JSON.stringify(memory));
+
+    // Ktoś nadpisuje plik niepełną kopią: bez wpisu i bez urządzenia komputera.
+    const full = JSON.parse(shared.files.get(path));
+    const keptDevice = full.devices[0];
+    const lostDevice = full.devices[1];
+    shared.files.set(path, JSON.stringify(Object.assign({}, full, {
+      tracks: full.tracks.filter((entry) => entry.key === 'youtube:PHONEONLY01'),
+      devices: [keptDevice],
+    })));
+    await phone.api.sync();
+
+    const healed = JSON.parse(shared.files.get(path));
+    check('entries that vanished without a deletion mark come back',
+      healed.tracks.some((entry) => entry.key === 'youtube:PCLOCAL0001') &&
+      healed.tracks.some((entry) => entry.key === 'youtube:dQw4w9WgXcQ'),
+      JSON.stringify(healed.tracks.map((entry) => entry.key)));
+    check('the device list in the file is complete again',
+      (healed.devices || []).length === 2 &&
+      (healed.devices || []).some((entry) => entry.id === lostDevice.id),
+      JSON.stringify((healed.devices || []).map((entry) => entry.id)));
+    check('and the panel reports what it put back',
+      /Odtworzone w pliku \(odczyt nie pokazał wszystkiego\): 2/.test(pane.querySelector('[data-cloud="status"]').textContent),
+      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(0, 110));
+  }
+
+  { // 51. pamięć chmury: co wolno odtworzyć, a czego nie
+    const env = makeEnv({ tracks: [track({})] });
+    const pure = env.api._pure;
+    const now = Date.now();
+    const memory = {
+      schema: 1, app: 'pulsar', updatedAt: now - 1000, at: now,
+      device: { id: 'me' },
+      devices: [{ id: 'me', name: 'Windows PC' }, { id: 'other', name: 'Pixel 8' }],
+      tracks: [
+        { key: 'youtube:REMEMBER01', title: 'Pamiętany', updatedAt: now - 5000 },
+        { key: 'youtube:DELETED001', title: 'Skasowany', updatedAt: now - 9000 },
+      ],
+      albums: [],
+      removed: [],
+    };
+    const fresh = {
+      schema: 1, app: 'pulsar', updatedAt: now - 100, device: { id: 'other' },
+      devices: [{ id: 'other', name: 'Pixel 8' }],
+      tracks: [{ key: 'youtube:OTHERONLY1', title: 'Inny', updatedAt: now - 200 }],
+      albums: [],
+      removed: [{ key: 'youtube:DELETED001', deletedAt: now - 50, device: 'other' }],
+    };
+
+    const warm = pure.mergeCloudMemory(fresh, memory);
+    check('a remembered entry missing from the read is restored',
+      warm.manifest.tracks.some((entry) => entry.key === 'youtube:REMEMBER01') &&
+      warm.restored.tracks === 1, JSON.stringify(warm.restored));
+    check('but a deletion mark keeps a remembered entry deleted',
+      !warm.manifest.tracks.some((entry) => entry.key === 'youtube:DELETED001'),
+      JSON.stringify(warm.manifest.tracks.map((entry) => entry.key)));
+    check('both devices stay in the file', warm.manifest.devices.length === 2,
+      JSON.stringify(warm.manifest.devices.map((entry) => entry.id)));
+    const fromMemory = pure.mergeCloudMemory(null, memory);
+    check('a missing read is reported as such',
+      fromMemory.restored.missing === true && !!fromMemory.manifest &&
+      (fromMemory.manifest.tracks || []).length === 2,
+      JSON.stringify(fromMemory.restored));
+
+    const stale = pure.mergeCloudMemory(fresh, Object.assign({}, memory, { at: now - 400 * 24 * 60 * 60 * 1000 }));
+    check('a memory older than deletion marks restores nothing',
+      stale.restored.stale === true && !stale.manifest.tracks.some((entry) => entry.key === 'youtube:REMEMBER01'),
+      JSON.stringify(stale.restored));
+  }
+
   await checkRuntimeHooks();
   console.log(results.join('\n'));
   const failed = results.filter((line) => line.startsWith('FAIL'));

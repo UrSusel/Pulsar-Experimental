@@ -66,6 +66,25 @@ it as deleted. The engine keeps a record of the keys that were in *this* library
   on the first sync after the update those are dropped, and the merge restores the entries from
   the file, which is how an already-broken library heals itself.
 
+### When Drive does not show the file
+
+A missing file is not an empty cloud. Drive's folder listing on Android (SafetyNet/SAF) refreshes
+with a delay, and the desktop client may not have downloaded the file yet, so for a moment a
+device sees a folder with no `pulsar-library.json` in it — right after the other device created
+one. Writing its own manifest at that point replaced the other device's library with this device's
+copy, and if the write then won in Drive, the other device lost what it had just saved.
+
+The engine keeps a memory of the last cloud manifest it saw or wrote (refreshed on every sync and
+dropped when the folder is forgotten or changed) and treats a bad read carefully:
+
+* a read that finds nothing is retried once after a moment — the usual cause is exactly that lag;
+* if the file is still invisible while the memory says it existed, the sync writes **nothing** and
+  says so in the panel, rather than replacing the file with this device's copy;
+* an entry the read did not show, and which has no tombstone, comes back from that memory, and so
+  does a device record (`Odtworzone w pliku: n` in the panel when it happens);
+* a memory older than the tombstone window restores nothing, so nothing is resurrected years later;
+* an empty library with no file to read and no memory writes nothing at all.
+
 ## How a device joins the library
 
 Folder mode needs no Google Cloud project, no OAuth screen and no tester list — the app
@@ -132,7 +151,7 @@ which keeps one copy of the engine on the page.
 ## Checks
 
 ```bash
-node Pulsar-Sync/tools/test_drive_sync.js          # 156 checks: engine, panel, plugins, desktop adapter
+node Pulsar-Sync/tools/test_drive_sync.js          # 169 checks: engine, panel, plugins, desktop adapter
 python Pulsar-Sync/tools/test_desktop_bundle.py    # 36 checks on the two packed archives
 python Pulsar-Sync/tools/refresh_download_zips.py --check
 node Pulsar-Android/tools/test_background_watchdog.js

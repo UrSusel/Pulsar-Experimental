@@ -98,6 +98,9 @@
       autoOn: 'Automatyczne pobieranie włączone.', autoOff: 'Automatyczne pobieranie wyłączone.',
       autoDownloading: 'Automatycznie pobieram: ',
       writeBackWarning: 'Uwaga: po zapisie nie widzę swoich danych w pliku — sprawdź, czy oba urządzenia wskazują ten sam folder w tej samej chmurze.',
+      cloudRestored: 'Odtworzone w pliku (odczyt nie pokazał wszystkiego): ',
+      cloudFileMissing: 'Nie widzę pliku pulsar-library.json, choć wcześniej tu był (Dysk może pokazywać folder z opóźnieniem) — nie nadpisuję go, żeby nie skasować biblioteki z drugiego urządzenia. Spróbuj ponownie za chwilę; jeśli plik naprawdę zniknął, kliknij „Zapomnij folder” i wskaż folder ponownie.',
+      nothingToSend: 'Biblioteka jest pusta, a w folderze nie ma jeszcze pliku — nie ma czego wysyłać.',
       removedElsewhere: 'Usunięte na innym urządzeniu: ',
       mirror: 'Trzymaj czytelną kopię na Dysku (folder Pulsar)',
       enabled: 'Synchronizuj automatycznie',
@@ -165,6 +168,9 @@
       autoOn: 'Automatic download switch on.', autoOff: 'Automatic download switch off.',
       autoDownloading: 'Downloading automatically: ',
       writeBackWarning: 'Warning: after writing I cannot see my own data in the file — check that both devices point at the same folder in the same cloud.',
+      cloudRestored: 'Restored in the file (the read did not show everything): ',
+      cloudFileMissing: 'I cannot see pulsar-library.json although it was here before (Drive can show the folder with a delay) — I am not overwriting it and risking the other device’s library. Try again in a moment; if the file is really gone, click “Forget folder” and pick the folder again.',
+      nothingToSend: 'The library is empty and there is no file in the folder yet — there is nothing to send.',
       removedElsewhere: 'Removed on another device: ',
       mirror: 'Keep a readable copy in Drive (Pulsar folder)',
       enabled: 'Sync automatically',
@@ -252,6 +258,80 @@
       out.push(entry);
     });
     return out;
+  }
+
+  /** Lista urządzeń bez duplikatów: najpierw to, co widzi plik, potem pamięć. */
+  function unionDeviceLists(first, second) {
+    var out = [];
+    var seen = {};
+    (first || []).concat(second || []).forEach(function (entry) {
+      if (!entry || !entry.id || seen[entry.id]) return;
+      seen[entry.id] = true;
+      out.push(entry);
+    });
+    return out;
+  }
+
+  /** Pamięć chmury jest świeża, dopóki nie przeżyje własnych znaczników kasowania. */
+  function cloudMemoryState(memory) {
+    if (!memory) return { fresh: false };
+    return { fresh: Number(memory.at || 0) > nowMs() - TOMBSTONE_TTL_MS };
+  }
+
+  /**
+   * Scalenie odczytu pliku z tym, co to urządzenie już o pliku wie.
+   *
+   * „Nie widzę pliku" to na Androidzie (SAF odświeża listę folderu z opóźnieniem)
+   * i na komputerze (klient Drive jeszcze nie pobrał pliku) zwykły stan przejściowy,
+   * a nie dowód, że w chmurze nic nie ma. Wpis, który zniknął z odczytu, a nie ma
+   * znacznika kasowania, wraca więc z pamięci — podobnie jak urządzenia z pliku.
+   * Bez tego jedna niepełna odpowiedź Drive kasowała bibliotekę drugiego urządzenia:
+   * telefon widział „brak pliku", zapisywał swoją kopię i utwory komputera
+   * znikały z chmury.
+   */
+  function mergeCloudMemory(fresh, memory) {
+    var restored = { tracks: 0, albums: 0, missing: !fresh, stale: false };
+    if (!memory || !cloudMemoryState(memory).fresh) {
+      restored.stale = !!memory;
+      return { manifest: fresh || null, restored: restored };
+    }
+    var buried = {};
+    ((fresh && fresh.removed) || []).forEach(function (entry) {
+      if (entry && entry.key) buried[entry.key] = true;
+    });
+    var have = {};
+    var tracks = ((fresh && fresh.tracks) || []).slice();
+    var albums = ((fresh && fresh.albums) || []).slice();
+    tracks.forEach(function (entry) { if (entry && entry.key) have[entry.key] = true; });
+    albums.forEach(function (entry) { if (entry && entry.key) have[entry.key] = true; });
+    (memory.tracks || []).forEach(function (entry) {
+      if (!entry || !entry.key || have[entry.key] || buried[entry.key]) return;
+      have[entry.key] = true;
+      tracks.push(entry);
+      restored.tracks++;
+    });
+    (memory.albums || []).forEach(function (entry) {
+      if (!entry || !entry.key || have[entry.key] || buried[entry.key]) return;
+      have[entry.key] = true;
+      albums.push(entry);
+      restored.albums++;
+    });
+    var removed = ((fresh && fresh.removed) || []).slice();
+    (memory.removed || []).forEach(function (entry) {
+      if (!entry || !entry.key) return;
+      if (removed.some(function (item) { return item && item.key === entry.key; })) return;
+      removed.push(entry);
+    });
+    var manifest = {
+      schema: SCHEMA, app: 'pulsar', name: MANIFEST_NAME,
+      updatedAt: Math.max(Number((fresh && fresh.updatedAt) || 0), Number(memory.updatedAt || 0)),
+      device: (fresh && fresh.device) || memory.device || null,
+      devices: unionDeviceLists(fresh && fresh.devices, memory.devices),
+      tracks: tracks,
+      albums: albums,
+      removed: removed
+    };
+    return { manifest: manifest, restored: restored };
   }
 
   function mergeDevices(local, remote, device) {
@@ -712,6 +792,10 @@
 
   function stateGet(id) { return withStore('state', 'readonly', function (store) { return store.get(id); }); }
   function statePut(value) { return withStore('state', 'readwrite', function (store) { return store.put(value); }); }
+  /** Zapomniany albo zmieniony folder: pamięć dotyczy starego pliku, więc znika. */
+  function clearCloudMemory() {
+    return statePut({ id: 'cloudMemory', value: null, at: 0 }).catch(function () {});
+  }
   function cloudReplace(entries) {
     return withStore('cloud', 'readwrite', function (store) { return store.clear(); }).then(function () {
       return Promise.all((entries || []).map(function (entry) {
@@ -749,7 +833,7 @@
   // Co mówi plik w chmurze: ile ma pozycji, kiedy i na jakim urządzeniu
   // powstała ostatnia zmiana. Bez tego „czy zsynchronizowało się?" jest zgadywaniem.
   var cloudMeta = { tracks: 0, albums: 0, updatedAt: 0, device: '', fromOther: false,
-    fileModifiedAt: 0, devices: [], writeBack: '' };
+    fileModifiedAt: 0, devices: [], writeBack: '', restored: 0, missingRead: false };
   // Automatyczne pobieranie nowych utworów: na komputerze domyślnie włączone,
   // na telefonie wyłączone (dane komórkowe) — z przełącznikiem w panelu.
   var AUTO_MAX_PER_SYNC = 3;
@@ -763,6 +847,9 @@
   var cloudKnownKeys = [];
   var cloudAnnounced = false;
   var MAX_CLOUD_ROWS = 25;
+  // Świeżo wgrany plik bywa przez chwilę niewidoczny (lista folderu w SAF na
+  // Androidzie, klient Drive na komputerze) — drugi odczyt to łapie.
+  var READ_RETRY_MS = 1500;
   var IMPORT_WAIT_MS = 120000;  // ile czekamy, aż import pojawi się w bibliotece
   var IMPORT_POLL_MS = 1500;
   var scheduledTimer = null;
@@ -944,6 +1031,32 @@
    *  - google: pull()/push() przez Drive REST.
    * Reszta silnika nie musi wiedzieć, gdzie fizycznie leży manifest.
    */
+  function parseManifest(source) {
+    if (!source || !source.manifest) return null;
+    try { return JSON.parse(source.manifest); } catch (error) { return null; }
+  }
+
+  /**
+   * Odczyt z jedną ponowną próbą: świeżo wgrany plik (albo plik, którego klient
+   * Drive jeszcze nie pobrał) bywa przez chwilę niewidoczny. Gdy i druga próba
+   * nic nie widzi, decyduje pamięć chmury — nigdy „pusty plik".
+   */
+  function pullRemoteWithRetry(memoryManifest) {
+    return pullRemote().then(function (first) {
+      var parsed = parseManifest(first);
+      if (parsed || !cloudMemoryState(memoryManifest).fresh) return { remote: first, manifest: parsed };
+      return new Promise(function (resolve) {
+        setTimeout(function () {
+          pullRemote().then(function (second) {
+            resolve({ remote: second, manifest: parseManifest(second) });
+          }, function () {
+            resolve({ remote: first, manifest: parsed });
+          });
+        }, Math.max(0, READ_RETRY_MS));
+      });
+    });
+  }
+
   function pullRemote() {
     if (!transport || !transport.api) return Promise.resolve(null);
     var api = transport.api;
@@ -976,6 +1089,7 @@
     busy = true;
     renderPanelStatus();
     var mergedManifest = null;
+    var skipped = null;
     // Klucze obecne lokalnie po tej synchronizacji — na następny raz, żeby
     // odróżnić kasowanie od wpisu z chmury, którego tu nigdy nie było.
     var nextLocalKeys = null;
@@ -993,15 +1107,41 @@
         return stateGet('manifest').then(function (stored) {
           var previous = stored && stored.value ? stored.value : null;
           return stateGet('localKeys').then(function (keysStored) {
+          return stateGet('cloudMemory').then(function (memoryStored) {
           var wasLocal = keysStored && keysStored.value ? keysStored.value : null;
+          // Ostatni znany stan pliku: chroni wpisy, których niepełny odczyt nie pokaże.
+          var memoryManifest = null;
+          if (memoryStored && memoryStored.value) {
+            memoryManifest = memoryStored.value;
+            memoryManifest.at = Number(memoryStored.at || 0) || 0;
+          }
           var localManifest = buildManifest(snapshot, previous, {
             id: device.deviceId, name: device.name, platform: devicePlatform()
           }, wasLocal);
-          return pullRemote().then(function (remote) {
-            var remoteManifest = null;
-            if (remote && remote.manifest) {
-              try { remoteManifest = JSON.parse(remote.manifest); } catch (error) { remoteManifest = null; }
+          return pullRemoteWithRetry(memoryManifest).then(function (read) {
+            var remote = read.remote;
+            var remoteManifest = read.manifest;
+            if (!remoteManifest && cloudMemoryState(memoryManifest).fresh) {
+              // Plik tu był, a teraz go nie widać. Zapis własnej kopii skasowałby
+              // bibliotekę drugiego urządzenia, więc nic nie zapisujemy.
+              skipped = 'cloud-missing';
+              cloudMeta.missingRead = true;
+              statePut({ id: 'cloudMeta', value: cloudMeta }).catch(function () {});
+              setStatus({ lastError: T('cloudFileMissing') });
+              renderPanelStatus();
+              return null;
             }
+            if (!remoteManifest && !(localManifest.tracks || []).length && !(localManifest.albums || []).length) {
+              // Pusty folder i pusta biblioteka: nie ma czego wysyłać.
+              skipped = 'nothing-to-send';
+              setStatus({ lastError: T('nothingToSend') });
+              renderPanelStatus();
+              return null;
+            }
+            var withMemory = mergeCloudMemory(remoteManifest, memoryManifest);
+            remoteManifest = withMemory.manifest;
+            cloudMeta.restored = withMemory.restored.tracks + withMemory.restored.albums;
+            cloudMeta.missingRead = false;
             if (remoteManifest) {
               var writer = remoteManifest.device || {};
               cloudMeta = {
@@ -1014,7 +1154,9 @@
                 devices: (remoteManifest.devices || []).map(function (item) {
                   return String((item && item.name) || (item && item.id) || '');
                 }).filter(Boolean),
-                writeBack: cloudMeta.writeBack
+                writeBack: cloudMeta.writeBack,
+                restored: cloudMeta.restored,
+                missingRead: false
               };
               statePut({ id: 'cloudMeta', value: cloudMeta }).catch(function () {});
             }
@@ -1066,8 +1208,7 @@
                 // żeby to zauważyć.
                 if (!force || typeof transport.api.read !== 'function') return null;
                 return pullRemote().then(function (again) {
-                  var back = null;
-                  if (again && again.manifest) { try { back = JSON.parse(again.manifest); } catch (error) { back = null; } }
+                  var back = parseManifest(again);
                   var devices = (back && back.devices) || [];
                   cloudMeta.writeBack = devices.some(function (item) { return item && item.id === device.deviceId; }) ? 'ok' : 'missing';
                   renderPanelStatus();
@@ -1078,18 +1219,34 @@
           });
         });
         });
+        });
       })
       .then(function () {
         // Manifest zapisujemy jako „poprzedni" dopiero po udanym wysłaniu —
         // inaczej zmiany uznane za wysłane przepadłyby przy błędzie sieci.
+        if (skipped) return null;
         return statePut({ id: 'manifest', value: mergedManifest });
       })
       .then(function () {
+        if (skipped) return null;
+        // Pamięć chmury: to, co właśnie trafiło do pliku, wróci z tego zapisu,
+        // jeśli Drive pokaże kiedyś niepełną listę.
+        return statePut({ id: 'cloudMemory', value: mergedManifest, at: nowMs() });
+      })
+      .then(function () {
+        if (skipped) return null;
         return statePut({ id: 'localKeys', value: nextLocalKeys || { tracks: {}, albums: {} } });
       })
-      .then(function () { return statePut({ id: 'counters', value: counters }); })
+      .then(function () {
+        if (skipped) return null;
+        return statePut({ id: 'counters', value: counters });
+      })
       .then(function () {
         busy = false;
+        if (skipped) {
+          renderPanelStatus();
+          return { skipped: skipped, mode: transport.kind };
+        }
         setStatus({ lastError: '', lastSyncAt: nowMs() });
         // Nowe utwory z innego urządzenia dociągamy dopiero po zakończonej
         // synchronizacji, żeby nie wejść w nią w trakcie (busy).
@@ -1416,7 +1573,11 @@
 
     var choose = find('choose');
     if (choose) choose.addEventListener('click', function () {
-      pluginCall(FOLDER_PLUGIN, 'pickFolder').then(refreshStatus).then(function () {
+      pluginCall(FOLDER_PLUGIN, 'pickFolder').then(function () {
+        // Nowy folder to nowa chmura: stara pamięć nie może tu nic odtwarzać
+        // ani blokować pierwszego zapisu.
+        return clearCloudMemory();
+      }).then(refreshStatus).then(function () {
         if (!state.folderReady) return null; // np. użytkownik zamknął okno wyboru
         note(T('folderReadyToast'));
         if (state.enabled) return runSync();
@@ -1426,7 +1587,9 @@
 
     var forget = find('forget');
     if (forget) forget.addEventListener('click', function () {
-      pluginCall(FOLDER_PLUGIN, 'forget').then(refreshStatus).catch(function (error) { fail(message(error)); });
+      pluginCall(FOLDER_PLUGIN, 'forget').then(function () {
+        return clearCloudMemory();
+      }).then(refreshStatus).catch(function (error) { fail(message(error)); });
     });
 
     var signin = find('signin');
@@ -1458,6 +1621,8 @@
         result = result || {};
         if (result.skipped === 'no-plugin') { fail(T('noTransport')); return; }
         if (result.skipped === 'disabled') { fail(T('syncDisabled')); return; }
+        if (result.skipped === 'cloud-missing') { fail(T('cloudFileMissing')); return; }
+        if (result.skipped === 'nothing-to-send') { note(T('nothingToSend')); return; }
         if (result.error) { fail(result.error); return; }
         if (result.counters) {
           note(T('syncDone') + ' ' + T('sent') + result.counters.sent + ' · ' + T('received') + result.counters.received +
@@ -1682,6 +1847,7 @@
         if (cloudMeta.devices && cloudMeta.devices.length) {
           lines.push(T('devicesInFile') + cloudMeta.devices.join(', '));
         }
+        if (cloudMeta.restored) lines.push(T('cloudRestored') + cloudMeta.restored);
         if (cloudMeta.writeBack === 'missing') lines.push(T('writeBackWarning'));
         if (counters.removed) lines.push(T('removedElsewhere') + counters.removed);
       }
@@ -1779,6 +1945,20 @@
     cloudOnly: function () { return cloudEntries.slice(); },
     cloudMeta: function () { return Object.assign({}, cloudMeta); },
     setImportWait: function (ms) { IMPORT_WAIT_MS = Math.max(0, Number(ms) || 0); return IMPORT_WAIT_MS; },
+    setReadRetry: function (ms) { READ_RETRY_MS = Math.max(0, Number(ms) || 0); return READ_RETRY_MS; },
+    cloudMemory: function () {
+      return stateGet('cloudMemory').then(function (stored) {
+        var value = stored && stored.value ? stored.value : null;
+        if (!value) return null;
+        return {
+          tracks: (value.tracks || []).length,
+          albums: (value.albums || []).length,
+          devices: unionDeviceLists(value.devices, []).length,
+          keys: (value.tracks || []).map(function (entry) { return entry.key; }),
+          at: Number(stored.at || 0) || 0
+        };
+      });
+    },
     _pure: {
       trackKey: trackKey,
       albumKey: albumKey,
@@ -1787,6 +1967,8 @@
       mergeManifests: mergeManifests,
       buildApplyPlan: buildApplyPlan,
       cloudOnlyOf: cloudOnlyOf,
+      mergeCloudMemory: mergeCloudMemory,
+      cloudMemoryState: cloudMemoryState,
       hash: hash
     }
   };
