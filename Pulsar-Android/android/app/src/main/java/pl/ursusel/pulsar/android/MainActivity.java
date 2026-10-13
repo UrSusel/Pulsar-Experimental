@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(PulsarMediaPlugin.class);
+        registerPlugin(PulsarDrivePlugin.class);
         super.onCreate(savedInstanceState);
         applyBackgroundPlaybackPolicy();
     }

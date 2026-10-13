@@ -33,6 +33,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Powrót z logowania Google: PulsarDrivePlugin odbiera kod OAuth.
+                 Scheme musi zgadzać się z adresem przekierowania w Google Cloud. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="pl.ursusel.pulsar.android" android:host="oauth2redirect" />
+            </intent-filter>
+
         </activity>
 
         <provider
