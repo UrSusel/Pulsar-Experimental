@@ -40,7 +40,7 @@ Only the two non-sensitive scopes `drive.appdata` and `drive.file` are requested
 
 ```bash
 node Pulsar-Android/tools/test_background_watchdog.js
-node Pulsar-Android/tools/test_drive_sync.js
+node Pulsar-Sync/tools/test_drive_sync.js
 ```
 
 The first runs the background-playback guard from `android-bridge.js` against a simulated WebView and media element (eight scenarios: system pause, notification pause, in-app pause, healthy background playback, frozen pipeline, retry limit, re-arm on resume, notification permission).

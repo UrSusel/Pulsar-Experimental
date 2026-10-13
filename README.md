@@ -34,13 +34,35 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 - ⏯️ **Resume where you left off** — last track and position are restored on start
 - 🔁 **Gapless playback** — live albums and DJ mixes flow on without a gap
 - ✏️ **Tag editor** — fix title, artist and cover from the track list; MP3/M4A tags are written into the file
+- ☁️ **One library everywhere** — point the app once at a folder synced with Google Drive and Windows, Linux and Android share the same library (names, favourites, plays, albums — never the audio files)
 - 💾 **Library backup** — one `.pulsarlib` file with tracks, covers, favourites and stats; restore merges, never deletes
+
+## ☁️ One library on every device
+
+The app can keep your library in a folder that Google Drive syncs. Only metadata travels —
+track names, artists, albums, favourites, play counts. Audio files never leave your devices,
+and nothing is sent anywhere except your own Drive.
+
+**Windows** — install [Google Drive for desktop](https://www.google.com/drive/download/), keep a
+folder synced, then in the app: *Settings → Cloud → Choose folder* and pick that folder.
+**Linux** — sync a folder with `rclone`, `Insync` or your file manager's Google Drive
+integration, then pick that folder the same way. **Android** — same folder, same menu.
+
+That's the whole setup: one-time per machine, then it happens automatically. The second device
+must be signed into the same Google account *and* have the same folder picked — the access
+grant does not copy across devices, and the app waits for the Drive client to download the
+manifest before it sees new changes.
+
+Signing in with a Google account inside the app is Android-only: Google no longer allows the
+browser-based flow the desktop build could perform, so on Windows and Linux the panel simply
+asks for the synced folder instead.
 
 ## 📁 What's in this repo
 
 ```
 Pulsar-Windows/     the runnable Windows build   (pulsar.exe · resources.neu · yt-dlp.exe)
 Pulsar-Linux/       the runnable Linux build     (pulsar · resources.neu · yt-dlp · README.md)
+Pulsar-Sync/        shared cloud library layer  (engine, adapters, build + tests)
 index.html          the project / download page  (served via GitHub Pages)
 Pulsar-Desktop.zip  packaged Windows release
 Pulsar-Linux.zip    packaged Linux release

@@ -1,7 +1,8 @@
 /**
- * Offline checks for the Google Drive sync (Pulsar-Android/drive-sync.js).
+ * Offline checks for the shared sync engine (Pulsar-Sync/drive-sync.js) on
+ * Android and on the desktop adapter (Pulsar-Sync/desktop-cloud-sync.js).
  *
- *   node Pulsar-Android/tools/test_drive_sync.js
+ *   node Pulsar-Sync/tools/test_drive_sync.js
  *
  * No device, no Google account and no network are involved: the script loads
  * drive-sync.js in a VM with a fake Capacitor plugin (in-memory Drive), a fake
@@ -9,14 +10,15 @@
  * expensive to discover on a phone: that only metadata leaves the device, how
  * two devices merge, and that deletions never delete audio without asking.
  */
-const fs = require('fs');
+const fsSource = require('fs');
 const path = require('path');
 const vm = require('vm');
 
 const { makeSettingsDom, makeDocument } = require('./fake_dom.js');
 
 const SOURCE = path.join(__dirname, '..', 'drive-sync.js');
-const HOOKS = path.join(__dirname, 'cloud_sync_hooks.js');
+const HOOKS = path.join(__dirname, '..', 'cloud_sync_hooks.js');
+const DESKTOP_ADAPTER = path.join(__dirname, '..', 'desktop-cloud-sync.js');
 
 // ------------------------------------------------------------------ fake IDB
 
@@ -116,6 +118,42 @@ function makeLibrary(tracks, albums) {
 
 function makeDrive() {
   return { files: new Map(), pushes: 0 };
+}
+
+/**
+ * Fałszywy Neutralino z prawdziwym systemem plików w pamięci. Ten sam `fs`
+ * przekazany do dwóch środowisk oznacza „ten sam folder na dwóch komputerach".
+ */
+function makeNeutralino(fs, state) {
+  const neutralino = {
+    filesystem: {
+      async getStats(target) {
+        if (fs.files.has(target)) return { isFile: true, isDirectory: false, modifiedAt: Date.now() };
+        if (fs.dirs.has(target)) return { isFile: false, isDirectory: true, modifiedAt: Date.now() };
+        throw new Error('Nie ma takiej ścieżki: ' + target);
+      },
+      async readFile(target) {
+        if (!fs.files.has(target)) throw new Error('Nie ma takiego pliku: ' + target);
+        return fs.files.get(target);
+      },
+      async writeFile(target, data) {
+        if (state.denied) throw new Error('Brak uprawnień do zapisu');
+        fs.files.set(target, String(data));
+      },
+      async createDirectory(target) {
+        if (state.denied) throw new Error('Brak uprawnień');
+        fs.dirs.add(target);
+      },
+    },
+    os: {
+      async showFolderDialog() {
+        if (state.cancelled) return null;
+        fs.dirs.add(state.pickedDir);
+        return state.pickedDir;
+      },
+    },
+  };
+  return neutralino;
 }
 
 /**
@@ -266,10 +304,22 @@ function makeEnv(options) {
     };
   }
   const pluginTable = {};
-  if (options.withDrive !== false) pluginTable.PulsarDrive = plugin;
-  if (options.withFolder !== false) pluginTable.PulsarFolder = folder;
+  if (options.desktop) {
+    // Desktop nie ma wtyczek Capacitora — zamiast nich działa adapter Neutralino.
+  } else {
+    if (options.withDrive !== false) pluginTable.PulsarDrive = plugin;
+    if (options.withFolder !== false) pluginTable.PulsarFolder = folder;
+  }
+
+  const fs = options.fs || { files: new Map(), dirs: new Set() };
+  const desktopState = {
+    pickedDir: options.pickedDir || '/home/user/Dysk Google/Pulsar',
+    cancelled: !!options.cancelPick,
+    denied: !!options.denyWrite,
+  };
 
   const toasts = [];
+  if (options.desktop) sandbox.Neutralino = makeNeutralino(fs, desktopState);
   sandbox.window = {
     Capacitor: { Plugins: pluginTable },
     __pulsarHost: { toast: (text) => toasts.push(String(text)) },
@@ -285,10 +335,15 @@ function makeEnv(options) {
   sandbox.window.clearTimeout = clearTimeout;
 
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(SOURCE, 'utf8'), sandbox, { filename: 'drive-sync.js' });
+  if (options.desktop) {
+    // Ładujemy prawdziwy adapter desktopowy, a nie atrapę.
+    vm.runInContext(fsSource.readFileSync(DESKTOP_ADAPTER, 'utf8'), sandbox, { filename: 'desktop-cloud-sync.js' });
+  }
+  vm.runInContext(fsSource.readFileSync(SOURCE, 'utf8'), sandbox, { filename: 'drive-sync.js' });
   return {
     api: sandbox.window.__pulsarDrive, drive, plugin, folder, library, plugins: pluginTable,
     storage: sandbox.localStorage, dom: settingsDom, document, toasts,
+    desktopFs: fs, desktopState,
     fireDocumentEvent(type) { (docListeners[type] || []).forEach((handler) => handler({ type })); },
   };
 }
@@ -507,7 +562,7 @@ function makeHooksEnv(libraryState) {
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(HOOKS, 'utf8'), sandbox, { filename: 'cloud_sync_hooks.js' });
+  vm.runInContext(fsSource.readFileSync(HOOKS, 'utf8'), sandbox, { filename: 'cloud_sync_hooks.js' });
   return sandbox;
 }
 
@@ -732,11 +787,11 @@ async function checkRuntimeHooks() {
   }
 
   { // 23. klasy CSS panelu muszą istnieć w runtime (inaczej panel wygląda jak goły HTML)
-    const htmlPath = path.join(__dirname, '..', 'www', 'index.html');
-    if (!fs.existsSync(htmlPath)) {
+    const htmlPath = path.join(__dirname, '..', '..', 'Pulsar-Android', 'www', 'index.html');
+    if (!fsSource.existsSync(htmlPath)) {
       check('panel CSS classes exist in the runtime', true, 'pominięte: brak www/index.html');
     } else {
-      const html = fs.readFileSync(htmlPath, 'utf8');
+      const html = fsSource.readFileSync(htmlPath, 'utf8');
       const css = html.slice(0, html.indexOf('</style>'));
       const known = new Set((css.match(/\.sm-[a-z-]+/g) || []).map((entry) => entry.slice(1)).concat(['sm-pane']));
       const env = makeEnv({ withDrive: true, withPanel: true, tracks: [track({})] });
@@ -818,6 +873,94 @@ async function checkRuntimeHooks() {
       firstCard.contains(pane.querySelector('[data-cloud="sync"]')));
     check('status comes before the folder and Google cards in the pane',
       pane.children.indexOf(firstCard) === 1, 'index=' + pane.children.indexOf(firstCard));
+  }
+
+  { // 29. desktop: adapter rejestruje się i pokazuje się w panelu jako folder
+    const env = makeEnv({ desktop: true, tracks: [track({})], withPanel: true });
+    const adapter = env.sandbox ? null : null;
+    check('desktop adapter is registered', !!env.api && env.api.mode() === 'folder', env.api.mode());
+    const pane = env.api.openPanel();
+    env.api.status();
+    await wait(20);
+    const status = pane.querySelector('[data-cloud="status"]').textContent;
+    check('desktop status names the desktop transport', /folder \(desktop\)/.test(status), status.replace(/\n/g, ' | ').slice(0, 110));
+    check('desktop panel hides the Google mode row',
+      pane.querySelector('[data-cloud-row="mode"]').classList.contains('sm-hide'));
+    check('desktop panel hides the Google card',
+      pane.querySelector('[data-cloud-section="google"]').classList.contains('sm-hide'));
+    check('desktop panel keeps the folder card visible',
+      !pane.querySelector('[data-cloud-section="folder"]').classList.contains('sm-hide'));
+    check('desktop hint talks about a Drive-synced folder',
+      /Dysk Google|Drive/i.test(pane.querySelector('[data-cloud-text="folderHint"]').textContent));
+    const label = pane.querySelector('[data-cloud-text="folderLab"]').textContent;
+    check('folder label mentions Google Drive on desktop', /Dysk Google|Google Drive/.test(label), label);
+  }
+
+  { // 30. desktop: wybór folderu, zapis i odczyt przez prawdziwy adapter
+    const shared = { files: new Map(), dirs: new Set() };
+    const env = makeEnv({ desktop: true, fs: shared, tracks: [track({ fav: true, plays: 4 })], withPanel: true });
+    const pane = env.api.openPanel();
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    check('picking a folder marks it ready', env.api.state().folderReady === true, JSON.stringify(env.api.state().folderLabel));
+
+    env.api.setEnabled(true);
+    const outcome = await env.api.sync();
+    const written = shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json');
+    check('desktop sync writes the manifest file', !!written && !outcome.error, outcome.error || 'ok');
+    check('written manifest keeps the cross-device key',
+      !!written && JSON.parse(written).tracks[0].key === 'youtube:dQw4w9WgXcQ');
+    check('desktop sync uploads no audio', !!written && !containsAudioLike(JSON.parse(written), 0));
+
+    // Drugi komputer: wskazuje ten sam folder, ma inną bibliotekę — scala się.
+    const second = makeEnv({ desktop: true, fs: shared, tracks: [track({ fav: false, plays: 1 })], withPanel: true });
+    second.api.openPanel().querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    second.api.setEnabled(true);
+    const secondOutcome = await second.api.sync();
+    check('second desktop reads the same folder and merges',
+      second.library.state.tracks[0].fav === true && second.library.state.tracks[0].plays === 4,
+      JSON.stringify(secondOutcome.counters || secondOutcome));
+  }
+
+  { // 31. desktop: anulowanie okna i brak pliku nie są błędami
+    const shared = { files: new Map(), dirs: new Set() };
+    const env = makeEnv({ desktop: true, fs: shared, cancelPick: true, tracks: [track({})], withPanel: true });
+    const pane = env.api.openPanel();
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(30);
+    check('cancelled folder pick leaves sync unconfigured',
+      env.api.state().folderReady === false && !env.api.state().lastError,
+      'ready=' + env.api.state().folderReady + ' error=' + (env.api.state().lastError || 'brak'));
+
+    const missing = makeEnv({ desktop: true, fs: shared, tracks: [track({})] });
+    const readResult = await missing.api.status();
+    check('missing manifest file is not an error', !!readResult, 'status ok');
+  }
+
+  { // 32. desktop: błąd zapisu trafia do panelu
+    const shared = { files: new Map(), dirs: new Set() };
+    const env = makeEnv({ desktop: true, fs: shared, denyWrite: true, tracks: [track({})], withPanel: true });
+    const pane = env.api.openPanel();
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(30);
+    pane.querySelector('[data-cloud="sync"]').click();
+    await wait(80);
+    const failure = env.api.state().lastError || '';
+    check('write failure is reported in the status', /uprawnie|permission/i.test(failure), failure.slice(0, 80));
+    check('write failure reaches the toast when the user asks for a sync',
+      env.toasts.some((text) => /uprawnie/i.test(text)),
+      JSON.stringify(env.toasts.map((text) => text.slice(0, 40))));
+    check('no manifest was left behind after the failure',
+      ![...env.desktopFs.files.keys()].some((path) => /pulsar-library\.json$/.test(path)));
+  }
+
+  { // 33. desktop: zapamiętany tryb Google wraca do folderu
+    const env = makeEnv({ desktop: true, tracks: [track({})], storage: { pulsarCloudSync: JSON.stringify({ enabled: true, mode: 'google' }) } });
+    check('stored google mode is not honoured on desktop', env.api.mode() === 'folder', env.api.mode());
+    check('storage is corrected too',
+      JSON.parse(env.storage.getItem('pulsarCloudSync')).mode === 'folder',
+      env.storage.getItem('pulsarCloudSync'));
   }
 
   await checkRuntimeHooks();

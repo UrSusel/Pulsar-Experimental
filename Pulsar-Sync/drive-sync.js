@@ -16,11 +16,19 @@
  *    swoim Dysku w systemowym oknie Dokumentów (PulsarFolderPlugin) i apka
  *    trzyma tam plik pulsar-library.json. Bez Client ID i bez ekranu zgody.
  *  - „google” (opcjonalny): logowanie OAuth i Drive REST (PulsarDrivePlugin).
+ *  - desktop (Windows/Linux): adapter Neutralino rejestruje
+ *    window.__pulsarSyncAdapter i wskazuje folder wybrany w systemowym oknie;
+ *    jeśli to folder synchronizowany z Dyskiem Google (klient Drive dla Windows
+ *    albo rclone na Linuksie), plik trafia do chmury bez logowania w aplikacji.
  * Wskazanie folderu jest jednorazowe na urządzenie — dalej wszystko dzieje się
  * samo: przy starcie, po powrocie do apki i po zmianach w bibliotece.
  */
 (function () {
   'use strict';
+
+  // Ten sam plik może trafić na stronę dwa razy (np. paczka desktop już go
+  // wczytuje). Drugie wejście kończy się od razu, żeby nie dublować nasłuchów.
+  if (window.__pulsarDrive) return;
 
   var SCHEMA = 1;
   var MANIFEST_NAME = 'pulsar-library.json';
@@ -43,6 +51,9 @@
       folderLab: 'Folder biblioteki', folderForgetHint: 'Zapomnienie folderu wyłącza synchronizację na tym urządzeniu.',
       chooseFolder: 'Wybierz folder', forgetFolder: 'Zapomnij folder',
       folderChosen: 'Folder: ', folderMissing: 'Nie wskazano jeszcze folderu — wybierz go raz i gotowe.',
+      folderHintDesktop: 'Wskaż folder synchronizowany z Dyskiem Google (klient Drive dla Windows albo rclone/Insync na Linuksie). Aplikacja trzyma w nim plik pulsar-library.json — bez logowania i bez konfiguracji.',
+      folderLabDesktop: 'Folder biblioteki (Dysk Google)',
+      googleOnlyAndroid: 'Logowanie kontem Google w aplikacji działa tylko na Androidzie.',
       folderHint: 'Wskaż raz folder na swoim Dysku i ten sam folder na drugim urządzeniu. Plik pulsar-library.json pojawi się w Twoim Dysku z listą utworów, albumów i polubień — bez plików audio. Konto Google wybierasz w systemowym oknie, nie w aplikacji.',
       googleCap: 'Konto Google',
       googleHint: 'Warstwa Drive (wysyłka i odbiór manifestu) jest gotowa, ale logowania w przeglądarce nie da się już użyć na Androidzie — Google je wycofał. Obsługiwane logowanie kontem Google wymaga Play Services (Credential Manager) i jest do dopisania. Teraz działa tryb „Folder na Dysku”.',
@@ -83,6 +94,9 @@
       folderLab: 'Library folder', folderForgetHint: 'Forgetting the folder turns sync off on this device.',
       chooseFolder: 'Choose folder', forgetFolder: 'Forget folder',
       folderChosen: 'Folder: ', folderMissing: 'No folder chosen yet — pick one once and you are done.',
+      folderHintDesktop: 'Point at a folder synced with Google Drive (the Drive client for Windows, or rclone/Insync on Linux). The app keeps pulsar-library.json inside it — no sign-in, no setup.',
+      folderLabDesktop: 'Library folder (Google Drive)',
+      googleOnlyAndroid: 'Signing in with a Google account inside the app works on Android only.',
       folderHint: 'Point once at a folder on your Drive and at the same folder on the second device. pulsar-library.json appears in your Drive with the list of tracks, albums and favourites — no audio files. The Google account is chosen in the system picker, not in the app.',
       googleCap: 'Google account',
       googleHint: 'The Drive layer (upload and download of the manifest) is ready, but browser sign-in can no longer be used on Android — Google retired it. Supported Google sign-in needs Play Services (Credential Manager) and is still to be added. For now the “Drive folder” mode works.',
@@ -645,9 +659,23 @@
    *    żadnego ekranu zgody, żadnego limitu testerów.
    *  - „google”: pełne logowanie OAuth, wymaga własnego projektu w Google Cloud.
    */
+  /** Adapter desktopu (Neutralino) rejestruje się sam, zanim wystartuje silnik. */
+  function desktopAdapter() {
+    var adapter = window.__pulsarSyncAdapter;
+    return adapter && typeof adapter.read === 'function' && typeof adapter.write === 'function' ? adapter : null;
+  }
+
+  function supportsGoogle() {
+    var adapter = desktopAdapter();
+    if (adapter) return adapter.supportsGoogle === true;
+    return !!plugins()[DRIVE_PLUGIN];
+  }
+
   function transportFor(mode) {
     var available = plugins();
+    var adapter = desktopAdapter();
     if (mode === 'google' && available[DRIVE_PLUGIN]) return { kind: 'google', api: available[DRIVE_PLUGIN] };
+    if (adapter) return { kind: 'folder', api: adapter, desktop: true };
     if (available[FOLDER_PLUGIN]) return { kind: 'folder', api: available[FOLDER_PLUGIN] };
     return null;
   }
@@ -671,6 +699,12 @@
         state.enabled = !!parsed.enabled;
         if (parsed.mode === 'google' || parsed.mode === 'folder') state.mode = parsed.mode;
       }
+      // Desktop nie ma logowania Google: zapamiętany tryb „google" nie może
+      // zostawić panelu bez działającego transportu.
+      if (state.mode === 'google' && !supportsGoogle()) {
+        state.mode = 'folder';
+        saveSettings();
+      }
     } catch (error) {}
   }
 
@@ -682,6 +716,7 @@
 
   function setMode(mode) {
     if (mode !== 'folder' && mode !== 'google') return;
+    if (mode === 'google' && !supportsGoogle()) mode = 'folder';
     state.mode = mode;
     saveSettings();
     transport = transportFor(mode);
@@ -898,6 +933,7 @@
   }
 
   function pluginAvailable(name) {
+    if (desktopAdapter() && name === FOLDER_PLUGIN) return true;
     var capacitor = window.Capacitor;
     if (capacitor && typeof capacitor.isPluginAvailable === 'function') {
       try { return !!capacitor.isPluginAvailable(name); } catch (error) { return false; }
@@ -910,6 +946,9 @@
   /** „folder ✔ · google ✖ (PulsarDrive)”: nazwa pluginu pojawia się tylko wtedy,
    *  gdy go brakuje — wtedy właśnie trzeba ją zgłosić. */
   function layersLine() {
+    if (desktopAdapter()) {
+      return T('layers') + 'folder (desktop) ✔ · google ' + (supportsGoogle() ? '✔' : '✖') + ' ' + T('googleOnlyAndroid');
+    }
     return T('layers') + LAYERS.map(function (layer) {
       return layer.kind + (pluginAvailable(layer.name) ? ' ✔' : ' (' + layer.name + ') ✖');
     }).join(' · ');
@@ -922,7 +961,8 @@
         reject(new Error(layerMissing(name)));
         return;
       }
-      var api = plugins()[name];
+      var adapter = desktopAdapter();
+      var api = (adapter && name === FOLDER_PLUGIN) ? adapter : plugins()[name];
       if (!api || typeof api[method] !== 'function') {
         reject(new Error(layerMissing(name)));
         return;
@@ -976,7 +1016,7 @@
       '<h2 class="sm-pane-title" data-cloud-text="title"></h2>' +
       '<div class="sm-card">' +
       '  <h3 class="sm-cap" data-cloud-text="howCap"></h3>' +
-      '  <div class="sm-row">' +
+      '  <div class="sm-row" data-cloud-row="mode">' +
       '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="modeLabel"></span>' +
       '      <span class="sm-desc" data-cloud-text="modeDesc"></span></div>' +
       '    <select class="sm-select" data-cloud="mode">' +
@@ -1061,6 +1101,16 @@
     if (redirectInput && !redirectInput.value) redirectInput.value = redirect;
     var status = pane.querySelector('[data-cloud="status"]');
     if (status) status.style.whiteSpace = 'pre-line';
+    // Desktop: ten sam mechanizm folderu, ale opisy mówią o kliencie Drive,
+    // bo tu nie ma systemowego okna Dokumentów z kontem Google.
+    if (desktopAdapter()) {
+      var hint = pane.querySelector('[data-cloud-text="folderHint"]');
+      if (hint) hint.textContent = T('folderHintDesktop');
+      var lab = pane.querySelector('[data-cloud-text="folderLab"]');
+      if (lab) lab.textContent = T('folderLabDesktop');
+      var choose = pane.querySelector('[data-cloud="choose"]');
+      if (choose) choose.textContent = T('chooseFolder');
+    }
     if (panelTab) panelTab.querySelector('[data-cloud-text="tab"]').textContent = T('tab');
   }
 
@@ -1194,10 +1244,13 @@
     if (!pane) return;
     var isFolder = state.mode === 'folder';
 
+    var googleOk = supportsGoogle();
+    var modeRow = pane.querySelector('[data-cloud-row="mode"]');
+    if (modeRow) modeRow.classList.toggle('sm-hide', !googleOk);
     var folderSection = pane.querySelector('[data-cloud-section="folder"]');
     if (folderSection) folderSection.classList.toggle('sm-hide', !isFolder);
     var googleSection = pane.querySelector('[data-cloud-section="google"]');
-    if (googleSection) googleSection.classList.toggle('sm-hide', isFolder);
+    if (googleSection) googleSection.classList.toggle('sm-hide', isFolder || !googleOk);
 
     var modeSelect = pane.querySelector('[data-cloud="mode"]');
     if (modeSelect && modeSelect.value !== state.mode) modeSelect.value = state.mode;
@@ -1236,6 +1289,10 @@
 
   function start() {
     loadSettings();
+    if (state.mode === 'google' && !supportsGoogle()) {
+      state.mode = 'folder';
+      saveSettings();
+    }
     transport = transportFor(state.mode);
     if (!transport) return;
     ensurePanel();
