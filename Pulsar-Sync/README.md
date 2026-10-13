@@ -45,6 +45,27 @@ Devices name themselves: an Android device reports its model, a computer reports
 Linux PC, and the manifest stores that with `platform: desktop` — a computer no longer registers
 as "android".
 
+New YouTube tracks can also be fetched on their own: the switch in the panel (on by default on a
+computer, off on a phone so it does not spend mobile data) downloads a few tracks per batch, with
+a pause between batches and a six-hour retry window for anything that failed, so a broken download
+can never turn into a loop.
+
+### Deletions, and the entries that only live in the cloud
+
+A manifest lists what the other device has, so a device that has never seen a track must not treat
+it as deleted. The engine keeps a record of the keys that were in *this* library at the last sync
+(`localKeys`) and only tombstones keys from that record:
+
+* a track saved on the phone stays in the cloud manifest when the computer syncs, however often
+  it syncs, and stays on the "cloud only" list until it is downloaded (or the switch fetches it);
+* a track deleted here still becomes a tombstone, the other device is told about it
+  ("Usunięte na innym urządzeniu"), and its audio file is never touched;
+* the record also keeps live tombstones (`localKeys.deleted`), so a deletion is not quietly
+  forgotten on the next start;
+* a manifest written by an older build may carry tombstones for entries that were never local —
+  on the first sync after the update those are dropped, and the merge restores the entries from
+  the file, which is how an already-broken library heals itself.
+
 ## How a device joins the library
 
 Folder mode needs no Google Cloud project, no OAuth screen and no tester list — the app
@@ -111,7 +132,7 @@ which keeps one copy of the engine on the page.
 ## Checks
 
 ```bash
-node Pulsar-Sync/tools/test_drive_sync.js          # 131 checks: engine, panel, plugins, desktop adapter
+node Pulsar-Sync/tools/test_drive_sync.js          # 156 checks: engine, panel, plugins, desktop adapter
 python Pulsar-Sync/tools/test_desktop_bundle.py    # 36 checks on the two packed archives
 python Pulsar-Sync/tools/refresh_download_zips.py --check
 node Pulsar-Android/tools/test_background_watchdog.js

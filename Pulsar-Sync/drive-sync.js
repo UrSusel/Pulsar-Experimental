@@ -90,6 +90,14 @@
       lastOtherWrite: 'Ostatnia zmiana z innego urządzenia: ',
       newFromCloud: 'Nowe z innego urządzenia: ',
       newFromCloudHint: ' — w Ustawieniach → Chmura możesz je pobrać na tym urządzeniu.',
+      devicesInFile: 'Urządzenia w pliku: ',
+      fileChanged: ' · plik zmieniony ',
+      autoLab: 'Pobieraj automatycznie utwory z YouTube z innego urządzenia',
+      autoDesc: 'Nowy utwór z YouTube z drugiego urządzenia ściąga się tu sam, po kilka na raz.',
+      autoDescMetered: 'Ten sam mechanizm na telefonie jest domyślnie wyłączony, żeby nie zużywał danych z sieci komórkowej. Możesz go tu włączyć.',
+      autoOn: 'Automatyczne pobieranie włączone.', autoOff: 'Automatyczne pobieranie wyłączone.',
+      autoDownloading: 'Automatycznie pobieram: ',
+      writeBackWarning: 'Uwaga: po zapisie nie widzę swoich danych w pliku — sprawdź, czy oba urządzenia wskazują ten sam folder w tej samej chmurze.',
       removedElsewhere: 'Usunięte na innym urządzeniu: ',
       mirror: 'Trzymaj czytelną kopię na Dysku (folder Pulsar)',
       enabled: 'Synchronizuj automatycznie',
@@ -149,6 +157,14 @@
       lastOtherWrite: 'Last change from another device: ',
       newFromCloud: 'New from another device: ',
       newFromCloudHint: ' — open Settings → Cloud to download them on this device.',
+      devicesInFile: 'Devices in the file: ',
+      fileChanged: ' · file changed ',
+      autoLab: 'Download YouTube tracks from another device automatically',
+      autoDesc: 'A YouTube track added on the other device is fetched here on its own, a few at a time.',
+      autoDescMetered: 'The same mechanism stays off by default on a phone so it does not use mobile data. You can switch it on here.',
+      autoOn: 'Automatic download switch on.', autoOff: 'Automatic download switch off.',
+      autoDownloading: 'Downloading automatically: ',
+      writeBackWarning: 'Warning: after writing I cannot see my own data in the file — check that both devices point at the same folder in the same cloud.',
       removedElsewhere: 'Removed on another device: ',
       mirror: 'Keep a readable copy in Drive (Pulsar folder)',
       enabled: 'Sync automatically',
@@ -261,8 +277,40 @@
    * znacznik 0 („wiek nieznany") i przegrywają konflikt z wpisem z chmury.
    * Inaczej urządzenie, które uruchomiło sync później, nadpisywałoby cudze
    * zmiany tylko dlatego, że ma późniejszy zegar.
+   *
+   * `localKeys` to klucze, które to urządzenie miało w bibliotece przy
+   * poprzedniej synchronizacji. Bez tego drugie uruchomienie uznawałoby za
+   * skasowane także wpisy, które nigdy tu nie były — czyli utwór dodany na
+   * telefonie ginąłby z chmury przy drugiej synchronizacji komputera.
    */
-  function buildManifest(snapshot, previous, device) {
+  /** Czy ten klucz był w bibliotece tego urządzenia przy poprzedniej synchronizacji. */
+  function wasLocalKey(localKeys, kind, key) {
+    if (!localKeys || !localKeys[kind]) return false;   // brak zapisu: nic nie kasujemy
+    return !!localKeys[kind][key];
+  }
+
+  /** Klucze obecne teraz lokalnie — zapisujemy je na następny raz. */
+  function localKeyMap(localManifest, plan, mergedManifest) {
+    var map = { tracks: {}, albums: {}, deleted: {} };
+    ((localManifest && localManifest.tracks) || []).forEach(function (entry) {
+      if (entry && entry.key) map.tracks[entry.key] = true;
+    });
+    ((localManifest && localManifest.albums) || []).forEach(function (entry) {
+      if (entry && entry.key) map.albums[entry.key] = true;
+    });
+    // Albumy dołożone z chmury zaraz będą w bibliotece, więc też są „nasze".
+    ((plan && plan.newAlbums) || []).forEach(function (entry) {
+      if (entry && entry.key) map.albums[entry.key] = true;
+    });
+    // Żywe znaczniki kasowania — żeby kasowanie nie zniknęło przy następnym
+    // starcie (wpis, którego już nie ma w bibliotece, nie chroni go inaczej).
+    ((mergedManifest && mergedManifest.removed) || []).forEach(function (entry) {
+      if (entry && entry.key) map.deleted[entry.key] = true;
+    });
+    return map;
+  }
+
+  function buildManifest(snapshot, previous, device, localKeys) {
     var firstSync = !previous;
     var previousTracks = {};
     var previousAlbums = {};
@@ -271,7 +319,23 @@
     if (previous) {
       (previous.tracks || []).forEach(function (entry) { if (entry && entry.key) previousTracks[entry.key] = entry; });
       (previous.albums || []).forEach(function (entry) { if (entry && entry.key) previousAlbums[entry.key] = entry; });
-      (previous.removed || []).forEach(function (entry) { if (entry && entry.key) tombstones[entry.key] = entry; });
+      // Znaczniki kasowania z poprzednich wersji mogły dotyczyć wpisów, których
+      // to urządzenie nigdy nie miało (błąd: druga synchronizacja usuwała z pliku
+      // utwory dodane na innym urządzeniu). Bez mapy kluczy lokalnych nie da się
+      // ich odsiać, więc przy pierwszym starcie po aktualizacji je odpuszczamy —
+      // scalanie przywraca wtedy wpisy z pliku, a nowe kasowania działają dalej.
+      if (localKeys) {
+        (previous.removed || []).forEach(function (entry) {
+          if (!entry || !entry.key) return;
+          // Znacznik zostaje, gdy dotyczy klucza, o którym to urządzenie wie:
+          // albo miało go u siebie, albo samo go wcześniej skasowało.
+          var known = (localKeys.deleted && localKeys.deleted[entry.key]) ||
+            wasLocalKey(localKeys, 'tracks', entry.key) ||
+            wasLocalKey(localKeys, 'albums', entry.key);
+          if (!known) return;
+          tombstones[entry.key] = entry;
+        });
+      }
     }
 
     var stamp = nowMs();
@@ -307,6 +371,8 @@
 
     Object.keys(previousTracks).forEach(function (key) {
       if (seenTracks[key]) return;
+      // Wpis z chmury, którego to urządzenie nigdy nie miało, to nie kasowanie.
+      if (!wasLocalKey(localKeys, 'tracks', key)) return;
       var existing = tombstones[key];
       tombstones[key] = { key: key, deletedAt: existing ? existing.deletedAt : stamp, device: device.id };
     });
@@ -338,6 +404,7 @@
 
     Object.keys(previousAlbums).forEach(function (key) {
       if (seenAlbums[key]) return;
+      if (!wasLocalKey(localKeys, 'albums', key)) return;
       var existing = tombstones[key];
       tombstones[key] = { key: key, deletedAt: existing ? existing.deletedAt : stamp, device: device.id };
     });
@@ -662,6 +729,9 @@
   var state = {
     mode: 'folder',
     enabled: false,
+    // Komputer: włączone. Telefon: wyłączone, żeby nie ciągnęło danych z sieci
+    // komórkowej — przełącznik w panelu to zmienia i zapisuje wybór.
+    autoDownload: !!desktopAdapter(),
     folderReady: false,
     folderLabel: '',
     googleConfigured: false,
@@ -678,7 +748,18 @@
   var cloudEntries = [];
   // Co mówi plik w chmurze: ile ma pozycji, kiedy i na jakim urządzeniu
   // powstała ostatnia zmiana. Bez tego „czy zsynchronizowało się?" jest zgadywaniem.
-  var cloudMeta = { tracks: 0, albums: 0, updatedAt: 0, device: '', fromOther: false };
+  var cloudMeta = { tracks: 0, albums: 0, updatedAt: 0, device: '', fromOther: false,
+    fileModifiedAt: 0, devices: [], writeBack: '' };
+  // Automatyczne pobieranie nowych utworów: na komputerze domyślnie włączone,
+  // na telefonie wyłączone (dane komórkowe) — z przełącznikiem w panelu.
+  var AUTO_MAX_PER_SYNC = 3;
+  var AUTO_RETRY_MS = 6 * 60 * 60 * 1000;
+  // Przerwa między partiami: bez niej każda partia kończy się synchronizacją,
+  // która uruchamia kolejną — i automat ściągnąłby całą bibliotekę na raz.
+  var AUTO_COOLDOWN_MS = 3 * 60 * 1000;
+  var autoBatchAt = 0;
+  var autoBusy = false;
+  var autoTried = {};
   var cloudKnownKeys = [];
   var cloudAnnounced = false;
   var MAX_CLOUD_ROWS = 25;
@@ -738,6 +819,7 @@
       if (raw) {
         var parsed = JSON.parse(raw);
         state.enabled = !!parsed.enabled;
+        if (typeof parsed.autoDownload === 'boolean') state.autoDownload = parsed.autoDownload;
         if (parsed.mode === 'google' || parsed.mode === 'folder') state.mode = parsed.mode;
       }
       // Desktop nie ma logowania Google: zapamiętany tryb „google" nie może
@@ -751,7 +833,9 @@
 
   function saveSettings() {
     try {
-      localStorage.setItem('pulsarCloudSync', JSON.stringify({ enabled: state.enabled, mode: state.mode }));
+      localStorage.setItem('pulsarCloudSync', JSON.stringify({
+        enabled: state.enabled, mode: state.mode, autoDownload: !!state.autoDownload
+      }));
     } catch (error) {}
   }
 
@@ -892,6 +976,9 @@
     busy = true;
     renderPanelStatus();
     var mergedManifest = null;
+    // Klucze obecne lokalnie po tej synchronizacji — na następny raz, żeby
+    // odróżnić kasowanie od wpisu z chmury, którego tu nigdy nie było.
+    var nextLocalKeys = null;
 
     return refreshStatus()
       .then(function () {
@@ -905,9 +992,11 @@
         if (!snapshot) throw new Error(T('missingLibrary'));
         return stateGet('manifest').then(function (stored) {
           var previous = stored && stored.value ? stored.value : null;
+          return stateGet('localKeys').then(function (keysStored) {
+          var wasLocal = keysStored && keysStored.value ? keysStored.value : null;
           var localManifest = buildManifest(snapshot, previous, {
             id: device.deviceId, name: device.name, platform: devicePlatform()
-          });
+          }, wasLocal);
           return pullRemote().then(function (remote) {
             var remoteManifest = null;
             if (remote && remote.manifest) {
@@ -920,7 +1009,12 @@
                 albums: (remoteManifest.albums || []).length,
                 updatedAt: Number(remoteManifest.updatedAt || 0) || 0,
                 device: String(writer.name || writer.id || ''),
-                fromOther: !!writer.id && writer.id !== device.deviceId
+                fromOther: !!writer.id && writer.id !== device.deviceId,
+                fileModifiedAt: Number((remote && remote.modifiedTime) || 0) || 0,
+                devices: (remoteManifest.devices || []).map(function (item) {
+                  return String((item && item.name) || (item && item.id) || '');
+                }).filter(Boolean),
+                writeBack: cloudMeta.writeBack
               };
               statePut({ id: 'cloudMeta', value: cloudMeta }).catch(function () {});
             }
@@ -956,6 +1050,7 @@
               }
               cloudKnownKeys = cloudEntries.map(function (entry) { return entry.key; });
               cloudAnnounced = true;
+              nextLocalKeys = localKeyMap(localManifest, plan, mergedManifest);
               counters = {
                 sent: (mergedManifest.tracks || []).length,
                 received: plan.trackUpdates.length + plan.newAlbums.length + plan.albumUpdates.length,
@@ -963,11 +1058,25 @@
                 removed: merged.stats.remoteRemoved.length
               };
               return cloudReplace(cloudEntries).then(function () {
-              renderPanelStatus();
+                renderPanelStatus();
                 return pushRemote(JSON.stringify(mergedManifest));
+              }).then(function () {
+                // Ręczna synchronizacja sprawdza jeszcze, czy własny zapis widać
+                // w pliku: gdy urządzenia patrzą na różne pliki, to jedyny sposób,
+                // żeby to zauważyć.
+                if (!force || typeof transport.api.read !== 'function') return null;
+                return pullRemote().then(function (again) {
+                  var back = null;
+                  if (again && again.manifest) { try { back = JSON.parse(again.manifest); } catch (error) { back = null; } }
+                  var devices = (back && back.devices) || [];
+                  cloudMeta.writeBack = devices.some(function (item) { return item && item.id === device.deviceId; }) ? 'ok' : 'missing';
+                  renderPanelStatus();
+                  return null;
+                }).catch(function () { return null; });
               });
             });
           });
+        });
         });
       })
       .then(function () {
@@ -975,10 +1084,17 @@
         // inaczej zmiany uznane za wysłane przepadłyby przy błędzie sieci.
         return statePut({ id: 'manifest', value: mergedManifest });
       })
+      .then(function () {
+        return statePut({ id: 'localKeys', value: nextLocalKeys || { tracks: {}, albums: {} } });
+      })
       .then(function () { return statePut({ id: 'counters', value: counters }); })
       .then(function () {
         busy = false;
         setStatus({ lastError: '', lastSyncAt: nowMs() });
+        // Nowe utwory z innego urządzenia dociągamy dopiero po zakończonej
+        // synchronizacji, żeby nie wejść w nią w trakcie (busy).
+        var pending = cloudEntries.slice();
+        setTimeout(function () { autoDownloadFresh(pending).catch(function () {}); }, 400);
         return { counters: counters, mode: transport.kind };
       })
       .catch(function (error) {
@@ -1121,6 +1237,11 @@
       '    <label class="switch"><input type="checkbox" data-cloud="enabled"><span class="slider"></span></label>' +
       '  </div>' +
       '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="autoLab"></span>' +
+      '      <span class="sm-desc" data-cloud-text="autoDesc"></span></div>' +
+      '    <label class="switch"><input type="checkbox" data-cloud="auto"><span class="slider"></span></label>' +
+      '  </div>' +
+      '  <div class="sm-row">' +
       '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="statusCap"></span>' +
       '      <span class="sm-desc" data-cloud="status"></span></div>' +
       '    <button type="button" class="sm-act" data-cloud="sync" data-cloud-text="syncNow"></button>' +
@@ -1208,6 +1329,8 @@
       var choose = pane.querySelector('[data-cloud="choose"]');
       if (choose) choose.textContent = T('chooseFolder');
     }
+    var autoDesc = pane.querySelector('[data-cloud-text="autoDesc"]');
+    if (autoDesc && !desktopAdapter()) autoDesc.textContent = T('autoDescMetered');
     if (panelTab) panelTab.querySelector('[data-cloud-text="tab"]').textContent = T('tab');
   }
 
@@ -1273,6 +1396,15 @@
         return;
       }
       runSync().catch(function () {});
+    });
+
+    var auto = find('auto');
+    if (auto) auto.addEventListener('change', function () {
+      state.autoDownload = !!auto.checked;
+      saveSettings();
+      // Reakcja widoczna od razu — żaden przełącznik nie może być cichy.
+      note(state.autoDownload ? T('autoOn') : T('autoOff'));
+      renderPanelStatus();
     });
 
     var mirror = find('mirror');
@@ -1388,18 +1520,18 @@
    * runtime (z netId, okładką i tagami), a potem biblioteka idzie do chmury —
    * dzięki temu znika z listy „tylko w chmurze" po obu stronach.
    */
-  function downloadCloudTrack(key) {
-    var entry = null;
-    (cloudEntries || []).forEach(function (item) { if (!entry && item && item.key === key) entry = item; });
-    var id = downloadIdOf(entry || { key: key });
-    if (!id) { fail(T('downloadFileOnly')); return Promise.resolve({ skipped: 'no-audio' }); }
+  /** Importuje utwór z YouTube na tym urządzeniu. `quiet` = tryb automatyczny. */
+  function importCloudTrack(entry, quiet) {
+    var key = (entry && entry.key) || '';
+    var id = downloadIdOf(entry);
+    if (!id) { fail(T('downloadFileOnly')); return Promise.resolve(false); }
     var net = netApi();
-    if (!net) { fail(T('downloadNoApi')); return Promise.resolve({ skipped: 'no-api' }); }
+    if (!net) { fail(T('downloadNoApi')); return Promise.resolve(false); }
     if (typeof net.enabled === 'function' && net.enabled() === false) {
       fail(T('downloadOff'));
-      return Promise.resolve({ skipped: 'net-off' });
+      return Promise.resolve(false);
     }
-    note(T('downloading') + ((entry && entry.title) || ('YouTube ' + id)));
+    note((quiet ? T('autoDownloading') : T('downloading')) + ((entry && entry.title) || ('YouTube ' + id)));
     return Promise.resolve().then(function () {
       return net.search('https://www.youtube.com/watch?v=' + id);
     }).then(function () {
@@ -1414,12 +1546,52 @@
     }).then(function () {
       return waitForTrack(key, IMPORT_WAIT_MS);
     }).then(function (found) {
-      if (!found) { fail(T('downloadUnconfirmed')); return { skipped: 'unconfirmed' }; }
+      if (!found) { fail(T('downloadUnconfirmed')); return false; }
       note(T('downloaded'));
-      return runSync({ force: true });
+      return true;
     }).catch(function (error) {
       fail(message(error));
-      return { error: message(error) };
+      return false;
+    });
+  }
+
+  function downloadCloudTrack(key) {
+    var entry = null;
+    (cloudEntries || []).forEach(function (item) { if (!entry && item && item.key === key) entry = item; });
+    if (!entry) entry = { key: key };
+    return importCloudTrack(entry, false).then(function (ok) {
+      return ok ? runSync({ force: true }) : { skipped: 'not-imported' };
+    });
+  }
+
+  /**
+   * Po synchronizacji dociąga nowe utwory z YouTube z innego urządzenia.
+   * Po kilka na raz i nie częściej niż raz na 6 h dla tego samego klucza, żeby
+   * jedna awaria nie zamieniła się w pętlę pobierania.
+   */
+  function autoDownloadFresh(entries) {
+    if (!state.autoDownload || autoBusy) return Promise.resolve(0);
+    var now = nowMs();
+    if (autoBatchAt && now - autoBatchAt < AUTO_COOLDOWN_MS) return Promise.resolve(0);
+    var queue = (entries || []).filter(function (entry) {
+      if (!entry || !downloadIdOf(entry)) return false;
+      return now - (autoTried[entry.key] || 0) > AUTO_RETRY_MS;
+    }).slice(0, AUTO_MAX_PER_SYNC);
+    if (!queue.length) return Promise.resolve(0);
+    autoBusy = true;
+    autoBatchAt = now;
+    var done = 0;
+    var chain = Promise.resolve();
+    queue.forEach(function (entry) {
+      chain = chain.then(function () {
+        autoTried[entry.key] = nowMs();
+        return importCloudTrack(entry, true).then(function (ok) { if (ok) done++; });
+      });
+    });
+    return chain.then(function () {
+      autoBusy = false;
+      if (!done) return 0;
+      return runSync({ force: true }).then(function () { return done; }).catch(function () { return done; });
     });
   }
 
@@ -1500,12 +1672,17 @@
         if (counters.cloud) lines.push(T('inCloud') + counters.cloud + T('inCloudHint'));
         if (cloudMeta.tracks) {
           lines.push(T('cloudFileInfo') + cloudMeta.tracks + ' ' + T('tracksWord') +
-            (cloudMeta.albums ? ' · ' + cloudMeta.albums + ' ' + T('albumsWord') : ''));
+            (cloudMeta.albums ? ' · ' + cloudMeta.albums + ' ' + T('albumsWord') : '') +
+            (cloudMeta.fileModifiedAt ? T('fileChanged') + new Date(cloudMeta.fileModifiedAt).toLocaleString() : ''));
         }
         if (cloudMeta.fromOther && cloudMeta.updatedAt) {
           lines.push(T('lastOtherWrite') + (cloudMeta.device || '') + ' · ' +
             new Date(cloudMeta.updatedAt).toLocaleString());
         }
+        if (cloudMeta.devices && cloudMeta.devices.length) {
+          lines.push(T('devicesInFile') + cloudMeta.devices.join(', '));
+        }
+        if (cloudMeta.writeBack === 'missing') lines.push(T('writeBackWarning'));
         if (counters.removed) lines.push(T('removedElsewhere') + counters.removed);
       }
       if (busy) lines.push(T('syncing'));
@@ -1516,6 +1693,8 @@
 
     var enabled = pane.querySelector('[data-cloud="enabled"]');
     if (enabled) enabled.checked = !!state.enabled;
+    var auto = pane.querySelector('[data-cloud="auto"]');
+    if (auto) auto.checked = !!state.autoDownload;
     var mirror = pane.querySelector('[data-cloud="mirror"]');
     if (mirror) mirror.checked = state.mirror !== false;
 
@@ -1596,6 +1775,7 @@
     state: function () { return state; },
     counters: function () { return counters; },
     download: downloadCloudTrack,
+    autoDownload: autoDownloadFresh,
     cloudOnly: function () { return cloudEntries.slice(); },
     cloudMeta: function () { return Object.assign({}, cloudMeta); },
     setImportWait: function (ms) { IMPORT_WAIT_MS = Math.max(0, Number(ms) || 0); return IMPORT_WAIT_MS; },

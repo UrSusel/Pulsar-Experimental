@@ -160,6 +160,7 @@ function makeNeutralino(fs, state) {
       },
       async writeFile(target, data) {
         if (state.denied) throw new Error('Brak uprawnień do zapisu');
+        if (state.writeNoop) return;   // zapis, który nigdzie nie trafia (test)
         fs.files.set(target, String(data));
       },
       async createDirectory(target) {
@@ -338,6 +339,7 @@ function makeEnv(options) {
     pickedDir: options.pickedDir || '/home/user/Dysk Google/Pulsar',
     cancelled: !!options.cancelPick,
     denied: !!options.denyWrite,
+    writeNoop: !!options.writeNoop,
   };
 
   const toasts = [];
@@ -1182,6 +1184,224 @@ async function checkRuntimeHooks() {
     check('an Android device names its model',
       manifest.device.name === 'Pixel 8' && manifest.device.platform === 'android',
       JSON.stringify(manifest.device));
+  }
+
+  { // 42. automatyczne pobieranie: utwór z telefonu ściąga się sam na komputerze
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({})] });
+    const net = makeNet({
+      results: [{ provider: 'youtube', id: 'AUTOTRACK01', ytId: 'AUTOTRACK01', title: 'Auto utwór', artist: 'Ktoś' }],
+    });
+    const pc = makeEnv({ desktop: true, fs: shared, withPanel: true, tracks: [track({})] });
+    pc.api.openPanel().querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    pc.sandbox.window.__player = { __net: net };
+    net.importIdx = function (index) {
+      net.calls.push(['import', index]);
+      pc.library.state.tracks.push(track({ netId: 'youtube:AUTOTRACK01', title: 'Auto utwór', artist: 'Ktoś' }));
+      return Promise.resolve();
+    };
+    check('desktop has automatic download on by default', pc.api.state().autoDownload === true);
+    pc.api.setEnabled(true);
+
+    // telefon dokłada utwór, komputer synchronizuje się sam
+    phone.library.state.tracks.push(track({ netId: 'youtube:AUTOTRACK01', title: 'Auto utwór', artist: 'Ktoś' }));
+    await phone.api.sync();
+    await pc.api.sync();
+    await wait(900);   // auto-pobieranie rusza po zakończeniu synchronizacji
+
+    check('the new track was fetched without a click',
+      net.calls.some((call) => call[0] === 'search' && call[1] === 'https://www.youtube.com/watch?v=AUTOTRACK01'),
+      JSON.stringify(net.calls));
+    check('the automatic download is announced, not silent',
+      pc.toasts.some((text) => /Automatycznie pobieram/.test(text)),
+      JSON.stringify(pc.toasts.map((text) => text.slice(0, 45))));
+    check('after the auto download the track is local and off the list',
+      pc.library.state.tracks.length === 2 && !pc.api.cloudOnly().some((entry) => entry.key === 'youtube:AUTOTRACK01'),
+      'tracks=' + pc.library.state.tracks.length + ' cloud=' + JSON.stringify(pc.api.cloudOnly().map((e) => e.key)));
+  }
+
+  { // 43. wyłączony przełącznik = nic się nie ściąga, ale przełącznik mówi co robi
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({})] });
+    const net = makeNet({
+      results: [{ provider: 'youtube', id: 'AUTOTRACK02', ytId: 'AUTOTRACK02', title: 'Inny auto', artist: 'Ktoś' }],
+    });
+    const pc = makeEnv({ desktop: true, fs: shared, withPanel: true, tracks: [track({})] });
+    const pane = pc.api.openPanel();
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    pc.sandbox.window.__player = { __net: net };
+    const autoBox = pane.querySelector('[data-cloud="auto"]');
+    check('the switch reflects the default', autoBox.checked === true);
+    autoBox.change(false);
+    await wait(20);
+    check('switching it off answers visibly',
+      pc.api.state().autoDownload === false && pc.toasts.some((text) => /Automatyczne pobieranie wyłączone/.test(text)),
+      JSON.stringify(pc.toasts.map((text) => text.slice(0, 40))));
+
+    phone.library.state.tracks.push(track({ netId: 'youtube:AUTOTRACK02', title: 'Inny auto', artist: 'Ktoś' }));
+    await phone.api.sync();
+    pc.api.setEnabled(true);
+    await pc.api.sync();
+    await wait(900);
+    check('with the switch off nothing is downloaded', net.calls.length === 0, JSON.stringify(net.calls));
+    check('and the track is still listed for a manual download',
+      !!pc.api.openPanel().querySelector('[data-cloud-download]'));
+  }
+
+  { // 44. limit: automat ściąga po kilka utworów, nie całą bibliotekę na raz
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({})] });
+    const net = makeNet({ results: [] });
+    const pc = makeEnv({ desktop: true, fs: shared, withPanel: true, tracks: [track({})] });
+    pc.api.openPanel().querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    pc.sandbox.window.__player = { __net: net };
+    let current = [];
+    net.search = function (term) {
+      net.calls.push(['search', term]);
+      const id = String(term).split('=').pop();
+      current = [{ provider: 'youtube', id, ytId: id, title: 'Auto ' + id, artist: 'Ktoś' }];
+      return Promise.resolve(current);
+    };
+    net.results = () => current;
+    net.importIdx = function (index) {
+      net.calls.push(['import', index]);
+      const id = String(current[index].ytId);
+      pc.library.state.tracks.push(track({ netId: 'youtube:' + id, title: 'Auto ' + id, artist: 'Ktoś' }));
+      return Promise.resolve();
+    };
+    pc.api.setEnabled(true);
+    for (let i = 1; i <= 5; i++) {
+      phone.library.state.tracks.push(track({ netId: 'youtube:BATCH00000' + i, title: 'Batch ' + i, artist: 'Ktoś' }));
+    }
+    await phone.api.sync();
+    await pc.api.sync();
+    await wait(1200);
+    const imports = net.calls.filter((call) => call[0] === 'import').length;
+    check('automatic download stops after a few tracks', imports === 3, 'importów=' + imports);
+    check('the rest stays on the list for the next run',
+      pc.api.cloudOnly().length === 2, JSON.stringify(pc.api.cloudOnly().map((e) => e.key)));
+    check('a second batch does not start immediately',
+      pc.toasts.filter((text) => /Automatycznie pobieram/.test(text)).length === 3,
+      String(pc.toasts.filter((text) => /Automatycznie pobieram/.test(text)).length));
+  }
+
+  { // 45. gdy zapis nie trafia tam, skąd czytamy, panel to mówi
+    const shared = { files: new Map(), dirs: new Set() };
+    // W folderze leży cudzy manifest (inne urządzenie), a nasz zapis nigdzie nie trafia.
+    shared.dirs.add('/home/user/Dysk Google/Pulsar');
+    shared.files.set('/home/user/Dysk Google/Pulsar/pulsar-library.json', JSON.stringify({
+      schema: 1, app: 'pulsar', updatedAt: Date.now(), device: { id: 'other-device', name: 'Pixel 8' },
+      devices: [{ id: 'other-device', name: 'Pixel 8' }], tracks: [], albums: [], removed: [],
+    }));
+    const pc = makeEnv({ desktop: true, fs: shared, withPanel: true, writeNoop: true, tracks: [track({})] });
+    const pane = pc.api.openPanel();
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    pc.api.setEnabled(true);
+    await pc.api.sync();   // force przez panel „Synchronizuj teraz"
+    pane.querySelector('[data-cloud="sync"]').click();
+    await wait(150);
+    check('a write that never comes back is reported',
+      /nie widzę swoich danych w pliku/.test(pane.querySelector('[data-cloud="status"]').textContent),
+      pane.querySelector('[data-cloud="status"]').textContent.replace(/\s+/g, ' ').slice(0, 160));
+    check('write-back state is exposed for diagnostics', pc.api.cloudMeta().writeBack === 'missing',
+      JSON.stringify(pc.api.cloudMeta().writeBack));
+  }
+
+  { // 46. utwór z telefonu nie ginie przy kolejnych synchronizacjach komputera
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = await folderEnv({ fs: shared, tracks: [track({})] });
+    const pc = await folderEnv({ fs: shared, tracks: [track({})] });
+    // Wyłączamy automat, żeby nic nie pobrało wpisu, który ma przetrwać.
+    pc.api.openPanel().querySelector('[data-cloud="auto"]').change(false);
+    await wait(20);
+
+    phone.library.state.tracks.push(track({ netId: 'youtube:KEEPME00001', title: 'Zostaje', artist: 'Ktoś' }));
+    await phone.api.sync();
+    await pc.api.sync();
+    await pc.api.sync();   // tu wcześniej wpis był uznawany za skasowany
+    await pc.api.sync();
+
+    const manifest = JSON.parse(shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json'));
+    check('the track from the phone is still in the cloud file',
+      manifest.tracks.some((entry) => entry.key === 'youtube:KEEPME00001'),
+      JSON.stringify(manifest.tracks.map((entry) => entry.key)));
+    check('a cloud-only entry is not turned into a deletion',
+      !(manifest.removed || []).some((entry) => entry.key === 'youtube:KEEPME00001'),
+      JSON.stringify((manifest.removed || []).map((entry) => entry.key)));
+    check('and the computer still lists it as cloud-only',
+      pc.api.cloudOnly().some((entry) => entry.key === 'youtube:KEEPME00001'),
+      JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+
+    const phoneOutcome = await phone.api.sync();
+    check('the phone is not told that its track was deleted',
+      (phoneOutcome.counters || {}).removed === 0, JSON.stringify(phoneOutcome.counters));
+  }
+
+  { // 47. prawdziwe kasowanie nadal się rozchodzi (żeby nie cofnąć tej naprawy)
+    const shared = { files: new Map(), dirs: new Set() };
+    const both = () => [track({}), track({ netId: 'youtube:SECOND0001', title: 'Drugi', artist: 'X' })];
+    const phone = await folderEnv({ fs: shared, tracks: both() });
+    const pc = await folderEnv({ fs: shared, tracks: both() });
+
+    pc.library.state.tracks = pc.library.state.tracks.filter((item) => item.netId !== 'youtube:SECOND0001');
+    await pc.api.sync();
+
+    const manifest = JSON.parse(shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json'));
+    check('a real local deletion becomes a tombstone',
+      (manifest.removed || []).some((entry) => entry.key === 'youtube:SECOND0001'),
+      JSON.stringify((manifest.removed || []).map((entry) => entry.key)));
+
+    const phoneOutcome = await phone.api.sync();
+    check('the other device is told about it', (phoneOutcome.counters || {}).removed === 1,
+      JSON.stringify(phoneOutcome.counters));
+    check('but the audio file stays on that device', phone.library.state.tracks.length === 2,
+      String(phone.library.state.tracks.length));
+
+    await pc.api.sync();
+    const later = JSON.parse(shared.files.get('/home/user/Dysk Google/Pulsar/pulsar-library.json'));
+    check('the deletion does not quietly come back on the next sync',
+      (later.removed || []).some((entry) => entry.key === 'youtube:SECOND0001') &&
+      !later.tracks.some((entry) => entry.key === 'youtube:SECOND0001'),
+      JSON.stringify({ removed: (later.removed || []).map((e) => e.key), tracks: later.tracks.map((e) => e.key) }));
+  }
+
+  { // 48. reguła kasowania: tylko to, co to urządzenie naprawdę miało
+    const env = makeEnv({ tracks: [track({})] });
+    const pure = env.api._pure;
+    const device = { id: 'me', name: 'PC', platform: 'desktop' };
+    const previous = {
+      schema: 1, app: 'pulsar', updatedAt: Date.now(), device: { id: 'me' }, devices: [{ id: 'me' }],
+      tracks: [
+        { key: 'youtube:MINE0000001', title: 'Moje', artist: 'X', updatedAt: 0, fingerprint: 'f' },
+        { key: 'youtube:THEIRS00001', title: 'Cudze', artist: 'Y', updatedAt: 0, fingerprint: 'g' },
+      ],
+      albums: [],
+      removed: [{ key: 'youtube:THEIRS00001', deletedAt: Date.now(), device: 'me' }],
+    };
+    const snapshot = { tracks: [{ key: 'youtube:MINE0000001', title: 'Moje', artist: 'X', albums: [] }], albums: [] };
+
+    const first = pure.buildManifest(snapshot, previous, device, null);
+    check('without a local-key record nothing is deleted',
+      (first.removed || []).length === 0, JSON.stringify((first.removed || []).map((e) => e.key)));
+
+    const second = pure.buildManifest(snapshot, previous, device,
+      { tracks: { 'youtube:MINE0000001': true }, albums: {} });
+    check('a track that was never local is not deleted either',
+      !(second.removed || []).some((entry) => entry.key === 'youtube:THEIRS00001'),
+      JSON.stringify((second.removed || []).map((e) => e.key)));
+
+    const third = pure.buildManifest({ tracks: [], albums: [] }, previous, device,
+      { tracks: { 'youtube:MINE0000001': true }, albums: {} });
+    check('a track that really was here is still deleted',
+      (third.removed || []).some((entry) => entry.key === 'youtube:MINE0000001'),
+      JSON.stringify((third.removed || []).map((e) => e.key)));
+    check('and only that one',
+      !(third.removed || []).some((entry) => entry.key === 'youtube:THEIRS00001'),
+      JSON.stringify((third.removed || []).map((e) => e.key)));
   }
 
   await checkRuntimeHooks();
