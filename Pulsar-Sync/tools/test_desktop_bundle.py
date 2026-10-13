@@ -120,6 +120,21 @@ def audit(platform: str, archive: Path) -> None:
           host_tail in html and html.find(host_tail) < html.find("window.__pulsarSyncSnapshot"),
           f"host@{html.find(host_tail)} hook@{html.find('window.__pulsarSyncSnapshot')}")
 
+    # Panel chmury jest wstawiany w locie do ustawień aplikacji. Jeśli zamknięty
+    # UI zgubi te zaczepy, panel przestanie się w ogóle pojawiać — dlatego
+    # pilnujemy ich obecności.
+    footholds = {
+        'menu ustawień': 'id="settingsMenu"',
+        'treść ustawień': 'id="smBody"',
+        'wyszukiwarka ustawień': 'id="smSearch"',
+        'pasek zakładek': 'sm-nav',
+        'zakładka': 'sm-tab',
+        'strona ustawień': 'sm-pane',
+    }
+    absent = [label for label, needle in footholds.items() if needle not in html]
+    check(f"[{platform}] panel chmury ma zaczepy w ustawieniach", not absent,
+          ", ".join(absent) or f"{len(footholds)} zaczepów OK")
+
     check(f"[{platform}] silnik w archiwum = źródło",
           files.get("resources/drive-sync.js") == ENGINE.read_bytes(),
           f"{ENGINE.stat().st_size} B")
