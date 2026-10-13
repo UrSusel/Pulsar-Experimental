@@ -13,6 +13,8 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+const { makeSettingsDom, makeDocument } = require('./fake_dom.js');
+
 const SOURCE = path.join(__dirname, '..', 'drive-sync.js');
 const HOOKS = path.join(__dirname, 'cloud_sync_hooks.js');
 
@@ -207,17 +209,23 @@ function makeEnv(options) {
 
   const library = makeLibrary(options.tracks || [], options.albums || []);
 
-  const document = {
+  // Bez `withPanel` testy działają bez DOM-u (logika scalania); z `withPanel`
+  // podstawiamy strukturę ustawień runtime'u, żeby sprawdzić sam panel.
+  const settingsDom = options.withPanel ? makeSettingsDom() : null;
+  const document = settingsDom ? Object.assign(makeDocument(settingsDom), { hidden: false }) : {
     readyState: 'complete',
     hidden: false,
     body: { contains: () => false },
     documentElement: { classList: { contains: () => false, add() {} } },
     getElementById: () => null,
     querySelector: () => null,
+    querySelectorAll: () => [],
     addEventListener() {},
     dispatchEvent() {},
     createElement: () => ({ style: {}, addEventListener() {}, setAttribute() {}, appendChild() {}, classList: { add() {} } }),
   };
+  document.documentElement = { classList: { contains: () => false, add() {} } };
+  document.hidden = false;
 
   const sandbox = {
     console,
@@ -237,6 +245,7 @@ function makeEnv(options) {
     Array,
     isFinite,
     navigator: { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/UQ1A) AppleWebKit/537.36' },
+    Event: class Event { constructor(type) { this.type = type; } },
     localStorage: {
       _data: Object.assign({}, options.storage || {}),
       getItem(key) { return Object.prototype.hasOwnProperty.call(this._data, key) ? this._data[key] : null; },
@@ -246,6 +255,16 @@ function makeEnv(options) {
     location: { href: 'https://localhost/' },
     File: class File {},
   };
+  const docListeners = {};
+  if (settingsDom) {
+    document.addEventListener = (type, handler) => {
+      (docListeners[type] = docListeners[type] || []).push(handler);
+    };
+    document.dispatchEvent = (event) => {
+      (docListeners[event.type] || []).forEach((handler) => handler(event));
+      return true;
+    };
+  }
   const pluginTable = {};
   if (options.withDrive !== false) pluginTable.PulsarDrive = plugin;
   if (options.withFolder !== false) pluginTable.PulsarFolder = folder;
@@ -267,7 +286,8 @@ function makeEnv(options) {
   vm.runInContext(fs.readFileSync(SOURCE, 'utf8'), sandbox, { filename: 'drive-sync.js' });
   return {
     api: sandbox.window.__pulsarDrive, drive, plugin, folder, library, plugins: pluginTable,
-    storage: sandbox.localStorage,
+    storage: sandbox.localStorage, dom: settingsDom, document,
+    fireDocumentEvent(type) { (docListeners[type] || []).forEach((handler) => handler({ type })); },
   };
 }
 
@@ -637,6 +657,95 @@ async function checkRuntimeHooks() {
     const outcome = await env.api.sync();
     check('missing Google plugin falls back to the folder transport',
       !!env.drive.files.get('folder') && !outcome.error, JSON.stringify(outcome));
+  }
+
+  { // 19. panel ląduje tam, gdzie runtime trzyma ustawienia (to była przyczyna „nic nie robi")
+    const env = makeEnv({ withDrive: true, withPanel: true, tracks: [track({})] });
+    const pane = env.api.openPanel();
+    check('pane is created inside #smBody, not loose in the menu',
+      !!pane && pane.parentNode === env.dom.smBody, pane && pane.parentNode && (pane.parentNode.getAttribute('id') || '?'));
+    const tab = env.dom.nav.querySelector('.sm-tab[data-pane="cloud"]');
+    check('tab is added to the runtime nav', !!tab && tab.parentNode === env.dom.nav);
+    check('tab is a real button with the runtime class',
+      !!tab && tab.getAttribute('type') === 'button' && tab.classList.contains('sm-tab'),
+      tab && tab.getAttribute('type'));
+    check('pane uses only the runtime pane class', !!pane && pane.classList.contains('sm-pane'));
+  }
+
+  { // 20. klik na zakładkę pokazuje panel (wcześniej nie robił nic)
+    const env = makeEnv({ withDrive: true, withPanel: true, tracks: [track({})] });
+    env.api.openPanel();
+    const tab = env.dom.nav.querySelector('.sm-tab[data-pane="cloud"]');
+    const pane = env.dom.smBody.querySelector('.sm-pane[data-pane="cloud"]');
+    const play = env.dom.smBody.querySelector('.sm-pane[data-pane="play"]');
+    check('cloud pane starts hidden', !pane.classList.contains('active'));
+    check('another pane starts active', play.classList.contains('active'));
+    tab.click();
+    check('clicking the tab activates the cloud pane', pane.classList.contains('active'));
+    check('clicking the tab deactivates the previous pane', !play.classList.contains('active'));
+    check('tab marks itself active and aria-current',
+      tab.classList.contains('active') && tab.getAttribute('aria-current') === 'page');
+    check('chosen tab is remembered for the next open',
+      env.storage.getItem('pulsarSettingsTab') === 'cloud', String(env.storage.getItem('pulsarSettingsTab')));
+    check('other tabs are deactivated', env.dom.nav.querySelector('.sm-tab[data-pane="play"]').classList.contains('active') === false);
+  }
+
+  { // 21. tryb wybiera się w panelu i wybór obowiązuje od razu
+    const env = makeEnv({ withDrive: true, withPanel: true, folderPicked: true, tracks: [track({})] });
+    const pane = env.api.openPanel();
+    const select = pane.querySelector('[data-cloud="mode"]');
+    const folderSection = pane.querySelector('[data-cloud-section="folder"]');
+    const googleSection = pane.querySelector('[data-cloud-section="google"]');
+    check('panel offers both transports', !!select && select.querySelectorAll('option').length === 2);
+    check('folder section is shown in the default mode',
+      !folderSection.classList.contains('sm-hide') && googleSection.classList.contains('sm-hide'));
+    select.change('google');
+    check('switching to Google mode is applied', env.api.mode() === 'google', env.api.mode());
+    check('sections swap with the mode',
+      folderSection.classList.contains('sm-hide') && !googleSection.classList.contains('sm-hide'));
+    check('mode survives a restart', JSON.parse(env.storage.getItem('pulsarCloudSync')).mode === 'google');
+  }
+
+  { // 22. żaden tekst panelu nie jest pusty, a zmiana języka go przetłumaczy
+    const env = makeEnv({ withDrive: true, withPanel: true, tracks: [track({})] });
+    const pane = env.api.openPanel();
+    const empty = pane.querySelectorAll('[data-cloud-text]').filter((el) => !el.textContent.trim());
+    check('every label in the panel is filled', empty.length === 0,
+      empty.map((el) => el.getAttribute('data-cloud-text')).join(',') || 'brak pustych');
+    check('input placeholders are set',
+      ['clientId', 'clientSecret', 'redirectUri'].every((name) => {
+        const input = pane.querySelector('[data-cloud="' + name + '"]');
+        return input && input.getAttribute('placeholder');
+      }));
+    const tab = env.dom.nav.querySelector('.sm-tab[data-pane="cloud"]');
+    const polishTab = tab.textContent.trim();
+    env.storage.setItem('playerLang', 'en');
+    env.fireDocumentEvent('pulsar:lang');
+    check('language switch relabels the tab', tab.textContent.trim() !== polishTab && /cloud/i.test(tab.textContent),
+      polishTab + ' → ' + tab.textContent.trim());
+    check('language switch relabels the pane',
+      /Drive folder|Google sign-in|How to sync/i.test(pane.textContent));
+  }
+
+  { // 23. klasy CSS panelu muszą istnieć w runtime (inaczej panel wygląda jak goły HTML)
+    const htmlPath = path.join(__dirname, '..', 'www', 'index.html');
+    if (!fs.existsSync(htmlPath)) {
+      check('panel CSS classes exist in the runtime', true, 'pominięte: brak www/index.html');
+    } else {
+      const html = fs.readFileSync(htmlPath, 'utf8');
+      const css = html.slice(0, html.indexOf('</style>'));
+      const known = new Set((css.match(/\.sm-[a-z-]+/g) || []).map((entry) => entry.slice(1)).concat(['sm-pane']));
+      const env = makeEnv({ withDrive: true, withPanel: true, tracks: [track({})] });
+      const pane = env.api.openPanel();
+      const tab = env.dom.nav.querySelector('.sm-tab[data-pane="cloud"]');
+      const used = new Set();
+      pane.querySelectorAll('*').concat([pane, tab]).forEach((element) => {
+        element.classList.set.forEach((name) => { if (name.startsWith('sm-')) used.add(name); });
+      });
+      const unknown = Array.from(used).filter((name) => !known.has(name));
+      check('panel CSS classes exist in the runtime', unknown.length === 0,
+        unknown.length ? 'nieznane: ' + unknown.join(', ') : Array.from(used).length + ' klas OK');
+    }
   }
 
   await checkRuntimeHooks();

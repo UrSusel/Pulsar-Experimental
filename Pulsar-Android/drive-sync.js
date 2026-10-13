@@ -36,12 +36,19 @@
       title: 'Chmura', tab: 'Chmura',
       intro: 'Biblioteka (utwory, albumy, polubienia) synchronizuje się przez Twoje konto Google. Pliki audio zostają na urządzeniu.',
       neverDeletes: 'Kasowanie nigdy nie rusza plików: utwory usunięte na innym urządzeniu są tylko oznaczone.',
+      howCap: 'Jak synchronizować', modeLabel: 'Sposób',
+      modeDesc: 'Folder: nic nie konfigurujesz. Konto Google: własny projekt w chmurze.',
       modeFolder: 'Folder na Dysku', modeGoogle: 'Konto Google',
+      folderCap: 'Folder na Dysku',
+      folderLab: 'Folder biblioteki', folderForgetHint: 'Zapomnienie folderu wyłącza synchronizację na tym urządzeniu.',
       chooseFolder: 'Wybierz folder', forgetFolder: 'Zapomnij folder',
       folderChosen: 'Folder: ', folderMissing: 'Nie wskazano jeszcze folderu — wybierz go raz i gotowe.',
-      folderHint: 'Wskaż folder na swoim Dysku Google (albo dowolnym innym miejscu z systemowego okna Dokumentów). Apka trzyma tam plik pulsar-library.json. Ten sam folder wskaż na drugim urządzeniu — potem wszystko dzieje się automatycznie. Nic nie trzeba konfigurować: konto Google wybiera system, nie apka.',
-      googleHint: 'Tryb dla osób z własnym projektem w Google Cloud: pełne logowanie i Drive REST. Wymaga Client ID i sekretu poniżej.',
-      folderMissingSync: 'Najpierw wskaż folder na Dysku.',
+      folderHint: 'Wskaż raz folder na swoim Dysku i ten sam folder na drugim urządzeniu. Plik pulsar-library.json pojawi się w Twoim Dysku z listą utworów, albumów i polubień — bez plików audio. Konto Google wybierasz w systemowym oknie, nie w aplikacji.',
+      googleCap: 'Konto Google',
+      googleHint: 'Wymaga własnego projektu w Google Cloud (Client ID i sekret poniżej) oraz konta dodanego jako tester.',
+      googleHelp: 'Jak włączyć: w Google Cloud utwórz projekt, włącz Drive API, dodaj typ klienta OAuth „Aplikacja komputerowa”, wklej Client ID i sekret, ustaw adres przekierowania pl.ursusel.pulsar.android:/oauth2redirect i dodaj swoje konto jako testera.',
+      statusCap: 'Stan',
+      signInLab: 'Logowanie',
       signedOut: 'Nie zalogowano na konto Google.', signedInAs: 'Zalogowano jako ',
       signIn: 'Zaloguj się kontem Google', signOut: 'Wyloguj', syncNow: 'Synchronizuj teraz',
       syncing: 'Synchronizuję…', lastSync: 'Ostatnia synchronizacja: ', never: 'nigdy',
@@ -51,7 +58,6 @@
       enabled: 'Synchronizuj automatycznie',
       advanced: 'Konfiguracja (Google Cloud)', clientId: 'Client ID', clientSecret: 'Client secret',
       redirectUri: 'Adres przekierowania', save: 'Zapisz',
-      help: 'Jak włączyć: utwórz projekt w Google Cloud, dodaj typ klienta OAuth „Aplikacja komputerowa”, wklej Client ID i secret powyżej, jako adres przekierowania podaj pl.ursusel.pulsar.android:/oauth2redirect i dodaj swoje konto jako testera.',
       missingLibrary: 'Nie widzę biblioteki aplikacji.', error: 'Błąd: ',
       noTransport: 'Ta wersja nie ma warstwy synchronizacji.'
     },
@@ -59,11 +65,19 @@
       title: 'Cloud', tab: 'Cloud',
       intro: 'Your library (tracks, albums, favourites) syncs through your own Google account. Audio files stay on the device.',
       neverDeletes: 'Deleting never touches files: tracks removed on another device are only flagged.',
+      howCap: 'How to sync', modeLabel: 'Mode',
+      modeDesc: 'Folder: nothing to configure. Google account: your own cloud project.',
       modeFolder: 'Drive folder', modeGoogle: 'Google sign-in',
+      folderCap: 'Drive folder',
+      folderLab: 'Library folder', folderForgetHint: 'Forgetting the folder turns sync off on this device.',
       chooseFolder: 'Choose folder', forgetFolder: 'Forget folder',
       folderChosen: 'Folder: ', folderMissing: 'No folder chosen yet — pick one once and you are done.',
-      folderHint: 'Point at a folder on your Google Drive (or anywhere else the system Documents picker offers). The app keeps pulsar-library.json there. Pick the same folder on your second device and everything happens automatically from then on. Nothing to configure: the Google account is chosen by the system, not by the app.',
-      googleHint: 'For people with their own Google Cloud project: full OAuth sign-in and Drive REST. Needs the Client ID and secret below.',
+      folderHint: 'Point once at a folder on your Drive and at the same folder on the second device. pulsar-library.json appears in your Drive with the list of tracks, albums and favourites — no audio files. The Google account is chosen in the system picker, not in the app.',
+      googleCap: 'Google account',
+      googleHint: 'Needs your own Google Cloud project (Client ID and secret below) and your account added as a test user.',
+      googleHelp: 'How to enable: create a Google Cloud project, enable the Drive API, add an OAuth client of type “Desktop app”, paste the Client ID and secret, set the redirect URI to pl.ursusel.pulsar.android:/oauth2redirect and add your account as a test user.',
+      statusCap: 'Status',
+      signInLab: 'Sign-in',
       notConfigured: 'Sync is not configured — paste the Client ID and Client secret from Google Cloud.',
       signedOut: 'Not signed in to Google.', signedInAs: 'Signed in as ',
       signIn: 'Sign in with Google', signOut: 'Sign out', syncNow: 'Sync now',
@@ -74,7 +88,6 @@
       enabled: 'Sync automatically',
       advanced: 'Setup (Google Cloud)', clientId: 'Client ID', clientSecret: 'Client secret',
       redirectUri: 'Redirect URI', save: 'Save',
-      help: 'How to enable: create a Google Cloud project, add an OAuth client of type “Desktop app”, paste its Client ID and secret above, set the redirect URI to pl.ursusel.pulsar.android:/oauth2redirect and add your account as a test user.',
       missingLibrary: 'The app library is not available.', error: 'Error: ',
       noTransport: 'This build has no sync layer.'
     }
@@ -831,6 +844,135 @@
     });
   }
 
+  /**
+   * Zakładka i pane ustawień budowane są tak, jak zrobił to runtime:
+   *  - panele mieszkają w #smBody (nie w menu), klasy: sm-pane/sm-card/sm-row,
+   *  - zakładki w .sm-nav, a aktywną stronę pokazuje klasa `active`,
+   *  - wybraną zakładkę runtime zapamiętuje w localStorage (pulsarSettingsTab).
+   * Trzymanie się tych samych nazw i kontenerów to warunek, żeby panel działał
+   * i wyglądał jak reszta ustawień.
+   */
+  function showPane(id) {
+    var settingsMenu = document.getElementById('settingsMenu');
+    if (!settingsMenu) return;
+    // Runtime trzyma smShowPane w swoim domknięciu, więc używamy go tylko jeśli
+    // został wystawiony; poza tym robimy dokładnie to samo.
+    if (typeof window.smShowPane === 'function') {
+      try { window.smShowPane(id); } catch (error) {}
+    } else {
+      settingsMenu.querySelectorAll('.sm-pane').forEach(function (pane) {
+        pane.classList.toggle('active', pane.dataset.pane === id);
+      });
+      settingsMenu.querySelectorAll('.sm-tab').forEach(function (tab) {
+        var on = tab.dataset.pane === id;
+        tab.classList.toggle('active', on);
+        tab.setAttribute('aria-current', on ? 'page' : 'false');
+      });
+    }
+    var body = document.getElementById('smBody');
+    if (body) body.scrollTop = 0;
+    // Wyszukiwarka ustawień: czyścimy filtr i pozwalamy runtime'owi go przeliczyć.
+    var search = document.getElementById('smSearch');
+    if (search && search.value) {
+      search.value = '';
+      try { search.dispatchEvent(new Event('input')); } catch (error) {}
+    }
+    try { localStorage.setItem('pulsarSettingsTab', id); } catch (error) {}
+  }
+
+  function panelHtml() {
+    return '' +
+      '<h2 class="sm-pane-title" data-cloud-text="title"></h2>' +
+      '<div class="sm-card">' +
+      '  <h3 class="sm-cap" data-cloud-text="howCap"></h3>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="modeLabel"></span>' +
+      '      <span class="sm-desc" data-cloud-text="modeDesc"></span></div>' +
+      '    <select class="sm-select" data-cloud="mode">' +
+      '      <option value="folder" data-cloud-text="modeFolder"></option>' +
+      '      <option value="google" data-cloud-text="modeGoogle"></option>' +
+      '    </select>' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="enabled"></span></div>' +
+      '    <label class="switch"><input type="checkbox" data-cloud="enabled"><span class="slider"></span></label>' +
+      '  </div>' +
+      '</div>' +
+      '<div class="sm-card" data-cloud-section="folder">' +
+      '  <h3 class="sm-cap" data-cloud-text="folderCap"></h3>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="folderLab"></span>' +
+      '      <span class="sm-desc" data-cloud-text="folderHint"></span></div>' +
+      '    <button type="button" class="sm-act" data-cloud="choose" data-cloud-text="chooseFolder"></button>' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-desc" data-cloud-text="folderForgetHint"></span></div>' +
+      '    <button type="button" class="sm-act" data-cloud="forget" data-cloud-text="forgetFolder"></button>' +
+      '  </div>' +
+      '</div>' +
+      '<div class="sm-card" data-cloud-section="google">' +
+      '  <h3 class="sm-cap" data-cloud-text="googleCap"></h3>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-desc" data-cloud-text="googleHint"></span></div>' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="signInLab"></span></div>' +
+      '    <button type="button" class="sm-act" data-cloud="signin" data-cloud-text="signIn"></button>' +
+      '    <button type="button" class="sm-act" data-cloud="signout" data-cloud-text="signOut"></button>' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="mirror"></span></div>' +
+      '    <label class="switch"><input type="checkbox" data-cloud="mirror"><span class="slider"></span></label>' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="clientId"></span></div>' +
+      '    <input class="sm-select" type="text" data-cloud="clientId" autocomplete="off" spellcheck="false">' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="clientSecret"></span></div>' +
+      '    <input class="sm-select" type="password" data-cloud="clientSecret" autocomplete="off">' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-lab" data-cloud-text="redirectUri"></span></div>' +
+      '    <input class="sm-select" type="text" data-cloud="redirectUri" autocomplete="off" spellcheck="false">' +
+      '  </div>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-desc" data-cloud-text="googleHelp"></span></div>' +
+      '    <button type="button" class="sm-act" data-cloud="save" data-cloud-text="save"></button>' +
+      '  </div>' +
+      '</div>' +
+      '<div class="sm-card">' +
+      '  <h3 class="sm-cap" data-cloud-text="statusCap"></h3>' +
+      '  <div class="sm-row">' +
+      '    <div class="sm-txt"><span class="sm-desc" data-cloud="status"></span></div>' +
+      '    <button type="button" class="sm-act" data-cloud="sync" data-cloud-text="syncNow"></button>' +
+      '  </div>' +
+      '</div>';
+  }
+
+  /** Wstawia aktualne teksty i placeholdery we wszystkie elementy panelu. */
+  function applyLabels(pane) {
+    var redirect = 'pl.ursusel.pulsar.android:/oauth2redirect';
+    pane.querySelectorAll('[data-cloud-text]').forEach(function (element) {
+      var key = element.getAttribute('data-cloud-text');
+      var text = T(key);
+      if (element.tagName === 'OPTION') element.textContent = text;
+      else element.textContent = text;
+    });
+    var fields = { clientId: 'clientId', clientSecret: 'clientSecret', redirectUri: 'redirectUri' };
+    Object.keys(fields).forEach(function (name) {
+      var input = pane.querySelector('[data-cloud="' + name + '"]');
+      if (input) input.setAttribute('placeholder', T(fields[name]));
+    });
+    var redirectInput = pane.querySelector('[data-cloud="redirectUri"]');
+    if (redirectInput && !redirectInput.value) redirectInput.value = redirect;
+    var status = pane.querySelector('[data-cloud="status"]');
+    if (status) status.style.whiteSpace = 'pre-line';
+    if (panelTab) panelTab.querySelector('[data-cloud-text="tab"]').textContent = T('tab');
+  }
+
+  var panelTab = null;
+
   function ensurePanel() {
     if (panel && document.body.contains(panel)) return panel;
     var settingsMenu = document.getElementById('settingsMenu');
@@ -841,57 +983,35 @@
       pane = document.createElement('div');
       pane.className = 'sm-pane';
       pane.setAttribute('data-pane', 'cloud');
-      pane.innerHTML =
-        '<div class="sm-section-cap">' + escapeHtml(T('title')) + '</div>' +
-        '<div class="sm-note" data-cloud="intro"></div>' +
-        '<div class="sm-btns"><button class="sm-btn" data-cloud="mode-folder">' + escapeHtml(T('modeFolder')) + '</button>' +
-        '<button class="sm-btn" data-cloud="mode-google">' + escapeHtml(T('modeGoogle')) + '</button></div>' +
-        '<label class="sm-check"><input type="checkbox" data-cloud="enabled"><span>' + escapeHtml(T('enabled')) + '</span></label>' +
-        '<div data-cloud="section-folder">' +
-        '  <div class="sm-note" data-cloud="folder-hint"></div>' +
-        '  <div class="sm-btns"><button class="sm-btn" data-cloud="choose">' + escapeHtml(T('chooseFolder')) + '</button>' +
-        '  <button class="sm-btn" data-cloud="forget">' + escapeHtml(T('forgetFolder')) + '</button></div>' +
-        '</div>' +
-        '<div data-cloud="section-google">' +
-        '  <div class="sm-note" data-cloud="google-hint"></div>' +
-        '  <label class="sm-check"><input type="checkbox" data-cloud="mirror"><span>' + escapeHtml(T('mirror')) + '</span></label>' +
-        '  <div class="sm-btns"><button class="sm-btn" data-cloud="signin">' + escapeHtml(T('signIn')) + '</button>' +
-        '  <button class="sm-btn" data-cloud="signout">' + escapeHtml(T('signOut')) + '</button></div>' +
-        '  <div class="sm-section-cap">' + escapeHtml(T('advanced')) + '</div>' +
-        '  <input class="sm-input" data-cloud="clientId" placeholder="' + escapeHtml(T('clientId')) + '">' +
-        '  <input class="sm-input" data-cloud="clientSecret" type="password" placeholder="' + escapeHtml(T('clientSecret')) + '">' +
-        '  <input class="sm-input" data-cloud="redirectUri" placeholder="' + escapeHtml(T('redirectUri')) + '">' +
-        '  <div class="sm-btns"><button class="sm-btn" data-cloud="save">' + escapeHtml(T('save')) + '</button></div>' +
-        '  <div class="sm-note" data-cloud="help"></div>' +
-        '</div>' +
-        '<div class="sm-btns"><button class="sm-btn" data-cloud="sync">' + escapeHtml(T('syncNow')) + '</button></div>' +
-        '<div class="sm-note" data-cloud="status"></div>';
-      settingsMenu.appendChild(pane);
+      pane.innerHTML = panelHtml();
 
-      var tabs = settingsMenu.querySelector('.sm-tabs') ||
+      // Panele ustawień runtime'u siedzą w #smBody (przewijanie i filtr
+      // wyszukiwarki działają tylko dla tej zawartości).
+      var body = document.getElementById('smBody');
+      (body || settingsMenu).appendChild(pane);
+
+      var nav = settingsMenu.querySelector('.sm-nav') ||
         (settingsMenu.querySelector('.sm-tab') ? settingsMenu.querySelector('.sm-tab').parentNode : null);
       var tab = document.createElement('button');
+      tab.setAttribute('type', 'button');
       tab.className = 'sm-tab';
       tab.setAttribute('data-pane', 'cloud');
-      tab.textContent = T('tab');
-      if (tabs) tabs.appendChild(tab);
-      tab.addEventListener('click', function () {
-        if (typeof window.smShowPane === 'function') window.smShowPane('cloud');
-      });
+      tab.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 8.6 4.5 4.5 0 0 0 7 18z"/></svg>' +
+        '<span data-cloud-text="tab"></span>';
+      if (nav) nav.appendChild(tab);
+      panelTab = tab;
+      tab.addEventListener('click', function () { showPane('cloud'); });
+
       wirePanel(pane);
+    } else if (!panelTab) {
+      panelTab = settingsMenu.querySelector('.sm-tab[data-pane="cloud"]');
     }
 
     panel = pane;
-    var intro = pane.querySelector('[data-cloud="intro"]');
-    if (intro) intro.textContent = T('intro') + ' ' + T('neverDeletes');
-    var folderHint = pane.querySelector('[data-cloud="folder-hint"]');
-    if (folderHint) folderHint.textContent = T('folderHint');
-    var googleHint = pane.querySelector('[data-cloud="google-hint"]');
-    if (googleHint) googleHint.textContent = T('googleHint');
-    var help = pane.querySelector('[data-cloud="help"]');
-    if (help) help.textContent = T('help');
-    var redirect = pane.querySelector('[data-cloud="redirectUri"]');
-    if (redirect && !redirect.value) redirect.value = 'pl.ursusel.pulsar.android:/oauth2redirect';
+    applyLabels(pane);
+    renderPanelStatus();
     return pane;
   }
 
@@ -899,17 +1019,15 @@
     function find(name) { return pane.querySelector('[data-cloud="' + name + '"]'); }
     function field(name) { var element = find(name); return element ? String(element.value || '').trim() : ''; }
 
+    var mode = find('mode');
+    if (mode) mode.addEventListener('change', function () { setMode(String(mode.value || 'folder')); });
+
     var enabled = find('enabled');
     if (enabled) enabled.addEventListener('change', function () {
       state.enabled = !!enabled.checked;
       saveSettings();
       if (state.enabled) runSync().catch(function () {});
     });
-
-    var folderMode = find('mode-folder');
-    if (folderMode) folderMode.addEventListener('click', function () { setMode('folder'); });
-    var googleMode = find('mode-google');
-    if (googleMode) googleMode.addEventListener('click', function () { setMode('google'); });
 
     var mirror = find('mirror');
     if (mirror) mirror.addEventListener('change', function () {
@@ -968,23 +1086,19 @@
     if (!pane) return;
     var isFolder = state.mode === 'folder';
 
-    var folderSection = pane.querySelector('[data-cloud="section-folder"]');
-    if (folderSection) folderSection.style.display = isFolder ? '' : 'none';
-    var googleSection = pane.querySelector('[data-cloud="section-google"]');
-    if (googleSection) googleSection.style.display = isFolder ? 'none' : '';
+    var folderSection = pane.querySelector('[data-cloud-section="folder"]');
+    if (folderSection) folderSection.classList.toggle('sm-hide', !isFolder);
+    var googleSection = pane.querySelector('[data-cloud-section="google"]');
+    if (googleSection) googleSection.classList.toggle('sm-hide', isFolder);
 
-    var modeFolder = pane.querySelector('[data-cloud="mode-folder"]');
-    if (modeFolder) modeFolder.setAttribute('data-active', isFolder ? '1' : '');
-    var modeGoogle = pane.querySelector('[data-cloud="mode-google"]');
-    if (modeGoogle) modeGoogle.setAttribute('data-active', isFolder ? '' : '1');
+    var modeSelect = pane.querySelector('[data-cloud="mode"]');
+    if (modeSelect && modeSelect.value !== state.mode) modeSelect.value = state.mode;
 
     var box = pane.querySelector('[data-cloud="status"]');
     if (box) {
       var lines = [];
       if (isFolder) {
-        lines.push(state.folderReady
-          ? T('folderChosen') + (state.folderLabel || '')
-          : T('folderMissing'));
+        lines.push(state.folderReady ? T('folderChosen') + (state.folderLabel || '') : T('folderMissing'));
       } else if (!state.googleConfigured) {
         lines.push(T('notConfigured'));
       } else if (!state.googleSignedIn) {
@@ -1048,6 +1162,14 @@
   loadSettings();
   transport = transportFor(state.mode);
 
+  // Runtime nie tłumaczy własnych zakładek, więc po zmianie języka odświeżamy
+  // etykiety sami — niezależnie od tego, czy panel zdążył już powstać.
+  document.addEventListener('pulsar:lang', function () {
+    try { LANG = String(localStorage.getItem('playerLang') || 'pl').slice(0, 2); } catch (error) {}
+    if (panel) applyLabels(panel);
+    renderPanelStatus();
+  });
+
   if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(start, 400);
   else document.addEventListener('DOMContentLoaded', function () { setTimeout(start, 400); });
 
@@ -1055,6 +1177,9 @@
   window.__pulsarDrive = {
     sync: runSync,
     status: refreshStatus,
+    // Wystawione dla testów offline (panel buduje się dopiero po starcie).
+    openPanel: function () { return ensurePanel(); },
+    showPane: showPane,
     setMode: setMode,
     setEnabled: function (flag) { state.enabled = !!flag; saveSettings(); renderPanelStatus(); },
     mode: function () { return state.mode; },
