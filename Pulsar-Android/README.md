@@ -11,7 +11,8 @@ This is a separate Android project; it does not change the Windows or Linux app 
 - Adds Android safe-area handling for settings and dialogs, plus a compact three-row mobile control bar that retains the track text and transport controls.
 - Keeps the karaoke/lyrics panel inside its own scroll area: synchronized lines only scroll that panel, so on phones the cover stays put and the track title, artist and progress bar stay at the bottom of the screen above the control bar.
 - Drops the fullscreen button from the mobile app (fullscreen only duplicated the automatic hiding of the control bar). When the control bar hides by itself, the rest of the player slides down into the freed space: the karaoke panel grows, the middle progress bar fades back in and the track text settles lower, so the free area above the control bar is used instead of staying empty.
-- Adds an Android media-playback foreground service, `MediaSession`, media notification, lock-screen/notification transport controls, and a partial wake lock while audio is playing. Controls are wired back to the existing WebView player; notification permission is requested on first playback where Android requires it. While a track plays, the activity re-resumes the WebView on pause so audio keeps playing in the background and with the screen off, and a suspended Web Audio context is resumed again.
+- Adds an Android media-playback foreground service, `MediaSession`, media notification, lock-screen/notification transport controls, and a partial wake lock while audio is playing. Controls are wired back to the existing WebView player; the notification permission is requested as soon as a track exists, so the notification is already in place before the app leaves the foreground.
+- Background playback is defended in four layers: the WebView renderer is kept at important priority while the app is invisible, the activity re-resumes the WebView when Capacitor pauses it for a playing track, the foreground service holds the media session and wake lock, and `android-bridge.js` watches the audio element in the background and undoes a pause or stall coming from the system (a system pause is told apart from an app or user pause, and retries stop after a few attempts instead of fighting a dead pipeline). A suspended Web Audio context is resumed as well.
 - Extracted web assets are generated locally from `../Pulsar-Linux/resources.neu` into the ignored `www/` folder; do not commit `www/` or unpacked app HTML/JS. The app UI/runtime source remains closed-source.
 
 **Not release-ready yet:** This change has not been built or tested on an Android device because the current workspace has no JDK/Android SDK. YouTube changes its private InnerTube API and player-client rules; the built-in resolver currently accepts direct HTTPS formats and already-signed URLs, but does not implement YouTube's encrypted `s` signature decipher or mint proof-of-origin tokens. It falls through across client profiles and public providers, but some videos or networks may still be blocked. Verify playback and in-app saving against the user's affected videos, downloads with Wi-Fi/mobile data, screen-off playback, notification permission denial, media buttons, seeking, and Android-version compatibility before relying on it. Android still does not export MP3 files to a user-selected device folder, and a native Android mini-player is not implemented.
@@ -31,3 +32,11 @@ npm run android:run
 The Capacitor `android/` project is included in this folder. Use Android Studio to build/run on an emulator or device. After changing the packed runtime, run `npm run android:sync` again to regenerate and copy the web assets.
 
 The build deliberately reads the existing packed runtime instead of checking in unpacked player sources. The generated `www/` tree is disposable and ignored by Git.
+
+## Checks without a device
+
+```bash
+node Pulsar-Android/tools/test_background_watchdog.js
+```
+
+Runs the background-playback guard from `android-bridge.js` against a simulated WebView and media element (eight scenarios: system pause, notification pause, in-app pause, healthy background playback, frozen pipeline, retry limit, re-arm on resume, notification permission). Useful when no Android device is at hand.

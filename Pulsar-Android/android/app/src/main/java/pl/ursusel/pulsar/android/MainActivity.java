@@ -1,5 +1,6 @@
 package pl.ursusel.pulsar.android;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebView;
 import com.getcapacitor.Bridge;
@@ -10,6 +11,26 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(PulsarMediaPlugin.class);
         super.onCreate(savedInstanceState);
+        applyBackgroundPlaybackPolicy();
+    }
+
+    /**
+     * Keeps the WebView renderer important even while the app is not visible.
+     * Without this Android/Chromium is free to deprioritise or suspend the
+     * renderer as soon as the activity leaves the foreground, which stops the
+     * JavaScript playback loop and with it the music.
+     */
+    private void applyBackgroundPlaybackPolicy() {
+        WebView webView = currentWebView();
+        if (webView == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
+        }
+    }
+
+    private WebView currentWebView() {
+        Bridge bridge = getBridge();
+        return bridge == null ? null : bridge.getWebView();
     }
 
     /**
@@ -23,9 +44,8 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         super.onPause();
         if (!PulsarPlaybackService.isPlaying()) return;
-        Bridge bridge = getBridge();
-        if (bridge == null) return;
-        WebView webView = bridge.getWebView();
+        applyBackgroundPlaybackPolicy();
+        WebView webView = currentWebView();
         if (webView == null) return;
         webView.onResume();
         webView.resumeTimers();

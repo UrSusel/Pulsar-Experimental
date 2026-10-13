@@ -107,6 +107,12 @@
     var lastTrackId = null;
     var permissionAsked = false;
     var observedAudioContext = null;
+    var watchdogTimer = null;
+    var watchdogAttempts = 0;
+    var expectedPlaying = false;
+    var userPausedIntent = false;
+    var lastProgressAt = 0;
+    var lastTrackKey = '';
 
     function syncMediaState(force) {
       var state;
@@ -127,6 +133,12 @@
         Math.floor(duration), Math.floor(position / 5)
       ].join('|');
       lastTrackId = state.title || state.artist || 'current-track';
+      var key = (state.title || '') + '|' + (state.artist || '');
+      if (key !== lastTrackKey) {
+        lastTrackKey = key;
+        expectedPlaying = false;
+        clearBackgroundWatchdog();
+      }
       if (!force && signature === lastSignature) return;
       lastSignature = signature;
 
@@ -142,7 +154,10 @@
         if (update && typeof update.catch === 'function') update.catch(function () {});
       } catch (error) {}
 
-      if (state.playing && !permissionAsked && typeof plugin.requestNotificationPermission === 'function') {
+      if (!permissionAsked && typeof plugin.requestNotificationPermission === 'function') {
+        // Ask as soon as a track exists, not only while playing: the media
+        // notification must already be in place when the app goes to the
+        // background, otherwise Android can stop the app and with it the audio.
         permissionAsked = true;
         try {
           var permission = plugin.requestNotificationPermission();
@@ -176,8 +191,95 @@
       syncMediaState(true);
     }
 
+    function clearBackgroundWatchdog() {
+      if (watchdogTimer !== null) {
+        window.clearInterval(watchdogTimer);
+        watchdogTimer = null;
+      }
+      watchdogAttempts = 0;
+    }
+
+    // The app itself (buttons, sleep timer, track change, error handling) calls
+    // pause() through JS. A pause coming from Android/WebView never goes through
+    // this method, so this flag tells the two apart and keeps the watchdog from
+    // restarting playback the user or the app asked to stop.
+    var nativePause = audio.pause;
+    var appPauseIntent = false;
+    if (typeof nativePause === 'function') {
+      audio.pause = function () {
+        appPauseIntent = true;
+        // The app asked for this (button, sleep timer, track change, error):
+        // disarm the watchdog immediately, otherwise an already armed one would
+        // start the track again.
+        expectedPlaying = false;
+        clearBackgroundWatchdog();
+        try { return nativePause.apply(audio, arguments); } catch (error) { return undefined; }
+      };
+    }
+
+    function markPlaybackAlive() {
+      if (audio.paused) return;
+      expectedPlaying = true;
+      userPausedIntent = false;
+      // Only real playback events (playing/timeupdate) mark progress. The
+      // watchdog must never refresh this on its own: a nudge that did not help
+      // has to keep looking like a stall, otherwise the retry counter would be
+      // reset forever and the app would fight a dead pipeline endlessly.
+      lastProgressAt = Date.now();
+      watchdogAttempts = 0;
+      if (!document.hidden) clearBackgroundWatchdog();
+    }
+
+    /**
+     * Android may pause or stall the page while the app is in the background
+     * (screen off, audio focus change, WebView throttling). The track should
+     * keep playing there, so give the media pipeline a nudge back instead of
+     * letting playback end silently.
+     */
+    function startBackgroundWatchdog() {
+      if (watchdogTimer !== null) return;
+      if (userPausedIntent || !expectedPlaying) return;
+      if (!lastProgressAt) lastProgressAt = Date.now();
+      watchdogTimer = window.setInterval(function () {
+        if (!document.hidden || userPausedIntent || !expectedPlaying) {
+          clearBackgroundWatchdog();
+          return;
+        }
+        resumeWebAudioIfPlaying();
+        if (!audio.paused && Date.now() - lastProgressAt < 4000) {
+          watchdogAttempts = 0; // playback is running: keep watching, do not act
+          return;
+        }
+        watchdogAttempts++;
+        if (watchdogAttempts > 6) { // roughly 12 s of trying: stop instead of fighting forever
+          clearBackgroundWatchdog();
+          return;
+        }
+        try {
+          // A tiny seek is what actually re-attaches a stalled WebView media
+          // pipeline; play() alone does nothing when it is stuck.
+          if (!audio.paused && audio.currentTime > 0.3) audio.currentTime = audio.currentTime - 0.2;
+          var playback = audio.play();
+          if (playback && typeof playback.catch === 'function') playback.catch(function () {});
+        } catch (error) {}
+      }, 2000);
+    }
+
+    function noteMediaIntent(action) {
+      if (action === 'play' || action === 'toggle' || action === 'next' || action === 'previous' || action === 'seekTo') {
+        userPausedIntent = false;
+        return;
+      }
+      if (action === 'pause') {
+        userPausedIntent = true;
+        expectedPlaying = false;
+        clearBackgroundWatchdog();
+      }
+    }
+
     function handleMediaAction(event) {
       var action = event && event.action;
+      noteMediaIntent(action);
       try {
         if (action === 'play' && audio.paused) host.toggle();
         else if (action === 'pause' && !audio.paused) host.toggle();
@@ -202,19 +304,51 @@
       } catch (error) {}
     }
 
-    audio.addEventListener('play', function () { syncMediaState(true); });
-    audio.addEventListener('pause', function () { syncMediaState(true); });
+    audio.addEventListener('play', function () {
+      appPauseIntent = false;
+      // Playback was requested: from here on the track is meant to be running,
+      // so keep an eye on it even if this was a notification press that lands
+      // while the page is in the background.
+      expectedPlaying = true;
+      if (document.hidden && !userPausedIntent) startBackgroundWatchdog();
+      syncMediaState(true);
+    });
+    audio.addEventListener('playing', function () { appPauseIntent = false; markPlaybackAlive(); resumeWebAudioIfPlaying(); syncMediaState(true); });
+    audio.addEventListener('pause', function () {
+      var fromApp = appPauseIntent;
+      appPauseIntent = false;
+      syncMediaState(true);
+      if (fromApp) return;
+      if (document.hidden && !userPausedIntent && expectedPlaying) startBackgroundWatchdog();
+    });
+    audio.addEventListener('stalled', function () { if (document.hidden) startBackgroundWatchdog(); });
+    audio.addEventListener('waiting', function () { if (document.hidden) startBackgroundWatchdog(); });
     audio.addEventListener('loadedmetadata', function () { syncMediaState(true); });
     audio.addEventListener('durationchange', function () { syncMediaState(true); });
     audio.addEventListener('seeked', function () { syncMediaState(true); });
-    audio.addEventListener('ended', function () { syncMediaState(true); });
-    audio.addEventListener('error', function () { syncMediaState(true); });
-    audio.addEventListener('playing', resumeWebAudioIfPlaying);
-    audio.addEventListener('timeupdate', function () { syncMediaState(false); });
+    audio.addEventListener('ended', function () {
+      expectedPlaying = false;
+      clearBackgroundWatchdog();
+      syncMediaState(true);
+    });
+    audio.addEventListener('error', function () {
+      expectedPlaying = false;
+      clearBackgroundWatchdog();
+      syncMediaState(true);
+    });
+    audio.addEventListener('timeupdate', function () {
+      markPlaybackAlive();
+      syncMediaState(false);
+    });
     document.addEventListener('pulsar:state', function () { syncMediaState(true); });
     document.addEventListener('visibilitychange', function () {
       resumeWebAudioIfPlaying();
-      if (!document.hidden) syncMediaState(true);
+      if (document.hidden) {
+        if (expectedPlaying && !userPausedIntent) startBackgroundWatchdog();
+      } else {
+        clearBackgroundWatchdog();
+        syncMediaState(true);
+      }
     });
     document.addEventListener('resume', handleAppResume);
     window.addEventListener('pageshow', handleAppResume);
