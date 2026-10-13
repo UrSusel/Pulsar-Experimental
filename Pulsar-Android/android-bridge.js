@@ -19,6 +19,31 @@
     'html.pulsar-android body { min-width: 0; overflow-x: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }',
     'html.pulsar-android { --barh: 96px; }',
     'html.pulsar-android .player { padding: max(20px, calc(var(--barh) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 68px)) max(12px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) calc(var(--barh) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 12px) max(12px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); }',
+    // Karaoke text stays inside its own panel: the panel is the only scroll
+    // container, so a new line can never push the cover, title, artist or the
+    // progress bar around (previously the whole player scrolled with it).
+    'html.pulsar-android body.lyrics-side .lyrics-box { overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }',
+    'html.pulsar-android body.lyrics-side .cover-wrap, html.pulsar-android body.lyrics-side .center-seek-row, html.pulsar-android body.lyrics-side .track-title, html.pulsar-android body.lyrics-side .track-artist { left: 0 !important; }',
+    // Phones/tablets in portrait: the lyrics panel sits in the normal column
+    // between the cover and the track text; the cover shrinks so everything
+    // (cover, lyrics, title, artist, bar) always fits the screen without
+    // scrolling the player itself.
+    '@media (max-width: 900px) {',
+    '  html.pulsar-android body.lyrics-side .player { height: 100dvh; max-height: 100dvh; overflow: hidden; padding-top: max(12px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); }',
+    '  html.pulsar-android body.lyrics-side .cover-wrap { flex: 0 0 auto; width: max(120px, min(70vw, 380px, 34vh, calc(66vh - 300px))); height: max(120px, min(70vw, 380px, 34vh, calc(66vh - 300px))); }',
+    '  html.pulsar-android body.lyrics-side .lyrics-box { position: static; inset: auto; flex: 1 1 auto; min-height: 56px; width: min(94vw, 620px); max-height: 26vh; margin: 8px auto 6px; padding: 6px 8px; }',
+    '  html.pulsar-android body.lyrics-side .center-seek-row { flex: 0 0 auto; margin-top: 8px; }',
+    '  html.pulsar-android body.lyrics-side .track-title, html.pulsar-android body.lyrics-side .track-artist { flex: 0 0 auto; }',
+    '  html.pulsar-android body.lyrics-side .empty-hint { display: none; }',
+    '  html.pulsar-android body.fullscreen-mode.lyrics-side .cover-wrap { width: max(120px, min(70vw, 46vh)); height: max(120px, min(70vw, 46vh)); }',
+    '  html.pulsar-android body.fullscreen-mode.lyrics-side .lyrics-box { max-height: 30vh; }',
+    '}',
+    // Wide screens keep the side-by-side column, but narrower so it can never
+    // reach the cover, and without shifting the rest of the player off-screen.
+    '@media (min-width: 901px) {',
+    '  html.pulsar-android body.lyrics-side .lyrics-box { position: fixed; left: max(12px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); right: auto; top: 50%; bottom: auto; width: min(26vw, 360px); max-height: 76vh; margin: 0; padding: 12px 10px; transform: translateY(-50%); z-index: 8; }',
+    '  html.pulsar-android body.fullscreen-mode.lyrics-side .lyrics-box { width: min(26vw, 380px); max-height: 80vh; }',
+    '}',
     'html.pulsar-android .library-panel { top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px)); height: calc(100% - var(--barh) - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); }',
     'html.pulsar-android .settings-menu { padding: max(8px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) max(8px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) max(8px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) max(8px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); }',
     'html.pulsar-android .sm-dialog { max-width: 100%; max-height: 100%; border-radius: 16px; }',
@@ -71,6 +96,7 @@
     var lastSignature = '';
     var lastTrackId = null;
     var permissionAsked = false;
+    var observedAudioContext = null;
 
     function syncMediaState(force) {
       var state;
@@ -115,6 +141,31 @@
       }
     }
 
+    function resumeWebAudioIfPlaying() {
+      if (audio.paused || typeof host.audioTap !== 'function') return;
+      try {
+        var tap = host.audioTap();
+        var context = tap && tap.ctx;
+        if (!context || context.state === 'closed') return;
+        if (context !== observedAudioContext) {
+          observedAudioContext = context;
+          context.addEventListener('statechange', function () {
+            if (document.hidden && !audio.paused && context.state !== 'running' && context.state !== 'closed') {
+              resumeWebAudioIfPlaying();
+            }
+          });
+        }
+        if (context.state === 'running') return;
+        var resumed = context.resume();
+        if (resumed && typeof resumed.catch === 'function') resumed.catch(function () {});
+      } catch (error) {}
+    }
+
+    function handleAppResume() {
+      resumeWebAudioIfPlaying();
+      syncMediaState(true);
+    }
+
     function handleMediaAction(event) {
       var action = event && event.action;
       try {
@@ -148,11 +199,16 @@
     audio.addEventListener('seeked', function () { syncMediaState(true); });
     audio.addEventListener('ended', function () { syncMediaState(true); });
     audio.addEventListener('error', function () { syncMediaState(true); });
+    audio.addEventListener('playing', resumeWebAudioIfPlaying);
     audio.addEventListener('timeupdate', function () { syncMediaState(false); });
     document.addEventListener('pulsar:state', function () { syncMediaState(true); });
     document.addEventListener('visibilitychange', function () {
+      resumeWebAudioIfPlaying();
       if (!document.hidden) syncMediaState(true);
     });
+    document.addEventListener('resume', handleAppResume);
+    window.addEventListener('pageshow', handleAppResume);
+    window.addEventListener('focus', handleAppResume);
     syncMediaState(true);
   }
 

@@ -42,6 +42,15 @@ public class PulsarPlaybackService extends Service {
         | PlaybackState.ACTION_SKIP_TO_PREVIOUS
         | PlaybackState.ACTION_SEEK_TO;
 
+    // The activity asks this before it lets Capacitor pause the WebView: while a
+    // track is playing the WebView must stay resumed, otherwise audio stops as
+    // soon as the app goes to the background or the screen turns off.
+    private static volatile boolean playingTrack = false;
+
+    public static boolean isPlaying() {
+        return playingTrack;
+    }
+
     private NotificationManager notificationManager;
     private MediaSession mediaSession;
     private PowerManager.WakeLock playbackWakeLock;
@@ -142,6 +151,7 @@ public class PulsarPlaybackService extends Service {
     private void refreshSessionAndNotification() {
         if (!hasTrack || mediaSession == null) return;
 
+        playingTrack = playing;
         updateWakeLock();
         String displayTitle = title.isEmpty() ? "Pulsar" : title;
         MediaMetadata metadata = new MediaMetadata.Builder()
@@ -162,12 +172,23 @@ public class PulsarPlaybackService extends Service {
 
         Notification notification = buildNotification(displayTitle);
         if (playing) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-            } else {
-                startForeground(NOTIFICATION_ID, notification);
+            boolean promoted = false;
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+                } else {
+                    startForeground(NOTIFICATION_ID, notification);
+                }
+                promoted = true;
+            } catch (RuntimeException ignored) {
+                // Some Android versions refuse a media playback foreground
+                // service (for example when notifications are blocked). Fall
+                // back to a plain notification so the media session, the wake
+                // lock and WebView playback keep working.
+                promoted = false;
             }
-            foreground = true;
+            foreground = promoted;
+            if (!promoted) notificationManager.notify(NOTIFICATION_ID, notification);
         } else {
             notificationManager.notify(NOTIFICATION_ID, notification);
             if (foreground) {
@@ -246,6 +267,7 @@ public class PulsarPlaybackService extends Service {
     private void clearPlaybackAndStop() {
         hasTrack = false;
         playing = false;
+        playingTrack = false;
         updateWakeLock();
         if (mediaSession != null) {
             mediaSession.setActive(false);
@@ -274,6 +296,7 @@ public class PulsarPlaybackService extends Service {
     @Override
     public void onDestroy() {
         playing = false;
+        playingTrack = false;
         updateWakeLock();
         if (playbackWakeLock != null && playbackWakeLock.isHeld()) playbackWakeLock.release();
         if (mediaSession != null) {

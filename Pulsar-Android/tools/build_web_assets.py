@@ -120,6 +120,24 @@ def build(archive: Path, out_dir: Path, bridge: Path) -> None:
             raise ValueError(f"expected exactly one MediaSession source fragment: {old[:100]!r}")
         html = html.replace(old, new, 1)
 
+    # Keep synchronized lyric scrolling inside the lyrics panel on Android.
+    # Element.scrollIntoView can also scroll the page/player ancestors, so the
+    # Android copy centers each active line by changing only lyricsBox.scrollTop.
+    lyrics_scroll_source = "if (typeof el.scrollIntoView === 'function'){ try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch(e){} }"
+    lyrics_scroll_android = (
+        "if (window.__pulsarAndroid){ try { "
+        "var boxRect = lyricsBox.getBoundingClientRect(); "
+        "var lineRect = el.getBoundingClientRect(); "
+        "var targetTop = lyricsBox.scrollTop + lineRect.top - boxRect.top - (lyricsBox.clientHeight - lineRect.height) / 2; "
+        "targetTop = Math.max(0, Math.min(targetTop, lyricsBox.scrollHeight - lyricsBox.clientHeight)); "
+        "if (typeof lyricsBox.scrollTo === 'function') lyricsBox.scrollTo({ top: targetTop, behavior: 'smooth' }); "
+        "else lyricsBox.scrollTop = targetTop; "
+        "} catch(e){} } else if (typeof el.scrollIntoView === 'function'){ try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch(e){} }"
+    )
+    if html.count(lyrics_scroll_source) != 1:
+        raise ValueError("expected exactly one synchronized lyrics scroll source fragment")
+    html = html.replace(lyrics_scroll_source, lyrics_scroll_android, 1)
+
     # The Android build exposes the existing network-library view but cannot
     # reach the desktop-only yt-dlp bridge on loopback. Skip that probe and use
     # the runtime's public search/stream fallbacks instead.
