@@ -1176,31 +1176,66 @@ async function checkRuntimeHooks() {
       unconfirmed.pc.api.state().lastError);
   }
 
-  { // 38. utwór z dysku innego urządzenia nie udaje, że da się go pobrać
+  { // 38. utwór z dysku innego urządzenia pobiera się tutaj z YouTube po tytule i autorze
     const shared = { files: new Map(), dirs: new Set() };
     const phone = makeEnv({
       desktop: true, fs: shared, withPanel: true,
       tracks: [track({ netId: '', size: 4096, hash: 'abc123', title: 'Plik z telefonu', artist: 'Ktoś' })],
     });
     const phonePane = phone.api.openPanel();
+    phonePane.querySelector('[data-cloud="auto"]').change(false);
     phonePane.querySelector('[data-cloud="choose"]').click();
     await wait(40);
     phone.api.setEnabled(true);
     await phone.api.sync();
 
+    const net = makeNet({
+      results: [
+        // Inny serwis podaje ten sam tytuł — z niego nie ściągamy, tylko z YouTube.
+        { provider: 'itunes', id: 'ITUNESONLY1', title: 'Plik z telefonu', artist: 'Ktoś', stream: 'https://example.invalid/a.m4a' },
+        { provider: 'youtube', id: 'YTMATCH00001', ytId: 'YTMATCH00001', title: 'Plik z telefonu (Official Audio)', artist: 'Ktoś - Topic', ytStream: true },
+      ],
+    });
     const pc = makeEnv({ desktop: true, fs: shared, tracks: [track({})], withPanel: true });
     const pane = pc.api.openPanel();
+    pane.querySelector('[data-cloud="auto"]').change(false);
     pane.querySelector('[data-cloud="choose"]').click();
     await wait(40);
     pc.api.setEnabled(true);
+    pc.sandbox.window.__player = { __net: net };
     await pc.api.sync();
 
     const card = pane.querySelector('[data-cloud-section="cloudOnly"]');
     check('a file from another device is listed too', card.textContent.includes('Plik z telefonu'),
       card.textContent.replace(/\s+/g, ' ').slice(0, 90));
-    check('no download button for a file that only exists on the phone',
-      card.querySelectorAll('[data-cloud-download]').length === 0);
-    check('the panel says why it cannot be downloaded', /nie da się go pobrać|another device/i.test(card.textContent));
+    const button = card.querySelector('[data-cloud-download]');
+    check('a file from another device gets a download button', !!button && button.getAttribute('data-cloud-download') === 'fp:4096:abc123',
+      button ? button.getAttribute('data-cloud-download') : 'brak przycisku');
+    check('the button says it comes from YouTube', /z YouTube/i.test(button ? button.textContent : ''),
+      button ? button.textContent : '');
+    check('the row says it will be looked up by title and artist',
+      /tytule i autorze/i.test(card.textContent), card.textContent.replace(/\s+/g, ' ').slice(0, 120));
+
+    // Klik: szukanie po tytule i autorze, wybór wyniku z YouTube i zapis.
+    net.importIdx = function (index) {
+      net.calls.push(['import', index]);
+      pc.library.state.tracks.push(track({ netId: 'youtube:YTMATCH00001', title: 'Plik z telefonu', artist: 'Ktoś' }));
+      return Promise.resolve();
+    };
+    button.click();
+    await wait(700);
+    check('the download searches YouTube by title and artist',
+      net.calls.some((call) => call[0] === 'search' && call[1] === 'Ktoś Plik z telefonu'), JSON.stringify(net.calls));
+    check('only a YouTube result is imported',
+      net.calls.some((call) => call[0] === 'import' && call[1] === 1), JSON.stringify(net.calls));
+    check('the entry is remembered as downloaded here',
+      !!pc.api.derived()['fp:4096:abc123'] && pc.api.derived()['fp:4096:abc123'].key === 'youtube:YTMATCH00001',
+      JSON.stringify(pc.api.derived()));
+    check('and it leaves the cloud-only list',
+      !pc.api.cloudOnly().some((entry) => entry.key === 'fp:4096:abc123'),
+      JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+    check('the panel confirms the download', pc.toasts.some((text) => /Pobrano|Downloaded/i.test(text)),
+      JSON.stringify(pc.toasts.map((text) => text.slice(0, 40))));
   }
 
   { // 39. panel mówi, co jest w pliku w chmurze i kto go ostatnio zapisał
@@ -1887,6 +1922,125 @@ async function checkRuntimeHooks() {
     check('the cloud styles are attached exactly once',
       styles.length === 1 && /overflow-scrolling: touch/.test(styles[0].textContent),
       String(styles.length));
+  }
+
+  { // 60. automat ściąga z YouTube także pliki z komputera — po tytule i autorze
+    const shared = { files: new Map(), dirs: new Set() };
+    const author = makeEnv({
+      desktop: true, fs: shared, withPanel: true,
+      tracks: [track({ netId: '', size: 2048, hash: 'beef01', title: 'Z komputera', artist: 'Ktoś Inny' })],
+    });
+    const authorPane = author.api.openPanel();
+    authorPane.querySelector('[data-cloud="auto"]').change(false);
+    authorPane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    author.api.setEnabled(true);
+    await author.api.sync();
+
+    const net = makeNet({
+      results: [{ provider: 'youtube', id: 'AUTOSEARCH01', ytId: 'AUTOSEARCH01', title: 'Z komputera', artist: 'Ktoś Inny', ytStream: true }],
+    });
+    const other = makeEnv({
+      desktop: true, fs: shared, withPanel: true,
+      tracks: [track({ netId: 'youtube:BASE0000001', title: 'Baza', artist: 'X' })],
+    });
+    const pane = other.api.openPanel();
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    other.api.setEnabled(true);
+    net.importIdx = function (index) {
+      net.calls.push(['import', index]);
+      other.library.state.tracks.push(track({ netId: 'youtube:AUTOSEARCH01', title: 'Z komputera', artist: 'Ktoś Inny' }));
+      return Promise.resolve();
+    };
+    other.sandbox.window.__player = { __net: net };
+
+    await other.api.sync();
+    await wait(1200);
+    check('the automatic download looks up a file that has no YouTube id',
+      net.calls.some((call) => call[0] === 'search' && call[1] === 'Ktoś Inny Z komputera'), JSON.stringify(net.calls));
+    check('and imports what YouTube returned',
+      net.calls.some((call) => call[0] === 'import' && call[1] === 0), JSON.stringify(net.calls));
+    check('the panel remembers the file as downloaded here',
+      !!other.api.derived()['fp:2048:beef01'], JSON.stringify(other.api.derived()));
+    check('the last automatic download is reported as successful',
+      !!other.api.autoLast() && other.api.autoLast().ok === true && /Z komputera/.test(other.api.autoLast().title || ''),
+      JSON.stringify(other.api.autoLast()));
+    check('nothing waits to be downloaded any more',
+      !other.api.cloudOnly().some((entry) => entry.key === 'fp:2048:beef01'),
+      JSON.stringify(other.api.cloudOnly().map((entry) => entry.key)));
+  }
+
+  { // 61. wpis bez tytułu nie ma czego szukać — panel mówi to wprost
+    const shared = { files: new Map(), dirs: new Set() };
+    const phone = makeEnv({
+      desktop: true, fs: shared, withPanel: true,
+      tracks: [track({ netId: '', size: 777, hash: 'noname1', title: '', artist: '' })],
+    });
+    const phonePane = phone.api.openPanel();
+    phonePane.querySelector('[data-cloud="auto"]').change(false);
+    phonePane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    phone.api.setEnabled(true);
+    await phone.api.sync();
+
+    const pc = makeEnv({ desktop: true, fs: shared, tracks: [track({})], withPanel: true });
+    const pane = pc.api.openPanel();
+    pane.querySelector('[data-cloud="auto"]').change(false);
+    pane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    pc.api.setEnabled(true);
+    await pc.api.sync();
+
+    const card = pane.querySelector('[data-cloud-section="cloudOnly"]');
+    check('an entry with no title is listed', pc.api.cloudOnly().length === 1,
+      JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+    check('but it gets no download button', card.querySelectorAll('[data-cloud-download]').length === 0);
+    check('the panel says there is nothing to look up',
+      /nie ma po czym szukać|nothing to look up/i.test(card.textContent),
+      card.textContent.replace(/\s+/g, ' ').slice(0, 120));
+  }
+
+  { // 62. ta sama piosenka pod dwoma kluczami nie ściąga się drugi raz
+    const shared = { files: new Map(), dirs: new Set() };
+    // Komputer ma plik z dysku; telefon ma tę samą piosenkę pobraną z YouTube.
+    const pc = makeEnv({
+      desktop: true, fs: shared, withPanel: true,
+      tracks: [track({ netId: '', size: 4096, hash: 'giants01', title: 'Giants', artist: 'Imagine Dragons' })],
+    });
+    const pcPane = pc.api.openPanel();
+    pcPane.querySelector('[data-cloud="auto"]').change(false);
+    pcPane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    pc.api.setEnabled(true);
+    await pc.api.sync();
+
+    const phone = makeEnv({
+      desktop: true, fs: shared, withPanel: true,
+      tracks: [track({ netId: 'youtube:COPY0000001', title: 'Giants', artist: 'Imagine Dragons' })],
+    });
+    const phonePane = phone.api.openPanel();
+    phonePane.querySelector('[data-cloud="auto"]').change(false);
+    phonePane.querySelector('[data-cloud="choose"]').click();
+    await wait(40);
+    phone.api.setEnabled(true);
+    await phone.api.sync();
+    await phone.api.sync();
+    await pc.api.sync();
+
+    check('the cloud really carries both entries before filtering',
+      pc.api.cloudMeta().tracks === 2 && phone.api.cloudMeta().tracks === 2,
+      String(pc.api.cloudMeta().tracks) + ' / ' + String(phone.api.cloudMeta().tracks));
+    check('the computer does not offer to fetch a song it already has as a file',
+      !pc.api.cloudOnly().some((entry) => entry.key === 'youtube:COPY0000001'),
+      JSON.stringify(pc.api.cloudOnly().map((entry) => entry.key)));
+    check('the phone does not offer to fetch the computer file of the song it already has',
+      !phone.api.cloudOnly().some((entry) => entry.key === 'fp:4096:giants01'),
+      JSON.stringify(phone.api.cloudOnly().map((entry) => entry.key)));
+    check('both libraries still hold both entries',
+      pc.api.state().enabled === true && typeof pc.api._pure.namePair === 'function' &&
+        pc.api._pure.namePair({ title: 'Giants (Remastered)', artist: 'Imagine Dragons' }) === 'giants|imagine dragons',
+      String(pc.api._pure.namePair({ title: 'Giants (Remastered)', artist: 'Imagine Dragons' })));
   }
 
   await checkRuntimeHooks();

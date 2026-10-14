@@ -83,13 +83,16 @@
       sent: 'Wysłane: ', received: 'Odebrane: ', inCloud: 'Tylko w chmurze: ',
       inCloudHint: ' — z innego urządzenia, możesz je pobrać niżej',
       cloudOnlyCap: 'Utwory tylko w chmurze',
-      cloudOnlyHint: 'Są już w bibliotece na innym urządzeniu. Pliki audio nie podróżują przez chmurę — utwory z YouTube możesz pobrać tutaj jednym kliknięciem.',
+      cloudOnlyHint: 'Są już w bibliotece na innym urządzeniu. Pliki audio nie podróżują przez chmurę — pobiorę je tutaj z YouTube: utwory z YouTube po identyfikatorze, a zwykłe pliki z komputera po tytule i autorze.',
       cloudOnlyMore: '…i jeszcze ', cloudOnlyMoreTail: ' w chmurze',
       downloadHere: 'Pobierz tutaj', downloading: 'Pobieram: ',
       downloaded: 'Pobrano — zaraz zsynchronizuję bibliotekę.',
       downloadNoResult: 'YouTube nie zwrócił tego utworu — nic nie pobrano.',
       downloadNoApi: 'Ta kompilacja nie ma wyszukiwarki sieciowej (__player.__net) — pobierz ten utwór ręcznie w zakładce Sieć.',
-      downloadFileOnly: 'To plik z innego urządzenia — dźwięk nie jedzie przez chmurę, więc nie da się go pobrać tutaj.',
+      downloadFromYoutube: 'Pobierz z YouTube',
+      searchByNameHint: 'plik z innego urządzenia — szukam go na YouTube po tytule i autorze',
+      searchingByTitle: ' — szukam na YouTube po tytule i autorze',
+      downloadNoTitle: 'Ten wpis nie ma tytułu, więc nie ma po czym szukać go na YouTube.',
       downloadUnconfirmed: 'Import nie potwierdził się w bibliotece — sprawdź zakładkę Sieć.',
       downloadOff: 'Wyszukiwanie w sieci jest w tej chwili wyłączone — włącz je w zakładce Sieć.',
       cloudFileInfo: 'Pliki w chmurze: ', ownFileLabel: 'Twój plik: ',
@@ -99,8 +102,8 @@
       newFromCloudHint: ' — w Ustawieniach → Chmura możesz je pobrać na tym urządzeniu.',
       devicesInFile: 'Urządzenia w pliku: ',
       fileChanged: ' · plik zmieniony ',
-      autoLab: 'Pobieraj automatycznie utwory z YouTube z innego urządzenia',
-      autoDesc: 'Nowy utwór z YouTube z drugiego urządzenia ściąga się tu sam, po kilka na raz.',
+      autoLab: 'Pobieraj automatycznie utwory z innego urządzenia (z YouTube)',
+      autoDesc: 'Utwory z drugiego urządzenia ściągają się tu same z YouTube — te z YouTube po identyfikatorze, a pliki z komputera po tytule i autorze — po kilka na raz.',
       autoDescMetered: 'Ten sam mechanizm na telefonie jest domyślnie wyłączony, żeby nie zużywał danych z sieci komórkowej. Możesz go tu włączyć.',
       autoOn: 'Automatyczne pobieranie włączone.', autoOff: 'Automatyczne pobieranie wyłączone.',
       autoStateOn: 'Automatyczne pobieranie: włączone', autoWaiting: ' · czeka na pobranie: ',
@@ -111,7 +114,7 @@
       filesSeen: 'Widzę pliki: ', filesNone: 'nie widzę w folderze żadnego pliku biblioteki',
       onlyOwnFile: 'W folderze widzę na razie tylko własny plik — Dysk pokazuje pliki z drugiego urządzenia z opóźnieniem. Otwórz folder w aplikacji Dysk Google (to odświeży listę) i kliknij „Odśwież listę plików”.',
       downloadAll: 'Pobierz wszystkie tutaj',
-      downloadAllHint: 'Te utwory są już w bibliotece na innym urządzeniu — możesz ściągnąć je tutaj po kolei, jednym kliknięciem.',
+      downloadAllHint: 'Te utwory są już w bibliotece na innym urządzeniu — ściągnę je tutaj z YouTube po kolei, jednym kliknięciem: utwory z YouTube po identyfikatorze, a pliki z komputera po tytule i autorze.',
       downloadNothing: 'Nie ma teraz czego pobierać z YouTube.',
       autoDownloading: 'Automatycznie pobieram: ',
       writeBackWarning: 'Uwaga: po zapisie nie widzę swoich danych w pliku — sprawdź, czy oba urządzenia wskazują ten sam folder w tej samej chmurze.',
@@ -167,13 +170,16 @@
       sent: 'Sent: ', received: 'Received: ', inCloud: 'Cloud only: ',
       inCloudHint: ' — from another device; you can download them below',
       cloudOnlyCap: 'Tracks only in the cloud',
-      cloudOnlyHint: 'They are already in the library on another device. Audio files never travel through the cloud — YouTube tracks can be downloaded here with one click.',
+      cloudOnlyHint: 'They are already in the library on another device. Audio never travels through the cloud — I will fetch them here from YouTube: YouTube tracks by id, plain files from the computer by title and artist.',
       cloudOnlyMore: '…and ', cloudOnlyMoreTail: ' more in the cloud',
       downloadHere: 'Download here', downloading: 'Downloading: ',
       downloaded: 'Downloaded — syncing the library in a moment.',
       downloadNoResult: 'YouTube did not return this track — nothing was downloaded.',
       downloadNoApi: 'This build has no network search (__player.__net) — download this track by hand in the Network tab.',
-      downloadFileOnly: 'This file lives on another device — its audio never travels through the cloud, so it cannot be downloaded here.',
+      downloadFromYoutube: 'Download from YouTube',
+      searchByNameHint: 'a file from another device — I will look it up on YouTube by title and artist',
+      searchingByTitle: ' — looking it up on YouTube by title and artist',
+      downloadNoTitle: 'This entry has no title, so there is nothing to look up on YouTube.',
       downloadUnconfirmed: 'The import was not confirmed in the library — check the Network tab.',
       downloadOff: 'Network search is switched off right now — switch it on in the Network tab.',
       cloudFileInfo: 'Cloud files: ', ownFileLabel: 'Your file: ',
@@ -183,8 +189,8 @@
       newFromCloudHint: ' — open Settings → Cloud to download them on this device.',
       devicesInFile: 'Devices in the file: ',
       fileChanged: ' · file changed ',
-      autoLab: 'Download YouTube tracks from another device automatically',
-      autoDesc: 'A YouTube track added on the other device is fetched here on its own, a few at a time.',
+      autoLab: 'Download tracks from another device automatically (from YouTube)',
+      autoDesc: 'Tracks from the other device are fetched here on their own from YouTube — YouTube tracks by id, files from the computer by title and artist — a few at a time.',
       autoDescMetered: 'The same mechanism stays off by default on a phone so it does not use mobile data. You can switch it on here.',
       autoOn: 'Automatic download on.', autoOff: 'Automatic download off.',
       autoStateOn: 'Automatic download: on', autoWaiting: ' · waiting: ',
@@ -195,7 +201,7 @@
       filesSeen: 'Files I can see: ', filesNone: 'no library file visible in the folder',
       onlyOwnFile: 'I can only see my own file in the folder — Drive shows files from another device with a delay. Open the folder in the Google Drive app (that refreshes the listing) and click “Refresh file list”.',
       downloadAll: 'Download all here',
-      downloadAllHint: 'These tracks are already in the library on another device — you can fetch them all here, one after another, in a single click.',
+      downloadAllHint: 'These tracks are already in the library on another device — I will fetch them here from YouTube one by one, in one click: YouTube tracks by id, files from the computer by title and artist.',
       downloadNothing: 'There is nothing to download from YouTube right now.',
       autoDownloading: 'Downloading automatically: ',
       writeBackWarning: 'Warning: after writing I cannot see my own data in the file — check that both devices point at the same folder in the same cloud.',
@@ -789,10 +795,96 @@
     return { trackUpdates: trackUpdates, albumUpdates: albumUpdates, newAlbums: newAlbums };
   }
 
+  /** Nazwa utworu bez ozdobników — ta sama norma, co przy dopasowaniu w runtime. */
+  function normName(text) {
+    return String(text || '').toLowerCase()
+      .replace(/\(.*?\)|\[.*?\]/g, ' ')
+      .replace(/feat\.?[^,]*/g, ' ')
+      .replace(/[^a-z0-9\u0105\u0107\u0119\u0142\u0144\u00f3\u015b\u017a\u017c]+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Para „tytuł|wykonawca” — po niej ten sam utwór poznaje się nawet wtedy, gdy
+   * na drugim urządzeniu ma inny klucz (plik z dysku kontra kopia z YouTube).
+   */
+  function namePair(entry) {
+    var title = normName(entry && entry.title);
+    var artist = normName(entry && entry.artist);
+    if (!title || !artist) return '';
+    return title + '|' + artist;
+  }
+
+  /** Zapytanie do YouTube dla utworu, który nie ma identyfikatora (plik z komputera). */
+  function searchQueryOf(entry) {
+    var title = String((entry && entry.title) || '').replace(/\s+/g, ' ').trim();
+    if (!title) return '';
+    var artist = String((entry && entry.artist) || '').replace(/\s+/g, ' ').trim();
+    return (artist ? artist + ' ' : '') + title;
+  }
+
+  /** Czy da się to pobrać tutaj: po identyfikatorze YouTube albo po tytule i autorze. */
+  function canFetchFromYoutube(entry) {
+    return !!downloadIdOf(entry) || !!searchQueryOf(entry);
+  }
+
+  /** Wyniki, których źródłem jest YouTube — z niego ściągamy wszystko, także pliki z komputera. */
+  function youtubeOnlyIndexes(results) {
+    var indexes = [];
+    (results || []).forEach(function (item, index) {
+      if (!item) return;
+      if (String(item.provider || '') === 'youtube' || item.ytStream) indexes.push(index);
+    });
+    return indexes;
+  }
+
+  /** Który wynik wziąć: po identyfikatorze dokładnie, po tytule — najlepiej pasujący. */
+  function pickResultIndex(results, id, entry) {
+    var indexes = youtubeOnlyIndexes(results);
+    if (!indexes.length) return -1;
+    if (id) {
+      var exact = -1;
+      indexes.forEach(function (index) {
+        if (exact >= 0) return;
+        var item = results[index] || {};
+        if (String(item.ytId || item.id || '') === id) exact = index;
+      });
+      return exact;
+    }
+    var wantTitle = normName(entry && entry.title);
+    var wantArtist = normName(entry && entry.artist);
+    if (!wantTitle) return indexes[0];
+    for (var i = 0; i < indexes.length; i++) {
+      var item = results[indexes[i]] || {};
+      var itemTitle = normName(item.title);
+      if (!itemTitle) continue;
+      if (itemTitle.indexOf(wantTitle) === -1 && wantTitle.indexOf(itemTitle) === -1) continue;
+      var itemArtist = normName(item.artist);
+      if (wantArtist && itemArtist && itemArtist.indexOf(wantArtist) === -1 && wantArtist.indexOf(itemArtist) === -1) continue;
+      return indexes[i];
+    }
+    return indexes[0];
+  }
+
   function cloudOnlyOf(merged, snapshot) {
     var local = {};
-    (snapshot.tracks || []).forEach(function (item) { if (item.key) local[item.key] = true; });
-    return (merged.tracks || []).filter(function (entry) { return entry && entry.key && !local[entry.key]; });
+    var localNames = {};
+    (snapshot.tracks || []).forEach(function (item) {
+      if (item.key) local[item.key] = true;
+      var pair = namePair(item);
+      if (pair) localNames[pair] = true;
+    });
+    return (merged.tracks || []).filter(function (entry) {
+      if (!entry || !entry.key) return false;
+      if (local[entry.key]) return false;
+      // Ten sam utwór mamy już tutaj pod innym kluczem: plik z komputera albo
+      // pobrana tutaj kopia z YouTube. Wtedy nie jest już „tylko w chmurze”.
+      var pair = namePair(entry);
+      if (pair && localNames[pair]) return false;
+      var derived = derivedTracks[entry.key];
+      if (derived && local[derived.key]) return false;
+      return true;
+    });
   }
 
   // --------------------------------------------------------------- baza sync
@@ -827,7 +919,13 @@
   function stateGet(id) { return withStore('state', 'readonly', function (store) { return store.get(id); }); }
   function statePut(value) { return withStore('state', 'readwrite', function (store) { return store.put(value); }); }
   /** Zapomniany albo zmieniony folder: pamięć dotyczy starego pliku, więc znika. */
+  function clearCloudDerived() {
+    derivedTracks = {};
+    return statePut({ id: 'cloudDerived', value: null, at: 0 }).catch(function () {});
+  }
+
   function clearCloudMemory() {
+    clearCloudDerived().catch(function () {});
     return statePut({ id: 'cloudMemory', value: null, at: 0 }).catch(function () {});
   }
   function cloudReplace(entries) {
@@ -884,6 +982,11 @@
   var autoLast = null;
   // Ostatnia odpowiedź mostka YouTube (desktop): po nieudanym pobieraniu pytamy
   // go wprost, żeby panel powiedział „mostek nie odpowiada”, a nie „nie udało się”.
+  // Wpisy z chmury, które udało się tu pobrać z YouTube mimo braku
+  // identyfikatora (np. plik z komputera): klucz z chmury → nasz klucz utworu.
+  // Bez tej pamięci taki utwór wracałby na listę „tylko w chmurze” po każdym
+  // pobraniu i ściągał się w kółko.
+  var derivedTracks = {};
   var downloadProbe = null;
   var downloadProbeBusy = false;
   var cloudKnownKeys = [];
@@ -2075,7 +2178,7 @@
    */
   /** Co się stało z ostatnim pobieraniem — dla panelu. */
   function stampDownload(entry, ok, errorText) {
-    if (!ok && downloadIdOf(entry)) probeDownloader();
+    if (!ok && canFetchFromYoutube(entry)) probeDownloader();
     autoLast = {
       key: String((entry && entry.key) || ''),
       title: String((entry && entry.title) || (entry && entry.key) || ''),
@@ -2087,39 +2190,103 @@
     return ok;
   }
 
-  /** Importuje utwór z YouTube na tym urządzeniu. `quiet` = tryb automatyczny. */
+  /**
+   * Importuje utwór na tym urządzeniu. `quiet` = tryb automatyczny.
+   *
+   * Utwór z YouTube (ma identyfikator) szukamy po identyfikatorze. Utwór, który
+   * na innym urządzeniu leży jako zwykły plik, też da się tu ściągnąć: jeśli ma
+   * tytuł i autora, szukamy go na YouTube i zapisujemy najlepiej pasujący wynik.
+   * Dzięki temu muzyka z komputera przestaje być niedostępna na telefonie.
+   */
   function importCloudTrack(entry, quiet) {
     var key = (entry && entry.key) || '';
     var id = downloadIdOf(entry);
-    if (!id) { fail(T('downloadFileOnly')); return Promise.resolve(stampDownload(entry, false, T('downloadFileOnly'))); }
+    var query = id ? '' : searchQueryOf(entry);
+    if (!id && !query) { fail(T('downloadNoTitle')); return Promise.resolve(stampDownload(entry, false, T('downloadNoTitle'))); }
     var net = netApi();
     if (!net) { fail(T('downloadNoApi')); return Promise.resolve(stampDownload(entry, false, T('downloadNoApi'))); }
     if (typeof net.enabled === 'function' && net.enabled() === false) {
       fail(T('downloadOff'));
       return Promise.resolve(stampDownload(entry, false, T('downloadOff')));
     }
-    note((quiet ? T('autoDownloading') : T('downloading')) + ((entry && entry.title) || ('YouTube ' + id)));
+    note((quiet ? T('autoDownloading') : T('downloading')) + ((entry && entry.title) || ('YouTube ' + id)) +
+      (id ? '' : T('searchingByTitle')));
+    // Szukanie po tytule ma trafiać w YouTube — inne źródła zostawiamy zakładce
+    // Sieć; po wyszukiwaniu wracamy do ustawienia użytkownika.
+    var previousProvider = '';
+    if (!id && typeof net.setProvider === 'function' && typeof net.provider === 'function') {
+      try {
+        previousProvider = String(net.provider() || '');
+        if (previousProvider && previousProvider !== 'youtube') net.setProvider('youtube');
+      } catch (error) { previousProvider = ''; }
+    }
+    function restoreProvider() {
+      if (!previousProvider) return;
+      try { net.setProvider(previousProvider); } catch (error) { /* ustawienie dostawcy to nie pobieranie */ }
+    }
+    var importedKey = '';
     return Promise.resolve().then(function () {
-      return net.search('https://www.youtube.com/watch?v=' + id);
+      return net.search(id ? 'https://www.youtube.com/watch?v=' + id : query);
     }).then(function () {
       var results = typeof net.results === 'function' ? (net.results() || []) : [];
-      var index = -1;
-      results.forEach(function (item, i) {
-        if (index >= 0 || !item) return;
-        if (String(item.ytId || item.id || '') === id) index = i;
-      });
+      var index = pickResultIndex(results, id, entry);
       if (index < 0) throw new Error(T('downloadNoResult'));
+      var item = results[index] || {};
+      var itemId = String(item.ytId || item.id || '');
+      importedKey = itemId ? 'youtube:' + itemId : key;
       return net.importIdx(index);
     }).then(function () {
-      return waitForTrack(key, IMPORT_WAIT_MS);
+      restoreProvider();
+      if (id) return waitForTrack(key, IMPORT_WAIT_MS);
+      return waitForMatch(entry, importedKey, IMPORT_WAIT_MS);
     }).then(function (found) {
       if (!found) { fail(T('downloadUnconfirmed')); return stampDownload(entry, false, T('downloadUnconfirmed')); }
+      if (!id) rememberDerived(entry, importedKey);
       note(T('downloaded'));
       return stampDownload(entry, true, '');
     }).catch(function (error) {
+      restoreProvider();
       fail(message(error));
       return stampDownload(entry, false, message(error));
     });
+  }
+
+  /** Import jest asynchroniczny — czekamy, aż utwór naprawdę będzie w bibliotece. */
+  function waitForMatch(entry, importedKey, waitMs) {
+    var want = namePair(entry);
+    // W testach i przy krótkim oknie czekania odpytywanie musi być gęstsze;
+    // w normalnej pracy zostaje 1500 ms, żeby nie męczyć biblioteki.
+    var pollMs = Math.min(IMPORT_POLL_MS, Math.max(20, Math.floor(waitMs / 4)));
+    return new Promise(function (resolve) {
+      var deadline = nowMs() + waitMs;
+      function step() {
+        var snapshot = null;
+        try {
+          snapshot = typeof window.__pulsarSyncSnapshot === 'function' ? window.__pulsarSyncSnapshot() : null;
+        } catch (error) { snapshot = null; }
+        var found = !!(snapshot && (snapshot.tracks || []).some(function (item) {
+          if (!item) return false;
+          if (importedKey && item.key === importedKey) return true;
+          // Runtime odmawia zapisu duplikatu (ten sam tytuł i wykonawca) — to
+          // też znaczy, że utwór jest już tutaj.
+          return !!want && namePair(item) === want;
+        }));
+        if (found) { resolve(true); return; }
+        if (nowMs() >= deadline) { resolve(false); return; }
+        setTimeout(step, pollMs);
+      }
+      step();
+    });
+  }
+
+  /** Pamięta, że ten wpis z chmury jest tu już jako pobrany utwór. */
+  function rememberDerived(entry, importedKey) {
+    if (!entry || !entry.key || !importedKey) return;
+    derivedTracks[entry.key] = { key: importedKey, at: nowMs() };
+    if (Object.keys(derivedTracks).length > 500) {
+      Object.keys(derivedTracks).slice(0, 100).forEach(function (oldKey) { delete derivedTracks[oldKey]; });
+    }
+    statePut({ id: 'cloudDerived', value: derivedTracks }).catch(function () {});
   }
 
   /**
@@ -2161,7 +2328,7 @@
   /**
    * Ile utworów z YouTube czeka na pobranie tutaj. */
   function autoWaitingCount() {
-    return (cloudEntries || []).filter(function (entry) { return !!downloadIdOf(entry); }).length;
+    return (cloudEntries || []).filter(function (entry) { return canFetchFromYoutube(entry); }).length;
   }
 
   /**
@@ -2169,7 +2336,7 @@
    * ponowień — użytkownik kliknął, więc chce pobrania, a nie odczekania 6 h.
    */
   function downloadAllCloudTracks() {
-    var queue = (cloudEntries || []).filter(function (entry) { return !!downloadIdOf(entry); });
+    var queue = (cloudEntries || []).filter(function (entry) { return canFetchFromYoutube(entry); });
     if (!queue.length) { fail(T('downloadNothing')); return Promise.resolve({ skipped: 'nothing' }); }
     var done = 0;
     var chain = Promise.resolve();
@@ -2233,7 +2400,7 @@
     var now = nowMs();
     if (autoBatchAt && now - autoBatchAt < AUTO_COOLDOWN_MS) return Promise.resolve(0);
     var queue = (entries || []).filter(function (entry) {
-      if (!entry || !downloadIdOf(entry)) return false;
+      if (!entry || !canFetchFromYoutube(entry)) return false;
       return now - (autoTried[entry.key] || 0) > AUTO_RETRY_MS;
     }).slice(0, AUTO_MAX_PER_SYNC);
     if (!queue.length) return Promise.resolve(0);
@@ -2272,17 +2439,19 @@
     var html = '';
     shown.forEach(function (entry) {
       var id = downloadIdOf(entry);
+      var query = id ? '' : searchQueryOf(entry);
       var title = String((entry && entry.title) || (entry && entry.key) || '');
       var artist = String((entry && entry.artist) || '');
+      var desc = query ? (artist ? artist + ' · ' : '') + T('searchByNameHint') : artist;
       html += '<div class="sm-row"><div class="sm-txt">' +
         '<span class="sm-lab">' + escapeHtml(title) + '</span>' +
-        '<span class="sm-desc">' + escapeHtml(artist) + '</span>' +
+        '<span class="sm-desc">' + escapeHtml(desc) + '</span>' +
         '</div>';
-      if (id) {
+      if (id || query) {
         html += '<button type="button" class="sm-act" data-cloud-download="' + escapeHtml(entry.key) + '">' +
-          escapeHtml(T('downloadHere')) + '</button>';
+          escapeHtml(id ? T('downloadHere') : T('downloadFromYoutube')) + '</button>';
       } else {
-        html += '<div class="sm-txt"><span class="sm-desc">' + escapeHtml(T('downloadFileOnly')) + '</span></div>';
+        html += '<div class="sm-txt"><span class="sm-desc">' + escapeHtml(T('downloadNoTitle')) + '</span></div>';
       }
       html += '</div>';
     });
@@ -2424,6 +2593,12 @@
         renderPanelStatus();
       }
     }).catch(function () {});
+    stateGet('cloudDerived').then(function (stored) {
+      if (stored && stored.value) {
+        derivedTracks = Object.assign({}, stored.value);
+        renderPanelStatus();
+      }
+    }).catch(function () {});
     stateGet('counters').then(function (stored) {
       if (stored && stored.value) {
         counters = Object.assign(counters, stored.value);
@@ -2486,6 +2661,7 @@
     ownFile: function () { return cloudMeta.ownFile || ''; },
     _fileHelpers: { platformKey: platformKey, ownFileName: ownFileName, fileLabel: fileLabel },
     cloudMeta: function () { return Object.assign({}, cloudMeta); },
+    derived: function () { return Object.assign({}, derivedTracks); },
     scrollInfo: function () { return panel ? cloudScrollInfo(panel) : null; },
     setImportWait: function (ms) { IMPORT_WAIT_MS = Math.max(0, Number(ms) || 0); return IMPORT_WAIT_MS; },
     setReadRetry: function (ms) { READ_RETRY_MS = Math.max(0, Number(ms) || 0); return READ_RETRY_MS; },
@@ -2510,6 +2686,10 @@
       mergeManifests: mergeManifests,
       buildApplyPlan: buildApplyPlan,
       cloudOnlyOf: cloudOnlyOf,
+      canFetchFromYoutube: canFetchFromYoutube,
+      searchQueryOf: searchQueryOf,
+      pickResultIndex: pickResultIndex,
+      namePair: namePair,
       mergeCloudMemory: mergeCloudMemory,
       cloudMemoryState: cloudMemoryState,
       hash: hash
