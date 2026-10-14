@@ -1,0 +1,22 @@
+{
+  "name": "pulsar-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Experimental Android port of Pulsar using its packed web runtime.",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "prepare:web": "node tools/prepare_web.js",
+    "android:sync": "npm run prepare:web && cap sync android",
+    "android:open": "cap open android",
+    "android:run": "npm run android:sync && cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.3",
+    "@capacitor/core": "8.4.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.3"
+  }
+}
