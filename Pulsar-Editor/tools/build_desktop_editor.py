@@ -20,6 +20,7 @@ from pathlib import Path
 EDITOR_DIR = Path(__file__).resolve().parents[1]
 REPO = EDITOR_DIR.parent
 EXTRAS_DIR = REPO / "Pulsar-Extras"
+KARAOKE_DIR = REPO / "Pulsar-Karaoke"
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
 sys.path.insert(0, str(REPO / "Pulsar-Sync" / "tools"))
@@ -43,10 +44,14 @@ ASSETS = {
     "resources/auto-dj.js": EXTRAS_DIR / "auto-dj.js",
     "resources/library-backup.js": EXTRAS_DIR / "library-backup.js",
     "resources/extras.css": EXTRAS_DIR / "extras.css",
+    "resources/karaoke-core.js": KARAOKE_DIR / "karaoke-core.js",
+    "resources/karaoke.js": KARAOKE_DIR / "karaoke.js",
+    "resources/karaoke.css": KARAOKE_DIR / "karaoke.css",
 }
 CSS_TAG = (
     '  <link rel="stylesheet" href="audio-editor.css">\n'
     '  <link rel="stylesheet" href="extras.css">\n'
+    '  <link rel="stylesheet" href="karaoke.css">\n'
 )
 SCRIPT_TAGS = (
     '  <script src="editor-core.js"></script>\n'
@@ -56,6 +61,8 @@ SCRIPT_TAGS = (
     '  <script src="audio-editor.js"></script>\n'
     '  <script src="auto-dj.js"></script>\n'
     '  <script src="library-backup.js"></script>\n'
+    '  <script src="karaoke-core.js"></script>\n'
+    '  <script src="karaoke.js"></script>\n'
 )
 PLATFORMS = {
     "windows": REPO / "Pulsar-Windows" / "resources.neu",

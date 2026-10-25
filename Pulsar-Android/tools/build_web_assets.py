@@ -19,7 +19,7 @@ from pathlib import Path
 ANDROID_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_ARCHIVE = ANDROID_DIR.parent / "Pulsar-Linux" / "resources.neu"
 DEFAULT_OUT = ANDROID_DIR / "www"
-REQUIRED_RESOURCES = {"index.html", "tags.js"}
+REQUIRED_RESOURCES = {"index.html", "tags.js", "karaoke-core.js", "karaoke.js", "karaoke.css"}
 # Silnik synchronizacji i poprawki runtime'u są wspólne dla Androida, Windows
 # i Linuksa — leżą w Pulsar-Sync/.
 SYNC_DIR = ANDROID_DIR.parent / "Pulsar-Sync"
@@ -641,6 +641,9 @@ def build(archive: Path, out_dir: Path, bridge: Path, drive_sync: Path) -> None:
     out_dir.mkdir(parents=True)
     (out_dir / "index.html").write_text(html, encoding="utf-8")
     (out_dir / "tags.js").write_bytes(selected["tags.js"])
+    # Karaoke jest wspólną warstwą WWW: te same LRC, offset i ustawienia na desktopie i Androidzie.
+    for resource in ("karaoke-core.js", "karaoke.js", "karaoke.css"):
+        (out_dir / resource).write_bytes(selected[resource])
     shutil.copy2(bridge, out_dir / "android-bridge.js")
     shutil.copy2(drive_sync, out_dir / "drive-sync.js")
     print(f"Prepared {out_dir}: index.html, tags.js, android-bridge.js, drive-sync.js")

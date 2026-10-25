@@ -25,7 +25,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 - 🎧 **Built-in YouTube downloader** — yt-dlp ships inside the app and starts itself in the background
 - 🖼️ **Covers & tags embedded** — saved tracks look right in Explorer, your phone, any player
 - 🌠 **Nebula visualizers** — audio-reactive 3D backgrounds, fullscreen ambient mode
-- 🎤 **Synced lyrics** — elegant column, buttery-smooth in fullscreen
+- 🎤 **Karaoke & synced lyrics** — large previous/current/next lines, clickable seeking, line progress, adjustable text size, themes, playback controls and fullscreen; plain lyrics and missing-text states are supported too
 - ✂️ **Audio Editor 2.0** — 32× waveform zoom, 1 ms cut boundaries, configurable silence detection, fades, resumable sessions and non-destructive WAV export
 - 🎞️ **MP3 / FLAC & long recordings** — optional FFmpeg export; large files are edited without decoding the whole recording in WebView
 - ⏱️ **Lyrics timing controls** — shift subtitles per track, export adjusted LRC, and keep lyrics aligned automatically after audio cuts
@@ -72,12 +72,13 @@ Pulsar-Linux/       the runnable Linux build     (pulsar · resources.neu · yt-
 Pulsar-Sync/        shared cloud library layer  (engine, adapters, build + tests)
 Pulsar-Editor/      desktop audio/LRC editor    (UI, audio engine, build + tests)
 Pulsar-Extras/      Auto-DJ 2.0, safe backups  (native bridge, UI + tests)
+Pulsar-Karaoke/     shared karaoke mode        (timing core, UI, styles + tests)
 index.html          the project / download page  (served via GitHub Pages)
 Pulsar-Desktop.zip  packaged Windows release
 Pulsar-Linux.zip    packaged Linux release
 ```
 
-Each app folder is the whole app: exactly the files needed to run it, nothing else. The core player is closed-source — `resources.neu` is a packed runtime bundle. Open extension layers such as `Pulsar-Sync/`, `Pulsar-Editor/` and `Pulsar-Extras/` have readable sources and reproducible build scripts that patch the bundle without replacing its other files.
+Each app folder is the whole app: exactly the files needed to run it, nothing else. The core player is closed-source — `resources.neu` is a packed runtime bundle. Open extension layers such as `Pulsar-Sync/`, `Pulsar-Editor/`, `Pulsar-Extras/` and `Pulsar-Karaoke/` have readable sources and reproducible build scripts that patch the bundle without replacing its other files.
 
 ## 🛠️ Tech
 

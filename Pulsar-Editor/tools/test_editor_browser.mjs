@@ -156,6 +156,11 @@ try {
   await cdp.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: DOWNLOADS });
   await page.goto(origin, { waitUntil: 'load' });
   check('moduł i przycisk edytora startują', await poll(() => page.evaluate(() => !!window.PulsarAudioEditor && !!document.getElementById('audioEditorBtn'))));
+  check('ustawienia używają klasycznego cogwheela', await page.evaluate(() => {
+    const path = document.querySelector('#settingsBtn svg path');
+    return !!path && path.getAttribute('d').startsWith('M10.325') && !path.getAttribute('d').includes('M12 2.8v3');
+  }));
+  check('wspólny moduł karaoke startuje', await page.evaluate(() => !!window.PulsarKaraoke && !!document.getElementById('karaokeBtn')));
 
   await page.$eval('#folderInput', input => input.removeAttribute('webkitdirectory'));
   const input = await page.$('#folderInput');
@@ -259,6 +264,47 @@ try {
   check('dopasowane napisy przeżywają restart, bez podwójnego offsetu', persisted && persisted.offset === 0 && persisted.lines && persisted.lines.length === 3 && persisted.lines[0].t === 2, persisted);
   const originalOffset = await page.evaluate(async (index) => { await __player.loadIndex(index); return __player.__lyrics.offset(); }, originalIndex);
   check('oryginał zachowuje własne przesunięcie +0,5 s', originalOffset === 0.5);
+
+  await page.click('#karaokeBtn');
+  check('karaoke wczytuje LRC bieżącego utworu', await poll(() => page.evaluate(index => {
+    const s = PulsarKaraoke.state();
+    return s.open && s.loadedTrack === index && s.lines === 4;
+  }, originalIndex)));
+  await page.evaluate(() => { document.getElementById('audio').currentTime = 3.05; });
+  check('duży tekst podąża za wspólnym offsetem', await poll(() => page.evaluate(() => {
+    const s = PulsarKaraoke.state();
+    const active = document.querySelector('#pkLines .pk-current .pk-line-text');
+    return s.activeLine === 1 && active && active.textContent === 'druga linia';
+  })));
+  check('widok zawiera poprzednie i następne wersy', await page.evaluate(() => document.querySelectorAll('#pkLines .pk-previous').length > 0 && document.querySelectorAll('#pkLines .pk-next').length > 0));
+  await page.click('#pkLarger');
+  check('skala dużego tekstu jest regulowana', await page.evaluate(() => PulsarKaraoke.state().scale > 1 && document.getElementById('pkScale').textContent !== '100%'));
+  await page.click('#pkAlign');
+  check('wyrównanie napisów jest regulowane', await page.evaluate(() => PulsarKaraoke.state().align === 'left' && document.querySelector('.pk-stage').dataset.align === 'left'));
+  await page.click('#pkOffsetPlus');
+  check('szybka korekta karaoke zmienia wspólny offset', await page.evaluate(() => PulsarKaraoke.state().offset === 0.6000000000000001 || PulsarKaraoke.state().offset === 0.6));
+  const clickedLineTime = await page.evaluate(() => {
+    document.getElementById('audio').currentTime = 2;
+    const line = document.querySelector('#pkLines [data-index="1"]');
+    if (line) line.click();
+    return { found: !!line, time: document.getElementById('audio').currentTime };
+  });
+  check('kliknięcie wersu przewija do czasu z offsetem', clickedLineTime.found && Math.abs(clickedLineTime.time - 3.1) < 0.02, clickedLineTime);
+  check('karaoke wyświetla zwykły tekst bez znaczników czasu', await page.evaluate(() => {
+    window.__testLyricsData = __player.__lyrics.data;
+    __player.__lyrics.data = () => ({ plain: 'Pierwszy zwykły wers\nDrugi zwykły wers', synced: null });
+    PulsarKaraoke.refresh();
+    return PulsarKaraoke.state().plain === 2 && document.querySelectorAll('#pkLines.pk-plain p').length === 2;
+  }));
+  check('karaoke ma czytelny stan braku tekstu', await page.evaluate(() => {
+    __player.__lyrics.data = () => null; PulsarKaraoke.refresh();
+    return !!document.querySelector('#pkLines .pk-empty') && document.getElementById('pkLines').textContent.includes('Brak tekstu');
+  }));
+  await page.evaluate(() => { __player.__lyrics.data = window.__testLyricsData; delete window.__testLyricsData; PulsarKaraoke.refresh(); });
+  await page.click('#pkClose');
+  check('karaoke zamyka się bez zatrzymywania odtwarzacza', await poll(() => page.evaluate(() => !PulsarKaraoke.state().open)));
+  check('zamknięcie karaoke zachowuje wcześniej włączony panel napisów', await page.evaluate(() => __player.__lyrics.on()));
+  await page.evaluate(() => __player.__lyrics.setOffset(0.5));
 
   check('panel Auto-DJ 2.0 jest dostępny', await page.evaluate(() => !!document.getElementById('pulsarDjPlus') && !!window.PulsarAutoDj));
   const djChoice = await page.evaluate(() => {

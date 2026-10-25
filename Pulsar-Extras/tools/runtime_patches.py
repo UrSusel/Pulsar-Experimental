@@ -73,6 +73,12 @@ def apply_extras_runtime_patches(html: str) -> str:
     )
     html = _replace_once(
         html,
+        '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg>',
+        '<svg viewBox="0 0 24 24"><!-- Pulsar extras: settings cogwheel --><circle cx="12" cy="12" r="3"/><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37 1.02.607 2.296.07 2.572-1.065z"/></svg>',
+        "Pulsar extras: settings cogwheel",
+    )
+    html = _replace_once(
+        html,
         "      analysisFor(id){ const a = analysisCache.get(id); return a ? { rms: a.rms, peak: a.peak, norm: a.norm, len: a.peaks.length, dur: a.dur || 0, silences: a.silences ? a.silences.map(x => x.slice()) : null } : null; },",
         "      analysisFor(id){ const a = analysisCache.get(id); return a ? { rms: a.rms, peak: a.peak, norm: a.norm, len: a.peaks.length, peaks: a.peaks ? Array.from(a.peaks) : null, dur: a.dur || 0, silences: a.silences ? a.silences.map(x => x.slice()) : null } : null; }, /* Pulsar extras: analysis peaks */",
         "Pulsar extras: analysis peaks",
@@ -90,5 +96,6 @@ def extras_runtime_patched(html: str) -> bool:
         "Pulsar safety: restore snapshot",
         "Pulsar extras: analysis peaks",
         "Pulsar extras: DJ direct play and undo",
+        "Pulsar extras: settings cogwheel",
     ]
     return all(html.count(marker) == 1 for marker in markers)
