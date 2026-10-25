@@ -1,47 +1,53 @@
-# Pulsar Editor — audio i napisy (desktop)
+# Pulsar Editor 2.0 — audio i napisy (desktop)
 
-Moduł dla wersji **Windows i Linux**. Jest wbudowany w gotowe `resources.neu`; nie wymaga FFmpeg, Node.js ani dodatkowych bibliotek w zainstalowanej aplikacji.
+Moduł dla wersji **Windows i Linux**, wbudowany w gotowe `resources.neu`. Zachowuje nieniszczący edytor WAV/LRC i dodaje precyzyjną edycję, sesje oraz natywny eksport przez FFmpeg.
 
 ## Dla użytkownika
 
-1. Wybierz utwór w Pulsarze.
-2. Kliknij ikonę **nożyczek** obok przycisku napisów.
-3. W zakładce **Audio**:
-   - przeciągnij po fali, aby zaznaczyć fragment do usunięcia, albo wpisz dokładny czas początku i końca;
-   - **Wykryj ciszę** zaznacza ciche zakresy (próg −45 dB, minimum 0,6 s);
+1. Wybierz utwór i kliknij **nożyczki** obok przycisku napisów.
+2. W zakładce **Audio**:
+   - przeciągnij po fali, aby usunąć fragment; chwyć czerwoną granicę, aby ją przesunąć;
+   - użyj **+ / −** albo **Ctrl + kółko**, aby powiększyć falę do 32×; **Pełny utwór** wraca do całości;
+   - każdy wycinek ma pola początku i końca z krokiem **1 ms**;
+   - **Wykryj ciszę** korzysta z regulowanego progu w dB i minimalnej długości ciszy;
+   - **Fade-in**, **fade-out** i **wygładzanie łączeń** ustawia się niezależnie w milisekundach;
    - **Podgląd bez wycinków** pomija zaznaczenia podczas odtwarzania;
-   - **Zapisz jako nowy utwór WAV** tworzy plik PCM 16-bit i opcjonalnie dodaje go do biblioteki.
-4. W zakładce **Napisy** reguluj przesunięcie suwakiem, polem liczbowym lub przyciskami ±0,1/±0,5 s. Dodatnia wartość opóźnia tekst, ujemna przyspiesza. Zmiana działa od razu i jest zapamiętywana dla utworu. **Eksportuj przesunięte .lrc** zapisuje osobny plik.
+   - **Zapisz sesję** zachowuje decyzje edycji. Zmiany zapisują się też automatycznie i wracają po ponownym otwarciu utworu. **Usuń sesję** czyści zapisane decyzje, nie audio.
+3. Wybierz **WAV PCM**, **MP3 192 kbps** albo **FLAC** i eksportuj jako nowy utwór. Import wyniku do biblioteki jest opcjonalny.
+4. W zakładce **Napisy** reguluj przesunięcie suwakiem, polem liczbowym lub przyciskami ±0,1/±0,5 s. Dodatnia wartość opóźnia tekst, ujemna przyspiesza. **Eksportuj przesunięte .lrc** zapisuje osobny plik.
 
-Edycja jest niezdestructywna: edytor nie pozwala zapisać wyniku pod ścieżką oryginalnego audio. Metadane i okładka są kopiowane. Jeżeli źródło ma napisy LRC, zapisana kopia otrzymuje własne dopasowane napisy: linie z usuniętych zakresów znikają, a pozostałe czasy są skracane o wycinki z uwzględnieniem ręcznego przesunięcia. Napisy i przesunięcia przeżywają restart i backup biblioteki.
+Edytor nigdy nie zapisuje pod ścieżką oryginału. Metadane, okładka i dopasowane napisy są przenoszone do wpisu biblioteki. Linie z usuniętych zakresów znikają, a pozostałe czasy są przeliczane po cięciach i ręcznym przesunięciu.
 
-> Eksport do WAV dekoduje źródło przez WebView i zapisuje PCM bez dodatkowej kompresji stratnej. Plik WAV będzie zwykle większy niż MP3/FLAC. Dostępność dekodowania formatu wejściowego zależy od kodeków WebView2/WebKitGTK, tak jak przy zwykłym odtwarzaniu.
+## FFmpeg i duże pliki
+
+- **WAV** dla zwykłych plików nadal działa bez FFmpeg, przez Web Audio i PCM 16-bit.
+- **MP3 i FLAC** wymagają `ffmpeg.exe` (Windows) albo `ffmpeg` (Linux) obok aplikacji lub w `PATH`.
+- Pliki powyżej **80 MB** lub **30 minut** automatycznie używają natywnej ścieżki FFmpeg. Nie jest tworzony pełny `AudioBuffer`; cięcie i przejścia wykonuje FFmpeg. Fala pochodzi z zapisanej analizy, jeśli jest dostępna, a granice zawsze można ustawić czasem.
+- Jeśli źródło ma ścieżkę na dysku, FFmpeg czyta je bezpośrednio. Dla utworu tylko z biblioteki mostek tworzy tymczasową kopię i usuwa ją po eksporcie.
+- Przy natywnym wyniku powyżej **256 MB** można zapisać plik, ale import do biblioteki jest pomijany dla ochrony pamięci WebView.
+
+Sesja w `localStorage` zawiera tylko zakresy, ustawienia i zoom — nigdy dane audio.
 
 ## Pliki
 
-- `editor-core.js` — normalizacja cięć, wykrywanie ciszy, WAV PCM, mapowanie i eksport LRC; bez DOM;
-- `audio-editor.js` — panel, fala, podgląd, natywny zapis i integracja z biblioteką;
-- `audio-editor.css` — wygląd panelu;
-- `tools/runtime_patches.py` — idempotentne zaczepy w zapakowanym runtime (trwały offset, API biblioteki, przechowywanie LRC);
-- `tools/build_desktop_editor.py` — build i kontrola `--check` dla Windows/Linux.
+- `editor-core.js` — cięcia, cisza, WAV, przejścia, argumenty FFmpeg i LRC; bez DOM;
+- `audio-editor.js` / `audio-editor.css` — panel, zoom, granice, sesje, podgląd i eksport;
+- `tools/runtime_patches.py` — idempotentne zaczepy runtime edytora;
+- `tools/build_desktop_editor.py` — wspólny build Windows/Linux dla edytora i `Pulsar-Extras`;
+- `tools/test_editor_core.js`, `test_desktop_editor.py`, `test_editor_browser.mjs` — testy logiki, paczek i E2E.
 
-## Build
+Auto-DJ 2.0, automatyczne kopie i natywny mostek są opisane w [`Pulsar-Extras/README.md`](../Pulsar-Extras/README.md).
+
+## Build i testy
 
 ```bash
 python Pulsar-Editor/tools/build_desktop_editor.py
-python Pulsar-Sync/tools/refresh_download_zips.py
-```
-
-Build nie nadpisuje warstwy `Pulsar-Sync` ani innych zasobów. Android pomija desktopowe znaczniki edytora w `Pulsar-Android/tools/build_web_assets.py`.
-
-## Testy
-
-```bash
+python Pulsar-Editor/tools/build_desktop_editor.py --check
 node Pulsar-Editor/tools/test_editor_core.js
+node Pulsar-Extras/tools/test_extras.js
 python Pulsar-Editor/tools/test_desktop_editor.py
 python Pulsar-Sync/tools/test_desktop_bundle.py
-python Pulsar-Editor/tools/build_desktop_editor.py --check
-python Pulsar-Sync/tools/refresh_download_zips.py --check
+python Pulsar-Sync/tools/refresh_download_zips.py
 ```
 
 Test przeglądarkowy wymaga `puppeteer-core` i `@sparticuz/chromium` oraz rozpakowanego `resources.neu`:
@@ -49,8 +55,9 @@ Test przeglądarkowy wymaga `puppeteer-core` i `@sparticuz/chromium` oraz rozpak
 ```bash
 python Pulsar-Sync/tools/neu.py unpack Pulsar-Windows/resources.neu .tmp/editor-test
 NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/editor-test/resources
-# Ta sama ścieżka, ale z natywnym dialogiem i zapisem przez stub Neutralino:
 EDITOR_DESKTOP=1 NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/editor-test/resources
 ```
 
-Test integracyjny używa syntetycznego WAV z dwoma ciszami i LRC. Sprawdza wykrywanie, ręczne cięcia, podgląd, zapis, metadane, mapowanie napisów i odtworzenie biblioteki po restarcie.
+E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, Auto-DJ oraz — w wariancie desktopowym — natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka.
+
+Android pomija wszystkie desktopowe zasoby edytora i rozszerzeń w `Pulsar-Android/tools/build_web_assets.py`.

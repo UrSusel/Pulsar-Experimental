@@ -103,6 +103,12 @@ def build(archive: Path, out_dir: Path, bridge: Path, drive_sync: Path) -> None:
         '  <link rel="stylesheet" href="audio-editor.css">\n',
         '  <script src="editor-core.js"></script>\n',
         '  <script src="audio-editor.js"></script>\n',
+        '  <link rel="stylesheet" href="extras.css">\n',
+        '  <script src="dj-core.js"></script>\n',
+        '  <script src="backup-core.js"></script>\n',
+        '  <script src="desktop-bridge.js"></script>\n',
+        '  <script src="auto-dj.js"></script>\n',
+        '  <script src="library-backup.js"></script>\n',
     ):
         html = html.replace(desktop_only, "")
     replacements = [

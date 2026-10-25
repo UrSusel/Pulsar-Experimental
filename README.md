@@ -18,7 +18,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 > **Linux:** the only system dependency is WebKitGTK, and the download manager (`yt-dlp`) is bundled.
 > Arch / CachyOS: `sudo pacman -S gtk3 webkit2gtk-4.1 gst-libav gst-plugins-ugly gst-plugins-good` · Debian / Ubuntu: `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 gstreamer1.0-libav gstreamer1.0-plugins-ugly gstreamer1.0-plugins-good`
 > (the GStreamer packages are what actually decode MP3/AAC — without them the player stays silent)
-> `ffmpeg` is optional and unlocks a few extra audio formats. On Wayland everything works through XWayland out of the box.
+> `ffmpeg` is optional: it unlocks MP3/FLAC export and memory-safe editing of very long recordings. On Wayland everything works through XWayland out of the box.
 
 ## ✨ Features
 
@@ -26,18 +26,19 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 - 🖼️ **Covers & tags embedded** — saved tracks look right in Explorer, your phone, any player
 - 🌠 **Nebula visualizers** — audio-reactive 3D backgrounds, fullscreen ambient mode
 - 🎤 **Synced lyrics** — elegant column, buttery-smooth in fullscreen
-- ✂️ **Non-destructive audio editor** — cut out silence or unwanted parts, preview the joins and save a new WAV copy; no FFmpeg needed
+- ✂️ **Audio Editor 2.0** — 32× waveform zoom, 1 ms cut boundaries, configurable silence detection, fades, resumable sessions and non-destructive WAV export
+- 🎞️ **MP3 / FLAC & long recordings** — optional FFmpeg export; large files are edited without decoding the whole recording in WebView
 - ⏱️ **Lyrics timing controls** — shift subtitles per track, export adjusted LRC, and keep lyrics aligned automatically after audio cuts
 - 🎨 **Dynamic colours** — the whole UI picks up palettes from the current album cover
 - ⏱️ **Sleep timer & stats** — gentle fade-out, favourites, play counts, smart sorting
-- 📻 **Auto-DJ** — picks the next tracks by tempo and energy, keeps them fresh (no ping-pong between two songs)
+- 📻 **Auto-DJ 2.0** — calm/focus/workout/party/discovery moods, “more like this”, artist/genre diversity, undoable history and a short reason for every pick
 - 🔌 **Truly portable** — keep it on any drive, even a USB stick; identical experience on Windows and Linux
 - 🪟 **Windows integration** — tray icon with playback menu, optional close-to-tray, always-on-top, compact mini mode
 - ⏯️ **Resume where you left off** — last track and position are restored on start
 - 🔁 **Gapless playback** — live albums and DJ mixes flow on without a gap
 - ✏️ **Tag editor** — fix title, artist and cover from the track list; MP3/M4A tags are written into the file
 - ☁️ **One library everywhere** — point the app once at a folder synced with Google Drive and Windows, Linux and Android share the same library (names, favourites, plays, albums — never the audio files)
-- 💾 **Library backup** — one `.pulsarlib` file with tracks, covers, favourites and stats; restore merges, never deletes
+- 💾 **Automatic & safe backups** — scheduled `.pulsarlib` copies, rotated versions, safety snapshots before restore/major changes, and a warning before deleting a track that exists only in the library
 
 ## ☁️ One library on every device
 
@@ -70,12 +71,13 @@ Pulsar-Windows/     the runnable Windows build   (pulsar.exe · resources.neu ·
 Pulsar-Linux/       the runnable Linux build     (pulsar · resources.neu · yt-dlp · README.md)
 Pulsar-Sync/        shared cloud library layer  (engine, adapters, build + tests)
 Pulsar-Editor/      desktop audio/LRC editor    (UI, audio engine, build + tests)
+Pulsar-Extras/      Auto-DJ 2.0, safe backups  (native bridge, UI + tests)
 index.html          the project / download page  (served via GitHub Pages)
 Pulsar-Desktop.zip  packaged Windows release
 Pulsar-Linux.zip    packaged Linux release
 ```
 
-Each app folder is the whole app: exactly the files needed to run it, nothing else. The core player is closed-source — `resources.neu` is a packed runtime bundle. Open extension layers such as `Pulsar-Sync/` and `Pulsar-Editor/` have readable sources and reproducible build scripts that patch the bundle without replacing its other files.
+Each app folder is the whole app: exactly the files needed to run it, nothing else. The core player is closed-source — `resources.neu` is a packed runtime bundle. Open extension layers such as `Pulsar-Sync/`, `Pulsar-Editor/` and `Pulsar-Extras/` have readable sources and reproducible build scripts that patch the bundle without replacing its other files.
 
 ## 🛠️ Tech
 

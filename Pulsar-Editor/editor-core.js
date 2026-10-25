@@ -207,13 +207,15 @@
     const kept = keptSegments(duration, normalized);
     const channels = Math.max(1, buffer.numberOfChannels);
     const opts = options || {};
-    const fadeFrames = Math.max(0, Math.round(sr * finite(opts.fadeMs, 5) / 1000));
+    const joinFadeFrames = Math.max(0, Math.round(sr * finite(opts.joinFadeMs != null ? opts.joinFadeMs : opts.fadeMs, 5) / 1000));
+    const fadeInFrames = Math.max(0, Math.round(sr * finite(opts.fadeInMs, 0) / 1000));
+    const fadeOutFrames = Math.max(0, Math.round(sr * finite(opts.fadeOutMs, 0) / 1000));
     const segments = kept.map(function (segment, index) {
       return {
         start: clamp(Math.round(segment.start * sr), 0, buffer.length),
         end: clamp(Math.round(segment.end * sr), 0, buffer.length),
-        fadeIn: index > 0,
-        fadeOut: index < kept.length - 1
+        fadeIn: index > 0 ? joinFadeFrames : fadeInFrames,
+        fadeOut: index < kept.length - 1 ? joinFadeFrames : fadeOutFrames
       };
     }).filter(function (segment) { return segment.end > segment.start; });
     const frames = segments.reduce(function (sum, segment) { return sum + segment.end - segment.start; }, 0);
@@ -242,11 +244,12 @@
     let offset = 44;
     segments.forEach(function (segment) {
       const length = segment.end - segment.start;
-      const fade = Math.min(fadeFrames, Math.floor(length / 2));
+      const fadeIn = Math.min(segment.fadeIn, Math.floor(length / 2));
+      const fadeOut = Math.min(segment.fadeOut, Math.floor(length / 2));
       for (let frame = segment.start; frame < segment.end; frame++) {
         let gain = 1;
-        if (fade && segment.fadeIn && frame < segment.start + fade) gain = Math.min(gain, (frame - segment.start) / fade);
-        if (fade && segment.fadeOut && frame >= segment.end - fade) gain = Math.min(gain, (segment.end - frame - 1) / fade);
+        if (fadeIn && frame < segment.start + fadeIn) gain = Math.min(gain, (frame - segment.start) / fadeIn);
+        if (fadeOut && frame >= segment.end - fadeOut) gain = Math.min(gain, (segment.end - frame - 1) / fadeOut);
         for (let ch = 0; ch < channels; ch++) {
           const sample = clamp((data[ch][frame] || 0) * gain, -1, 1);
           view.setInt16(offset, Math.round(sample < 0 ? sample * 32768 : sample * 32767), true);
@@ -262,9 +265,53 @@
     return (cleaned || 'utwor').slice(0, 150);
   }
 
-  function editedFileName(name, suffix) {
+  /**
+   * Argumenty natywnego eksportu FFmpeg. Ścieżki pozostają osobnymi
+   * argumentami; warstwa desktopowa cytuje je dla Windows/POSIX.
+   */
+  function buildFfmpegArgs(options) {
+    const opts = options || {};
+    if (!opts.inputPath || !opts.outputPath) throw new Error('MISSING_PATH');
+    const duration = finite(opts.duration, 0);
+    const segments = Array.isArray(opts.segments) && opts.segments.length ? opts.segments.map(function (segment) {
+      const start = Math.max(0, finite(segment && segment.start, 0));
+      const end = Math.max(start, finite(segment && segment.end, start));
+      return { start: start, end: end };
+    }).filter(function (segment) { return segment.end - segment.start >= MIN_CUT; }) : (duration > 0 ? [{ start: 0, end: duration }] : []);
+    if (!segments.length) throw new Error('EMPTY_OUTPUT');
+    const format = /^(mp3|flac)$/i.test(String(opts.format)) ? String(opts.format).toLowerCase() : 'wav';
+    const joinMs = Math.max(0, finite(opts.joinFadeMs != null ? opts.joinFadeMs : opts.fadeMs, 5));
+    const firstMs = Math.max(0, finite(opts.fadeInMs, 0));
+    const lastMs = Math.max(0, finite(opts.fadeOutMs, 0));
+    const time = function (value) { return Math.max(0, value).toFixed(6).replace(/0+$/, '').replace(/\.$/, '.0'); };
+    const filters = [];
+    const labels = [];
+    segments.forEach(function (segment, index) {
+      const length = segment.end - segment.start;
+      const fadeIn = Math.min(index > 0 ? joinMs : firstMs, length * 500) / 1000;
+      const fadeOut = Math.min(index < segments.length - 1 ? joinMs : lastMs, length * 500) / 1000;
+      let chain = '[0:a]atrim=start=' + time(segment.start) + ':end=' + time(segment.end) + ',asetpts=PTS-STARTPTS';
+      if (fadeIn > 0) chain += ',afade=t=in:st=0:d=' + time(fadeIn);
+      if (fadeOut > 0) chain += ',afade=t=out:st=' + time(Math.max(0, length - fadeOut)) + ':d=' + time(fadeOut);
+      const label = '[pae' + index + ']';
+      filters.push(chain + label);
+      labels.push(label);
+    });
+    filters.push(labels.join('') + 'concat=n=' + segments.length + ':v=0:a=1[out]');
+    const args = ['-hide_banner', '-y', '-i', String(opts.inputPath), '-vn', '-filter_complex', filters.join(';'), '-map', '[out]'];
+    if (format === 'mp3') args.push('-c:a', 'libmp3lame', '-b:a', '192k');
+    else if (format === 'flac') args.push('-c:a', 'flac', '-compression_level', '5');
+    else args.push('-c:a', 'pcm_s16le');
+    if (opts.title) args.push('-metadata', 'title=' + String(opts.title));
+    if (opts.artist) args.push('-metadata', 'artist=' + String(opts.artist));
+    args.push(String(opts.outputPath));
+    return args;
+  }
+
+  function editedFileName(name, suffix, format) {
     const base = String(name || 'utwor').replace(/\.[^.]+$/, '');
-    return safeFileName(base + (suffix || ' (edycja)')) + '.wav';
+    const ext = /^(mp3|flac)$/i.test(String(format)) ? String(format).toLowerCase() : 'wav';
+    return safeFileName(base + (suffix || ' (edycja)')) + '.' + ext;
   }
 
   return {
@@ -280,6 +327,7 @@
     detectSilence: detectSilence,
     waveformPeaks: waveformPeaks,
     renderCutWav: renderCutWav,
+    buildFfmpegArgs: buildFfmpegArgs,
     safeFileName: safeFileName,
     editedFileName: editedFileName
   };

@@ -28,6 +28,21 @@
   let lastLyricsPaint = 0;
   let ui = {};
   let editButton = null;
+  let zoom = 1;
+  let viewStart = 0;
+  let boundaryDrag = null;
+  let nativeMode = false;
+  let ffmpegAvailable = false;
+  let mediaReady = null;
+  let fadeInMs = 0;
+  let fadeOutMs = 0;
+  let joinFadeMs = 5;
+  let silenceDb = -45;
+  let silenceMin = 0.6;
+  let outputFormat = 'wav';
+  let sessionEnabled = true;
+  let sessionNotice = '';
+  const LARGE_FILE_BYTES = 80 * 1024 * 1024;
 
   function byId(id) { return document.getElementById(id); }
   function toast(text) { try { host.toast(text); } catch (e) {} }
@@ -70,6 +85,66 @@
     element.appendChild(document.createTextNode(String(text || '')));
   }
 
+  function sessionKey() { return track ? 'pulsarEditorSession:' + track.id : ''; }
+  function hasEditWork() { return cuts.length > 0 || fadeInMs > 0 || fadeOutMs > 0 || joinFadeMs !== 5 || silenceDb !== -45 || silenceMin !== 0.6; }
+  function saveSession(manual) {
+    if (!track || !sessionEnabled || (!manual && !hasEditWork())) return;
+    try {
+      localStorage.setItem(sessionKey(), JSON.stringify({ version: 2, updatedAt: Date.now(), fileName: track.file.name, fileSize: track.file.size, cuts: cuts, fadeInMs: fadeInMs, fadeOutMs: fadeOutMs, joinFadeMs: joinFadeMs, silenceDb: silenceDb, silenceMin: silenceMin, outputFormat: outputFormat, zoom: zoom, viewStart: viewStart }));
+      if (manual) setStatus(ui.audioStatus, 'Sesja zapisana. Możesz zamknąć edytor i wrócić do niej później.', 'success');
+    } catch (e) { if (manual) setStatus(ui.audioStatus, 'Nie udało się zapisać sesji: ' + (e.message || e), 'error'); }
+  }
+  function restoreSession() {
+    sessionNotice = '';
+    if (!track || !duration) return;
+    try {
+      const data = JSON.parse(localStorage.getItem(sessionKey()) || 'null');
+      if (!data || data.version !== 2) return;
+      cuts = core.normalizeCuts(data.cuts || [], duration);
+      fadeInMs = Math.max(0, Math.min(30000, Number(data.fadeInMs) || 0));
+      fadeOutMs = Math.max(0, Math.min(30000, Number(data.fadeOutMs) || 0));
+      joinFadeMs = Math.max(0, Math.min(30000, Number(data.joinFadeMs == null ? 5 : data.joinFadeMs) || 0));
+      silenceDb = Math.max(-90, Math.min(-5, Number(data.silenceDb) || -45));
+      silenceMin = Math.max(0.1, Math.min(60, Number(data.silenceMin) || 0.6));
+      outputFormat = /^(wav|mp3|flac)$/.test(data.outputFormat) ? data.outputFormat : 'wav';
+      zoom = Math.max(1, Math.min(32, Number(data.zoom) || 1));
+      viewStart = Math.max(0, Math.min(duration, Number(data.viewStart) || 0));
+      sessionNotice = ' Wznowiono zapisaną sesję.';
+    } catch (e) {}
+  }
+  function deleteSession() {
+    if (!track) return;
+    try { localStorage.removeItem(sessionKey()); } catch (e) {}
+    sessionEnabled = false; cuts = []; history = []; fadeInMs = 0; fadeOutMs = 0; joinFadeMs = 5; silenceDb = -45; silenceMin = 0.6; zoom = 1; viewStart = 0; sessionNotice = '';
+    syncOptionInputs(); updateAudioUi(); drawWave();
+    setStatus(ui.audioStatus, 'Usunięto zapisaną sesję i wyczyszczono decyzje edycji. Oryginał pozostał bez zmian.', 'success');
+  }
+  function viewDuration() { return duration > 0 ? duration / zoom : 0; }
+  function clampView() { if (!duration || zoom <= 1) viewStart = 0; else viewStart = Math.max(0, Math.min(duration - viewDuration(), viewStart)); }
+  function setZoom(value, center) {
+    if (!duration) return;
+    const oldTime = Number.isFinite(center) ? center : viewStart + viewDuration() / 2;
+    const oldRatio = viewDuration() ? (oldTime - viewStart) / viewDuration() : 0.5;
+    zoom = Math.max(1, Math.min(32, Number(value) || 1));
+    viewStart = oldTime - oldRatio * viewDuration();
+    clampView(); updateViewUi(); drawWave(); saveSession(false);
+  }
+  function updateViewUi() {
+    if (!ui.zoomLabel) return;
+    clampView();
+    ui.zoomLabel.textContent = zoom.toFixed(zoom < 10 ? 1 : 0) + '×';
+    ui.axisStart.textContent = formatTime(viewStart, true);
+    ui.axisDuration.textContent = formatTime(viewStart + viewDuration(), true);
+    ui.zoomOut.disabled = zoom <= 1 || saveBusy;
+    ui.zoomIn.disabled = zoom >= 32 || saveBusy;
+    ui.zoomFit.disabled = zoom <= 1 || saveBusy;
+  }
+  function syncOptionInputs() {
+    if (!ui.fadeIn) return;
+    ui.fadeIn.value = String(fadeInMs); ui.fadeOut.value = String(fadeOutMs); ui.joinFade.value = String(joinFadeMs);
+    ui.silenceDb.value = String(silenceDb); ui.silenceMin.value = String(silenceMin); ui.format.value = outputFormat;
+  }
+
   function buildButton() {
     const lyricsButton = byId('lyricsBtn');
     if (!lyricsButton || !lyricsButton.parentNode || byId('audioEditorBtn')) return;
@@ -103,26 +178,41 @@
         </nav>
         <div class="pae-body">
           <div class="pae-pane" id="paeAudioPane" role="tabpanel">
-            <p class="pae-note"><strong>Przeciągnij po fali, aby usunąć fragment.</strong> Kliknięcie przewija odtwarzanie. Zapis tworzy nowy plik WAV — oryginał nie jest nadpisywany.</p>
+            <p class="pae-note"><strong>Przeciągnij po fali, aby usunąć fragment; chwyć czerwoną granicę, aby ją przesunąć.</strong> Ctrl + kółko powiększa falę. Zapis zawsze tworzy nowy plik — oryginał nie jest nadpisywany.</p>
             <div>
               <div class="pae-wave-wrap" id="paeWaveWrap">
                 <canvas class="pae-wave" id="paeWave" aria-label="Fala dźwiękowa — przeciągnij, aby wybrać wycinek"></canvas>
                 <div class="pae-wave-empty" id="paeWaveEmpty">Wczytywanie fali dźwiękowej…</div>
                 <div class="pae-playhead" id="paePlayhead"></div>
               </div>
-              <div class="pae-time-axis"><span>0:00,000</span><span id="paeAxisDuration">0:00,000</span></div>
+              <div class="pae-time-axis"><span id="paeAxisStart">0:00,000</span><span id="paeAxisDuration">0:00,000</span></div>
+            </div>
+            <div class="pae-zoombar" aria-label="Powiększenie fali">
+              <button type="button" class="pae-btn icon" id="paeZoomOut" aria-label="Pomniejsz falę">−</button><strong id="paeZoomLabel">1,0×</strong><button type="button" class="pae-btn icon" id="paeZoomIn" aria-label="Powiększ falę">+</button><button type="button" class="pae-btn" id="paeZoomFit">Pełny utwór</button><span>Ctrl + kółko · dokładność 1 ms</span>
             </div>
             <div class="pae-summary">
               <div class="pae-stat"><span>Oryginał</span><strong id="paeOriginalDuration">0:00,00</strong></div>
               <div class="pae-stat removed"><span>Do usunięcia</span><strong id="paeRemovedDuration">0:00,00</strong></div>
               <div class="pae-stat result"><span>Po edycji</span><strong id="paeFinalDuration">0:00,00</strong></div>
             </div>
+            <details class="pae-advanced">
+              <summary>Przejścia i wykrywanie ciszy</summary>
+              <div class="pae-options-grid">
+                <label class="pae-field">Fade-in (ms)<input class="pae-input" id="paeFadeIn" type="number" min="0" max="30000" step="10" value="0"></label>
+                <label class="pae-field">Fade-out (ms)<input class="pae-input" id="paeFadeOut" type="number" min="0" max="30000" step="10" value="0"></label>
+                <label class="pae-field">Wygładzanie łączeń (ms)<input class="pae-input" id="paeJoinFade" type="number" min="0" max="30000" step="1" value="5"></label>
+                <label class="pae-field">Próg ciszy (dB)<input class="pae-input" id="paeSilenceDb" type="number" min="-90" max="-5" step="1" value="-45"></label>
+                <label class="pae-field">Minimalna cisza (s)<input class="pae-input" id="paeSilenceMin" type="number" min="0.1" max="60" step="0.1" value="0.6"></label>
+              </div>
+            </details>
             <div class="pae-toolbar">
               <button type="button" class="pae-btn" id="paeDetect">Wykryj ciszę</button>
               <button type="button" class="pae-btn" id="paePreview" aria-pressed="false">▶ Podgląd bez wycinków</button>
               <span class="spacer"></span>
               <button type="button" class="pae-btn" id="paeUndo">Cofnij</button>
               <button type="button" class="pae-btn danger" id="paeClear">Wyczyść</button>
+              <button type="button" class="pae-btn" id="paeSaveSession">Zapisz sesję</button>
+              <button type="button" class="pae-btn" id="paeDeleteSession">Usuń sesję</button>
             </div>
             <section class="pae-section">
               <div class="pae-section-title"><h3>Dodaj wycinek</h3><span>czas w sekundach</span></div>
@@ -144,7 +234,8 @@
             <div class="pae-status" id="paeAudioStatus" aria-live="polite"></div>
             <div class="pae-save">
               <label class="pae-check"><input type="checkbox" id="paeImport" checked> Dodaj wynik do biblioteki</label>
-              <button type="button" class="pae-btn primary" id="paeSave">Zapisz jako nowy utwór WAV</button>
+              <label class="pae-format">Format<select class="pae-input" id="paeFormat" aria-label="Format eksportu"><option value="wav">WAV PCM</option><option value="mp3">MP3 192 kbps · FFmpeg</option><option value="flac">FLAC · FFmpeg</option></select></label>
+              <button type="button" class="pae-btn primary" id="paeSave">Eksportuj jako nowy utwór WAV</button>
             </div>
           </div>
 
@@ -185,8 +276,11 @@
       track: byId('paeTrack'),
       audioPane: byId('paeAudioPane'), lyricsPane: byId('paeLyricsPane'),
       wave: byId('paeWave'), waveWrap: byId('paeWaveWrap'), waveEmpty: byId('paeWaveEmpty'), playhead: byId('paePlayhead'),
-      axisDuration: byId('paeAxisDuration'), originalDuration: byId('paeOriginalDuration'), removedDuration: byId('paeRemovedDuration'), finalDuration: byId('paeFinalDuration'),
+      axisStart: byId('paeAxisStart'), axisDuration: byId('paeAxisDuration'), originalDuration: byId('paeOriginalDuration'), removedDuration: byId('paeRemovedDuration'), finalDuration: byId('paeFinalDuration'),
       detect: byId('paeDetect'), preview: byId('paePreview'), undo: byId('paeUndo'), clear: byId('paeClear'),
+      saveSession: byId('paeSaveSession'), deleteSession: byId('paeDeleteSession'),
+      zoomOut: byId('paeZoomOut'), zoomIn: byId('paeZoomIn'), zoomFit: byId('paeZoomFit'), zoomLabel: byId('paeZoomLabel'),
+      fadeIn: byId('paeFadeIn'), fadeOut: byId('paeFadeOut'), joinFade: byId('paeJoinFade'), silenceDb: byId('paeSilenceDb'), silenceMin: byId('paeSilenceMin'), format: byId('paeFormat'),
       start: byId('paeCutStart'), end: byId('paeCutEnd'), addCut: byId('paeAddCut'), cuts: byId('paeCuts'),
       audioStatus: byId('paeAudioStatus'), import: byId('paeImport'), save: byId('paeSave'),
       offsetValue: byId('paeOffsetValue'), offsetRange: byId('paeOffsetRange'), offsetNumber: byId('paeOffsetNumber'),
@@ -202,12 +296,30 @@
     ui.preview.addEventListener('click', function () { setPreview(!preview); });
     ui.undo.addEventListener('click', undoCuts);
     ui.clear.addEventListener('click', clearCuts);
+    ui.saveSession.addEventListener('click', function () { sessionEnabled = true; saveSession(true); });
+    ui.deleteSession.addEventListener('click', deleteSession);
+    ui.zoomOut.addEventListener('click', function () { setZoom(zoom / 2, viewStart + viewDuration() / 2); });
+    ui.zoomIn.addEventListener('click', function () { setZoom(zoom * 2, mainAudio.currentTime >= viewStart && mainAudio.currentTime <= viewStart + viewDuration() ? mainAudio.currentTime : viewStart + viewDuration() / 2); });
+    ui.zoomFit.addEventListener('click', function () { setZoom(1, 0); });
     ui.addCut.addEventListener('click', addCutFromInputs);
     byId('paeSetStart').addEventListener('click', function () { ui.start.value = String(round3(mainAudio.currentTime || 0)); });
     byId('paeSetEnd').addEventListener('click', function () { ui.end.value = String(round3(mainAudio.currentTime || 0)); });
     [ui.start, ui.end].forEach(function (input) {
       input.addEventListener('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); addCutFromInputs(); } });
     });
+    [[ui.fadeIn, 'fadeIn', 0, 30000], [ui.fadeOut, 'fadeOut', 0, 30000], [ui.joinFade, 'joinFade', 0, 30000], [ui.silenceDb, 'silenceDb', -90, -5], [ui.silenceMin, 'silenceMin', 0.1, 60]].forEach(function (item) {
+      item[0].addEventListener('change', function () {
+        const value = Math.max(item[2], Math.min(item[3], numberValue(item[0].value)));
+        if (!Number.isFinite(value)) { syncOptionInputs(); return; }
+        if (item[1] === 'fadeIn') fadeInMs = value;
+        else if (item[1] === 'fadeOut') fadeOutMs = value;
+        else if (item[1] === 'joinFade') joinFadeMs = value;
+        else if (item[1] === 'silenceDb') silenceDb = value;
+        else silenceMin = value;
+        sessionEnabled = true; syncOptionInputs(); saveSession(false); updateAudioUi();
+      });
+    });
+    ui.format.addEventListener('change', function () { outputFormat = /^(wav|mp3|flac)$/.test(ui.format.value) ? ui.format.value : 'wav'; sessionEnabled = true; saveSession(false); updateAudioUi(); });
     ui.save.addEventListener('click', saveEditedAudio);
     ui.offsetRange.addEventListener('input', function () { setLyricsOffset(numberValue(ui.offsetRange.value), 'range'); });
     ui.offsetNumber.addEventListener('change', function () { setLyricsOffset(numberValue(ui.offsetNumber.value), 'number'); });
@@ -253,13 +365,43 @@
     }
   }
 
+  async function prepareMedia() {
+    const tools = window.__pulsarDesktopTools;
+    if (!tools || !tools.available) { ffmpegAvailable = false; updateAudioUi(); return; }
+    try { const caps = await tools.capabilities(); ffmpegAvailable = !!caps.ffmpeg; }
+    catch (e) { ffmpegAvailable = false; }
+    if (open) updateAudioUi();
+  }
+  function activateNative(message) {
+    nativeMode = true;
+    buffer = null;
+    const analysis = player.__sound && player.__sound.analysisFor ? player.__sound.analysisFor(track.id) : null;
+    peaks = analysis && analysis.peaks && analysis.peaks.length ? new Float32Array(analysis.peaks) : null;
+    if (!duration && analysis && analysis.dur) duration = Number(analysis.dur) || 0;
+    if (!Number.isFinite(duration) || duration < 0) duration = 0;
+    ui.waveEmpty.hidden = true;
+    ui.start.max = ui.end.max = String(duration || 0);
+    setStatus(ui.audioStatus, message + (peaks ? ' Używam zapisanej fali analizy.' : ' Fala jest uproszczona; granice ustawisz czasem i przeciąganiem.'), 'success');
+    restoreSession(); syncOptionInputs(); updateAudioUi(); drawWave();
+  }
   async function loadAudioBuffer(token) {
     buffer = null;
     peaks = null;
+    nativeMode = false;
     ui.waveEmpty.hidden = false;
     ui.waveEmpty.textContent = 'Wczytywanie fali dźwiękowej…';
-    setStatus(ui.audioStatus, 'Dekodowanie audio do edycji…', '', true);
+    setStatus(ui.audioStatus, 'Sprawdzanie najlepszego trybu edycji…', '', true);
     updateAudioUi();
+    await mediaReady;
+    if (!open || token !== decodeToken) return;
+    const needsNative = track.file.size > LARGE_FILE_BYTES || duration > 1800;
+    if (needsNative) {
+      if (ffmpegAvailable) { activateNative('Tryb dużych plików: cięcie wykona FFmpeg bez dekodowania całości w WebView.'); return; }
+      ui.waveEmpty.textContent = 'Duży plik — bez dekodowania całości';
+      setStatus(ui.audioStatus, 'Dla tego dużego pliku włączono ochronę pamięci. Dołącz FFmpeg, aby edytować strumieniowo i eksportować MP3/FLAC.', 'error');
+      updateAudioUi(); drawWave(); return;
+    }
+    setStatus(ui.audioStatus, 'Dekodowanie audio do edycji…', '', true);
     try {
       const decoded = await decodeFile(track.file);
       if (!open || token !== decodeToken) return;
@@ -270,12 +412,14 @@
       ui.start.max = String(duration);
       ui.end.max = String(duration);
       ui.end.value = String(round3(Math.min(duration, Math.max(1, (mainAudio.currentTime || 0) + 1))));
-      setStatus(ui.audioStatus, 'Fala gotowa. Zaznacz fragment albo użyj wykrywania ciszy.', 'success');
+      restoreSession(); syncOptionInputs();
+      setStatus(ui.audioStatus, 'Fala gotowa. Zaznacz fragment albo użyj wykrywania ciszy.' + sessionNotice, 'success');
       updateAudioUi();
       drawWave();
     } catch (error) {
       if (!open || token !== decodeToken) return;
       console.warn('Pulsar Editor: dekodowanie nie powiodło się', error);
+      if (ffmpegAvailable) { activateNative('WebView nie zdekodowało źródła; eksport i cięcie wykona FFmpeg.'); return; }
       ui.waveEmpty.textContent = 'Nie udało się zdekodować tego pliku.';
       setStatus(ui.audioStatus, 'Nie można edytować tego formatu w tej wersji WebView. Napisy nadal możesz przesuwać.', 'error');
       updateAudioUi();
@@ -290,11 +434,16 @@
     buildPanel();
     track = current;
     duration = Number(current.duration || mainAudio.duration || 0) || 0;
+    if (!Number.isFinite(duration) || duration < 0) duration = 0;
     cuts = [];
     history = [];
     draft = null;
+    boundaryDrag = null;
     preview = false;
     saveBusy = false;
+    zoom = 1; viewStart = 0; nativeMode = false;
+    fadeInMs = 0; fadeOutMs = 0; joinFadeMs = 5; silenceDb = -45; silenceMin = 0.6; outputFormat = 'wav';
+    sessionEnabled = true; sessionNotice = '';
     open = true;
     const token = ++decodeToken;
     ++lyricsToken;
@@ -309,18 +458,21 @@
     setStatus(ui.lyricsStatus, '');
     setPreview(false);
     setTab(tab || 'audio');
+    restoreSession(); syncOptionInputs();
     updateAudioUi();
     updateLyricsOffsetUi();
     if (editButton) editButton.classList.add('active');
     requestAnimationFrame(function () { if (open) ui.dim.classList.add('show'); });
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(animationTick);
+    mediaReady = prepareMedia();
     loadAudioBuffer(token);
     setTimeout(function () { if (open) byId('paeClose').focus(); }, 80);
   }
 
   function closeEditor() {
     if (!open || saveBusy) return;
+    saveSession(false);
     open = false;
     ++decodeToken;
     ++lyricsToken;
@@ -339,16 +491,22 @@
     ui.originalDuration.textContent = formatTime(duration, false);
     ui.removedDuration.textContent = formatTime(removed, false);
     ui.finalDuration.textContent = formatTime(finalDuration, false);
-    ui.axisDuration.textContent = formatTime(duration, true);
     ui.detect.disabled = !buffer || saveBusy;
+    ui.detect.title = buffer ? 'Próg ' + silenceDb + ' dB, minimum ' + silenceMin + ' s' : 'Wykrywanie ciszy wymaga zdekodowanego audio; w trybie dużych plików ustaw zakresy czasem';
     ui.preview.disabled = !cuts.length || saveBusy;
     ui.preview.classList.toggle('active', preview);
     ui.preview.setAttribute('aria-pressed', String(preview));
     ui.undo.disabled = !history.length || saveBusy;
     ui.clear.disabled = !cuts.length || saveBusy;
-    ui.save.disabled = !buffer || !cuts.length || finalDuration < 0.1 || saveBusy;
-    ui.save.textContent = saveBusy ? 'Zapisywanie…' : 'Zapisz jako nowy utwór WAV';
-    ui.addCut.disabled = saveBusy;
+    ui.saveSession.disabled = saveBusy; ui.deleteSession.disabled = saveBusy;
+    const formatReady = outputFormat === 'wav' || ffmpegAvailable;
+    ui.save.disabled = !(buffer || nativeMode) || !duration || finalDuration < 0.1 || saveBusy || !formatReady;
+    ui.save.textContent = saveBusy ? 'Zapisywanie…' : 'Eksportuj jako nowy utwór ' + outputFormat.toUpperCase();
+    ui.save.title = formatReady ? 'Oryginał nie zostanie nadpisany' : 'Ten format wymaga FFmpeg obok aplikacji lub w PATH';
+    ui.format.disabled = saveBusy;
+    Array.prototype.forEach.call(ui.format.options, function (option) { if (option.value !== 'wav') option.disabled = !ffmpegAvailable; });
+    ui.addCut.disabled = saveBusy || !(buffer || nativeMode) || !duration;
+    updateViewUi();
     renderCuts();
   }
 
@@ -365,7 +523,19 @@
       const row = document.createElement('div');
       row.className = 'pae-cut-row';
       const num = document.createElement('span'); num.className = 'pae-cut-num'; num.textContent = String(index + 1) + '.';
-      const times = document.createElement('span'); times.className = 'pae-cut-time'; times.textContent = formatTime(cut.start, true) + ' → ' + formatTime(cut.end, true);
+      const startInput = document.createElement('input'); startInput.className = 'pae-input pae-cut-input'; startInput.type = 'number'; startInput.min = '0'; startInput.max = String(duration); startInput.step = '0.001'; startInput.value = String(round3(cut.start)); startInput.setAttribute('aria-label', 'Początek wycinka ' + (index + 1) + ' w sekundach');
+      const arrow = document.createElement('span'); arrow.className = 'pae-cut-arrow'; arrow.textContent = '→';
+      const endInput = document.createElement('input'); endInput.className = 'pae-input pae-cut-input'; endInput.type = 'number'; endInput.min = '0'; endInput.max = String(duration); endInput.step = '0.001'; endInput.value = String(round3(cut.end)); endInput.setAttribute('aria-label', 'Koniec wycinka ' + (index + 1) + ' w sekundach');
+      const updateBoundary = function (side, input) {
+        const value = numberValue(input.value);
+        if (!Number.isFinite(value)) { updateAudioUi(); return; }
+        const next = cuts.map(function (item) { return { start: item.start, end: item.end }; });
+        next[index][side] = value;
+        if (!mutateCuts(next, 'Przesunięto granicę wycinka.')) updateAudioUi();
+      };
+      startInput.addEventListener('change', function () { updateBoundary('start', startInput); });
+      endInput.addEventListener('change', function () { updateBoundary('end', endInput); });
+      startInput.disabled = endInput.disabled = saveBusy;
       const length = document.createElement('span'); length.className = 'pae-cut-len'; length.textContent = '−' + formatTime(cut.end - cut.start, false);
       const seek = document.createElement('button'); seek.type = 'button'; seek.className = 'pae-btn icon'; seek.textContent = '▶'; seek.title = 'Przewiń do początku wycinka'; seek.setAttribute('aria-label', seek.title);
       seek.addEventListener('click', function () { try { mainAudio.currentTime = cut.start; } catch (e) {} });
@@ -373,7 +543,7 @@
       remove.addEventListener('click', function () {
         mutateCuts(cuts.filter(function (_, i) { return i !== index; }), 'Przywrócono fragment.');
       });
-      row.appendChild(num); row.appendChild(times); row.appendChild(length); row.appendChild(seek); row.appendChild(remove);
+      row.appendChild(num); row.appendChild(startInput); row.appendChild(arrow); row.appendChild(endInput); row.appendChild(length); row.appendChild(seek); row.appendChild(remove);
       ui.cuts.appendChild(row);
     });
   }
@@ -388,6 +558,8 @@
     history.push(cuts.map(function (cut) { return { start: cut.start, end: cut.end }; }));
     if (history.length > 30) history.shift();
     cuts = normalized;
+    sessionEnabled = true;
+    saveSession(false);
     setPreview(false);
     if (message) setStatus(ui.audioStatus, message, 'success');
     updateAudioUi();
@@ -410,6 +582,7 @@
   function undoCuts() {
     if (!history.length || saveBusy) return;
     cuts = history.pop();
+    sessionEnabled = true; saveSession(false);
     setPreview(false);
     setStatus(ui.audioStatus, 'Cofnięto ostatnią zmianę.', 'success');
     updateAudioUi();
@@ -427,8 +600,8 @@
     setTimeout(function () {
       if (!open || !buffer) return;
       try {
-        const found = core.detectSilence(buffer, { db: -45, minDuration: 0.6, padding: 0.03 });
-        if (!found.length) { setStatus(ui.audioStatus, 'Nie znaleziono ciszy dłuższej niż 0,6 s przy progu −45 dB.', ''); return; }
+        const found = core.detectSilence(buffer, { db: silenceDb, minDuration: silenceMin, padding: 0.03 });
+        if (!found.length) { setStatus(ui.audioStatus, 'Nie znaleziono ciszy dłuższej niż ' + silenceMin + ' s przy progu ' + silenceDb + ' dB.', ''); return; }
         const before = JSON.stringify(cuts);
         const combined = core.normalizeCuts(cuts.concat(found), duration);
         if (JSON.stringify(combined) === before) { setStatus(ui.audioStatus, 'Wykryte ciche fragmenty są już zaznaczone.', ''); return; }
@@ -450,8 +623,13 @@
   function animationTick(timestamp) {
     if (!open) return;
     if (duration > 0) {
-      const position = Math.max(0, Math.min(1, (mainAudio.currentTime || 0) / duration));
-      ui.playhead.style.left = (position * 100) + '%';
+      const now = mainAudio.currentTime || 0;
+      if (zoom > 1 && !mainAudio.paused && !boundaryDrag && !draft && (now < viewStart || now > viewStart + viewDuration())) {
+        viewStart = now - viewDuration() * 0.35; clampView(); updateViewUi(); drawWave();
+      }
+      const position = (now - viewStart) / Math.max(0.001, viewDuration());
+      ui.playhead.hidden = position < 0 || position > 1;
+      ui.playhead.style.left = (Math.max(0, Math.min(1, position)) * 100) + '%';
     }
     if (preview && cuts.length) {
       const now = mainAudio.currentTime || 0;
@@ -498,7 +676,8 @@
       ctx.fillStyle = gradient;
       const middle = height / 2;
       for (let x = 0; x < width; x++) {
-        const index = Math.min(peaks.length - 1, Math.floor(x / width * peaks.length));
+        const globalRatio = (viewStart + (x / Math.max(1, width)) * viewDuration()) / duration;
+        const index = Math.max(0, Math.min(peaks.length - 1, Math.floor(globalRatio * peaks.length)));
         const peak = Math.max(.012, peaks[index]);
         const half = Math.max(1, peak * (height - 18) / 2);
         ctx.fillRect(x, middle - half, 1, half * 2);
@@ -508,16 +687,22 @@
 
     if (duration > 0) {
       cuts.forEach(function (cut) {
-        const x = cut.start / duration * width;
-        const w = Math.max(1, (cut.end - cut.start) / duration * width);
+        const visible = viewDuration();
+        const start = Math.max(cut.start, viewStart), end = Math.min(cut.end, viewStart + visible);
+        if (end <= start) return;
+        const x = (start - viewStart) / visible * width;
+        const w = Math.max(1, (end - start) / visible * width);
         ctx.fillStyle = 'rgba(255,72,105,.25)'; ctx.fillRect(x, 0, w, height);
-        ctx.fillStyle = 'rgba(255,125,145,.9)'; ctx.fillRect(x, 0, 1, height); ctx.fillRect(Math.min(width - 1, x + w - 1), 0, 1, height);
+        ctx.fillStyle = 'rgba(255,125,145,.9)';
+        if (cut.start >= viewStart && cut.start <= viewStart + visible) ctx.fillRect((cut.start - viewStart) / visible * width, 0, 2, height);
+        if (cut.end >= viewStart && cut.end <= viewStart + visible) ctx.fillRect(Math.min(width - 1, (cut.end - viewStart) / visible * width - 1), 0, 2, height);
         ctx.strokeStyle = 'rgba(255,180,190,.32)';
         for (let sx = x - height; sx < x + w; sx += 9) { ctx.beginPath(); ctx.moveTo(Math.max(x, sx), 0); ctx.lineTo(Math.min(x + w, sx + height), height); ctx.stroke(); }
       });
       if (draft) {
+        const visible = viewDuration();
         const start = Math.min(draft.start, draft.end), end = Math.max(draft.start, draft.end);
-        const x = start / duration * width, w = Math.max(1, (end - start) / duration * width);
+        const x = (start - viewStart) / visible * width, w = Math.max(1, (end - start) / visible * width);
         ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x, 0, w, height);
         ctx.strokeStyle = '#fff'; ctx.strokeRect(x + .5, .5, Math.max(0, w - 1), height - 1);
       }
@@ -527,24 +712,57 @@
   function eventTime(event) {
     const rect = ui.wave.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
-    return ratio * duration;
+    return viewStart + ratio * viewDuration();
+  }
+  function boundaryAt(event) {
+    if (!duration || !cuts.length) return null;
+    const rect = ui.wave.getBoundingClientRect();
+    let best = null;
+    cuts.forEach(function (cut, index) {
+      ['start', 'end'].forEach(function (side) {
+        const time = cut[side];
+        if (time < viewStart || time > viewStart + viewDuration()) return;
+        const x = rect.left + (time - viewStart) / viewDuration() * rect.width;
+        const distance = Math.abs(event.clientX - x);
+        if (distance <= 9 && (!best || distance < best.distance)) best = { index: index, side: side, distance: distance };
+      });
+    });
+    return best;
   }
 
   function bindWaveEvents() {
     ui.wave.addEventListener('pointerdown', function (event) {
-      if (!buffer || saveBusy || event.button !== 0) return;
+      if (!(buffer || nativeMode) || saveBusy || event.button !== 0) return;
       event.preventDefault();
-      const time = eventTime(event);
-      draft = { start: time, end: time, pointerId: event.pointerId };
+      const hit = boundaryAt(event);
+      if (hit) {
+        boundaryDrag = { index: hit.index, side: hit.side, pointerId: event.pointerId, before: cuts.map(function (cut) { return { start: cut.start, end: cut.end }; }) };
+      } else {
+        const time = eventTime(event);
+        draft = { start: time, end: time, pointerId: event.pointerId };
+      }
       try { ui.wave.setPointerCapture(event.pointerId); } catch (e) {}
       drawWave();
     });
     ui.wave.addEventListener('pointermove', function (event) {
-      if (!draft || draft.pointerId !== event.pointerId) return;
-      draft.end = eventTime(event);
-      drawWave();
+      if (boundaryDrag && boundaryDrag.pointerId === event.pointerId) {
+        const cut = cuts[boundaryDrag.index];
+        if (!cut) return;
+        const time = eventTime(event);
+        if (boundaryDrag.side === 'start') cut.start = Math.max(0, Math.min(time, cut.end - 0.01));
+        else cut.end = Math.min(duration, Math.max(time, cut.start + 0.01));
+        updateAudioUi(); drawWave(); return;
+      }
+      if (draft && draft.pointerId === event.pointerId) { draft.end = eventTime(event); drawWave(); return; }
+      ui.wave.style.cursor = boundaryAt(event) ? 'ew-resize' : 'crosshair';
     });
     ui.wave.addEventListener('pointerup', function (event) {
+      if (boundaryDrag && boundaryDrag.pointerId === event.pointerId) {
+        const drag = boundaryDrag; boundaryDrag = null;
+        const next = cuts.map(function (cut) { return { start: cut.start, end: cut.end }; });
+        cuts = drag.before;
+        mutateCuts(next, 'Przesunięto granicę wycinka.'); drawWave(); return;
+      }
       if (!draft || draft.pointerId !== event.pointerId) return;
       const selection = draft;
       draft = null;
@@ -557,7 +775,16 @@
         drawWave();
       }
     });
-    ui.wave.addEventListener('pointercancel', function () { draft = null; drawWave(); });
+    ui.wave.addEventListener('pointercancel', function () {
+      if (boundaryDrag) { cuts = boundaryDrag.before; boundaryDrag = null; updateAudioUi(); }
+      draft = null; drawWave();
+    });
+    ui.wave.addEventListener('wheel', function (event) {
+      if (!event.ctrlKey || !duration) return;
+      event.preventDefault();
+      const center = eventTime(event);
+      setZoom(zoom * (event.deltaY < 0 ? 2 : 0.5), center);
+    }, { passive: false });
     window.addEventListener('resize', function () { if (open) drawWave(); });
   }
 
@@ -597,30 +824,48 @@
   }
 
   async function saveEditedAudio() {
-    if (!buffer || !cuts.length || saveBusy) return;
+    if (!(buffer || nativeMode) || !duration || saveBusy) return;
+    const useNative = nativeMode || outputFormat !== 'wav';
+    const tools = window.__pulsarDesktopTools;
+    if (useNative && (!tools || !tools.available || !ffmpegAvailable)) { setStatus(ui.audioStatus, 'Ten eksport wymaga dostępnego FFmpeg.', 'error'); return; }
     saveBusy = true;
     let completed = false;
+    saveSession(false);
     updateAudioUi();
-    setStatus(ui.audioStatus, 'Sklejanie audio i zapisywanie WAV…', '', true);
+    setStatus(ui.audioStatus, useNative ? 'FFmpeg przygotowuje eksport bez dekodowania w WebView…' : 'Sklejanie audio i zapisywanie WAV…', '', true);
     try {
-      const wav = core.renderCutWav(buffer, cuts, { fadeMs: 5 });
-      const blob = new Blob([wav], { type: 'audio/wav' });
-      const defaultName = core.editedFileName(track.file.name, ' (edycja)');
+      const defaultName = core.editedFileName(track.file.name, ' (edycja)', outputFormat);
       const fs = window.__pulsarFs;
+      const saveDialog = fs && fs.saveDialog ? fs.saveDialog : tools && tools.available ? tools.fs.saveDialog : null;
       let path = '';
-      if (fs && fs.saveDialog) {
-        path = await fs.saveDialog('Zapisz przycięty utwór', defaultName, 'wav', 'WAV PCM');
+      if (saveDialog) {
+        path = await saveDialog('Zapisz przycięty utwór', defaultName, outputFormat, outputFormat.toUpperCase());
         if (!path) { setStatus(ui.audioStatus, 'Anulowano zapis — zmiany nadal są w edytorze.', ''); return; }
         if (track.srcPath && samePath(path, track.srcPath)) throw new Error('Wybierz inną nazwę lub folder. Edytor nie nadpisuje oryginalnego pliku.');
       }
       const outputName = fileNameFromPath(path, defaultName);
+      const outputTitle = (track.title || outputName.replace(/\.[^.]+$/, '')) + ' (edycja)';
+      const mime = outputFormat === 'mp3' ? 'audio/mpeg' : outputFormat === 'flac' ? 'audio/flac' : 'audio/wav';
+      let blob = null;
+      let importSkipped = false;
       setStatus(ui.audioStatus, 'Zapisywanie ' + outputName + '…', '', true);
-      if (path) await writeBlob(path, blob);
-      else downloadBlob(blob, outputName);
+      if (useNative) {
+        const result = await tools.exportAudio({ inputPath: track.srcPath || '', inputBlob: track.file, inputName: track.file.name, outputPath: path, format: outputFormat, duration: duration, segments: core.keptSegments(duration, cuts), fadeInMs: fadeInMs, fadeOutMs: fadeOutMs, joinFadeMs: joinFadeMs, title: outputTitle, artist: track.artist || '' });
+        path = result.path;
+        if (ui.import.checked) {
+          if (result.size > 256 * 1024 * 1024) importSkipped = true;
+          else blob = new Blob([await tools.fs.read(path)], { type: mime });
+        }
+      } else {
+        const wav = core.renderCutWav(buffer, cuts, { fadeInMs: fadeInMs, fadeOutMs: fadeOutMs, joinFadeMs: joinFadeMs });
+        blob = new Blob([wav], { type: mime });
+        if (path) await writeBlob(path, blob);
+        else downloadBlob(blob, outputName);
+      }
 
       let imported = false;
       let alreadyThere = false;
-      if (ui.import.checked) {
+      if (ui.import.checked && !importSkipped) {
         let adjusted = null;
         const sourceLines = await localSyncedLyrics();
         if (sourceLines) {
@@ -628,10 +873,10 @@
           const lines = core.remapLyrics(sourceLines, cuts, offset, duration);
           if (lines.length) adjusted = { synced: lines, plain: null, source: 'lrc' };
         }
-        const outputFile = new File([blob], outputName, { type: 'audio/wav' });
+        const outputFile = new File([blob], outputName, { type: mime });
         const id = player.__editor.importEdited(outputFile, track.id, {
           path: path,
-          title: (track.title || outputName.replace(/\.wav$/i, '')) + ' (edycja)',
+          title: outputTitle,
           duration: core.editedDuration(duration, cuts),
           lyrics: adjusted,
           lrcText: adjusted ? core.formatLRC(adjusted.synced) : ''
@@ -639,8 +884,9 @@
         imported = !!id;
         alreadyThere = !id;
       }
-      setStatus(ui.audioStatus, imported ? 'Zapisano i dodano nowy utwór do biblioteki.' : alreadyThere ? 'Plik zapisany. Identyczna wersja jest już w bibliotece.' : 'Zapisano przycięty plik WAV.', 'success');
-      toast(imported ? 'Zapisano i dodano przycięty utwór do biblioteki' : alreadyThere ? 'Zapisano WAV — taka wersja już jest w bibliotece' : 'Zapisano przycięty plik WAV');
+      const message = importSkipped ? 'Plik zapisany. Import do biblioteki pominięto dla pliku powyżej 256 MB, aby oszczędzić pamięć.' : imported ? 'Zapisano i dodano nowy utwór do biblioteki.' : alreadyThere ? 'Plik zapisany. Identyczna wersja jest już w bibliotece.' : 'Zapisano przycięty plik ' + outputFormat.toUpperCase() + '.';
+      setStatus(ui.audioStatus, message, 'success');
+      toast(message);
       completed = true;
     } catch (error) {
       console.warn('Pulsar Editor: zapis nie powiódł się', error);
@@ -771,6 +1017,7 @@
   window.PulsarAudioEditor = {
     open: openEditor,
     close: closeEditor,
-    state: function () { return { open: open, tab: activeTab, trackId: track && track.id, cuts: cuts.map(function (cut) { return { start: cut.start, end: cut.end }; }), preview: preview, decoded: !!buffer, busy: saveBusy }; }
+    saveSession: function () { sessionEnabled = true; saveSession(true); },
+    state: function () { return { open: open, tab: activeTab, trackId: track && track.id, cuts: cuts.map(function (cut) { return { start: cut.start, end: cut.end }; }), preview: preview, decoded: !!buffer, nativeMode: nativeMode, ffmpeg: ffmpegAvailable, busy: saveBusy, zoom: zoom, viewStart: viewStart, fadeInMs: fadeInMs, fadeOutMs: fadeOutMs, joinFadeMs: joinFadeMs, silenceDb: silenceDb, silenceMin: silenceMin, format: outputFormat, sessionKey: sessionKey() }; }
   };
 })();

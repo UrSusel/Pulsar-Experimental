@@ -10,7 +10,7 @@ REPO = EDITOR_DIR.parent
 sys.path.insert(0, str(REPO / "Pulsar-Editor" / "tools"))
 sys.path.insert(0, str(REPO / "Pulsar-Sync" / "tools"))
 import neu  # noqa: E402
-from build_desktop_editor import ASSETS, INDEX, PLATFORMS, expected_index  # noqa: E402
+from build_desktop_editor import ASSETS, INDEX, PLATFORMS, expected_index, extras_runtime_patched  # noqa: E402
 from runtime_patches import editor_runtime_patched  # noqa: E402
 
 results: list[tuple[bool, str, str]] = []
@@ -33,7 +33,7 @@ def audit(platform: str, archive: Path) -> None:
     for rel, source in ASSETS.items():
         check(f"[{platform}] {Path(rel).name} = źródło", files.get(rel) == source.read_bytes(), f"{source.stat().st_size} B")
     html = files.get(INDEX, b"").decode("utf-8", "replace")
-    check(f"[{platform}] runtime ma wszystkie zaczepy", editor_runtime_patched(html))
+    check(f"[{platform}] runtime ma wszystkie zaczepy", editor_runtime_patched(html) and extras_runtime_patched(html))
     check(f"[{platform}] index jest wynikiem powtarzalnego builda", files.get(INDEX) == expected_index(files.get(INDEX, b"")))
 
     css = '<link rel="stylesheet" href="audio-editor.css">'

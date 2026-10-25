@@ -18,6 +18,8 @@ const DESKTOP = process.env.EDITOR_DESKTOP === '1';
 const DOWNLOADS = path.join(TMP, 'downloads'); fs.mkdirSync(DOWNLOADS);
 const NATIVE_DIR = path.join(TMP, 'native'); fs.mkdirSync(NATIVE_DIR);
 const NATIVE_OUTPUT = path.join(NATIVE_DIR, 'Test Artist - Test Song (edycja).wav');
+const NATIVE_OUTPUT_MP3 = path.join(NATIVE_DIR, 'Test Artist - Test Song (edycja).mp3');
+let lastFfmpegCommand = '';
 const NEUTRALINO_STUB = String.raw`
 (function(){
   var handlers = {};
@@ -43,6 +45,7 @@ const NEUTRALINO_STUB = String.raw`
   document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){window.__nlEmit('ready',{});},50);});
 })();`;
 let failures = 0;
+const dialogMessages = [];
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 function check(name, ok, extra) {
   console.log((ok ? 'PASS ' : 'FAIL ') + name + (extra === undefined ? '' : '  ' + JSON.stringify(extra)));
@@ -93,7 +96,10 @@ fs.writeFileSync(lrcPath, '[00:01.00] w pierwszej ciszy\n[00:02.50] druga linia\
 async function nativeFs(op, argsJson) {
   const args = JSON.parse(argsJson);
   try {
-    if (op === 'showSaveDialog') return JSON.stringify(NATIVE_OUTPUT);
+    if (op === 'showSaveDialog') {
+      const requested = String(args[1] && args[1].defaultPath || '');
+      return JSON.stringify(/\.mp3$/i.test(requested) ? NATIVE_OUTPUT_MP3 : NATIVE_OUTPUT);
+    }
     if (op === 'writeBinaryFile') { fs.writeFileSync(args[0], Buffer.from(args[1], 'base64')); return 'null'; }
     if (op === 'appendBinaryFile') { fs.appendFileSync(args[0], Buffer.from(args[1], 'base64')); return 'null'; }
     if (op === 'readBinaryFile') return JSON.stringify(fs.readFileSync(args[0]).toString('base64'));
@@ -105,7 +111,18 @@ async function nativeFs(op, argsJson) {
       return JSON.stringify({ size: stat.size, isFile: stat.isFile(), isDirectory: stat.isDirectory(), createdAt: stat.birthtimeMs, modifiedAt: stat.mtimeMs });
     }
     if (op === 'readDirectory') return JSON.stringify(fs.readdirSync(args[0], { withFileTypes: true }).map(entry => ({ entry: entry.name, type: entry.isDirectory() ? 'DIRECTORY' : 'FILE' })));
-    if (op === 'execCommand') return JSON.stringify({ stdOut: '2026.01.01\n', stdErr: '', exitCode: 0 });
+    if (op === 'execCommand') {
+      const command = String(args[0] || '');
+      if (command === 'command -v ffmpeg' || command === 'where ffmpeg' || command.includes('command -v ffmpeg')) return JSON.stringify({ stdOut: '/usr/bin/ffmpeg\n', stdErr: '', exitCode: 0 });
+      if (command.includes('-hide_banner') && command.includes('-filter_complex')) {
+        lastFfmpegCommand = command;
+        const match = command.match(/'([^']+)'\s*$/) || command.match(/"([^"]+)"\s*$/);
+        if (!match) return JSON.stringify({ stdOut: '', stdErr: 'no output path', exitCode: 1 });
+        fs.writeFileSync(match[1], Buffer.from('ID3 simulated FFmpeg output'));
+        return JSON.stringify({ stdOut: '', stdErr: '', exitCode: 0 });
+      }
+      return JSON.stringify({ stdOut: '2026.01.01\n', stdErr: '', exitCode: 0 });
+    }
     return JSON.stringify({ __err: 'unknown op ' + op });
   } catch (error) { return JSON.stringify({ __err: String(error.message || error) }); }
 }
@@ -118,7 +135,7 @@ try {
   const page = await browser.newPage();
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
-  page.on('dialog', dialog => dialog.accept().catch(() => {}));
+  page.on('dialog', dialog => { dialogMessages.push(dialog.message()); dialog.accept().catch(() => {}); });
   await page.setRequestInterception(true);
   page.on('request', request => {
     if (/^https?:/.test(request.url()) && !request.url().startsWith(origin)) request.abort().catch(() => {});
@@ -165,6 +182,31 @@ try {
   await page.click('#paePreview');
   check('podgląd przeskakuje usunięty zakres', await poll(() => page.evaluate(() => document.getElementById('audio').currentTime >= 1.99)));
   await page.click('#paePreview');
+
+  await page.$eval('.pae-cut-input', input => { input.value = '1.01'; input.dispatchEvent(new Event('change', { bubbles: true })); });
+  check('granica wycinka ma precyzyjne pole 1 ms', await page.evaluate(() => PulsarAudioEditor.state().cuts[0].start === 1.01));
+  await page.click('#paeUndo');
+  check('cofanie przywraca poprzednią granicę', await page.evaluate(() => PulsarAudioEditor.state().cuts[0].start === 1));
+  await page.click('#paeZoomIn');
+  check('zoom fali zwiększa widok do 2×', await page.evaluate(() => PulsarAudioEditor.state().zoom === 2));
+  await page.$eval('#paeFadeIn', input => { input.value = '120'; input.dispatchEvent(new Event('change', { bubbles: true })); });
+  await page.$eval('#paeJoinFade', input => { input.value = '25'; input.dispatchEvent(new Event('change', { bubbles: true })); });
+  await page.$eval('#paeSilenceMin', input => { input.value = '1.2'; input.dispatchEvent(new Event('change', { bubbles: true })); });
+  await page.click('#paeSaveSession');
+  const savedSessionKey = await page.evaluate(() => PulsarAudioEditor.state().sessionKey);
+  check('sesja zapisuje decyzje bez audio w localStorage', await page.evaluate(key => {
+    const raw = localStorage.getItem(key), value = JSON.parse(raw || 'null');
+    return !!value && value.cuts.length === 2 && value.fadeInMs === 120 && value.joinFadeMs === 25 && value.silenceMin === 1.2 && raw.length < 2000;
+  }, savedSessionKey));
+  await page.click('#paeClose');
+  await page.click('#audioEditorBtn');
+  const resumed = await poll(() => page.evaluate(() => {
+    const s = PulsarAudioEditor.state();
+    return s.open && s.decoded && s.cuts.length === 2 && s.fadeInMs === 120 && s.joinFadeMs === 25 && s.silenceMin === 1.2 && s.zoom === 2;
+  }));
+  if (!resumed) console.log('DIAG resumed', await page.evaluate(key => ({ state: PulsarAudioEditor.state(), saved: JSON.parse(localStorage.getItem(key) || 'null'), status: document.getElementById('paeAudioStatus').textContent, hidden: document.getElementById('audioEditor').hidden }), savedSessionKey));
+  check('sesja wznawia cięcia, przejścia, ciszę i zoom', !!resumed);
+  if (!resumed) throw new Error('Sesja nie wznowiła się — szczegóły DIAG powyżej');
 
   await page.click('[data-tab="lyrics"]');
   check('lokalne LRC jest widoczne w edytorze', await poll(() => page.evaluate(() => document.querySelectorAll('#paeLyricsPreview .pae-lyric-row').length > 0)));
@@ -217,6 +259,67 @@ try {
   check('dopasowane napisy przeżywają restart, bez podwójnego offsetu', persisted && persisted.offset === 0 && persisted.lines && persisted.lines.length === 3 && persisted.lines[0].t === 2, persisted);
   const originalOffset = await page.evaluate(async (index) => { await __player.loadIndex(index); return __player.__lyrics.offset(); }, originalIndex);
   check('oryginał zachowuje własne przesunięcie +0,5 s', originalOffset === 0.5);
+
+  check('panel Auto-DJ 2.0 jest dostępny', await page.evaluate(() => !!document.getElementById('pulsarDjPlus') && !!window.PulsarAutoDj));
+  const djChoice = await page.evaluate(() => {
+    PulsarAutoDj.set({ mood: 'calm', artistDiversity: 80, genreDiversity: 60 });
+    const preview = PulsarAutoDj.preview();
+    const index = __player.__dj.choose();
+    const last = PulsarAutoDj.lastChoice();
+    return { preview: preview && preview.index, index: index, reason: last && last.reason, settings: PulsarAutoDj.settings() };
+  });
+  check('Auto-DJ stosuje nastrój i zwraca wyjaśnienie wyboru', djChoice && Number.isInteger(djChoice.index) && djChoice.index !== originalIndex && /Spokojnie/.test(djChoice.reason || '') && djChoice.settings.artistDiversity === 80, djChoice);
+  const djUndo = await page.evaluate(() => {
+    const start = __player.state().currentIndex;
+    const picked = PulsarAutoDj.playSimilar();
+    const after = __player.state().currentIndex;
+    const backed = __player.__dj.back();
+    return { start: start, picked: picked, after: after, backed: backed, restored: __player.state().currentIndex, history: __player.__dj.history().length };
+  });
+  check('Więcej podobnych i cofanie korzystają z historii DJ', djUndo && djUndo.picked === djUndo.after && djUndo.backed && djUndo.restored === djUndo.start, djUndo);
+
+  if (DESKTOP) {
+    check('natywny FFmpeg jest wykrywany', await page.evaluate(async () => (await __pulsarDesktopTools.capabilities(true)).ffmpeg));
+    const backupResults = await page.evaluate(async dir => {
+      PulsarBackups.set({ enabled: false, safety: true, folder: dir, keep: 2 });
+      const results = [];
+      for (let i = 0; i < 3; i++) results.push(await PulsarBackups.snapshot('test-' + i));
+      return results.map(x => ({ name: x.name, size: x.size, tracks: x.tracks }));
+    }, NATIVE_DIR);
+    const backupFiles = fs.readdirSync(NATIVE_DIR).filter(name => /^Pulsar-auto-.*\.pulsarlib$/i.test(name)).sort();
+    check('automatyczne migawki mają format .pulsarlib i rotację do 2 wersji', backupResults.length === 3 && backupFiles.length === 2 && backupFiles.every(name => fs.readFileSync(path.join(NATIVE_DIR, name)).subarray(0, 9).toString() === 'PULSARLIB'), { results: backupResults, files: backupFiles });
+    const uniqueGuard = await page.evaluate(async () => {
+      const current = __player.__editor.current();
+      return __pulsarLibraryGuard.beforeRemove([current], { total: __player.state().tracks, kind: 'remove' });
+    });
+    check('usunięcie jedynej kopii wymaga osobnego ostrzeżenia i robi migawkę', uniqueGuard === true && dialogMessages.some(message => /tylko w bibliotece/i.test(message)), dialogMessages.slice(-3));
+    const restoreGuard = await page.evaluate(async () => {
+      const allowed = await __pulsarLibraryGuard.beforeRestore({ tracks: 1 });
+      return { allowed: allowed, path: PulsarBackups.state().lastPath };
+    });
+    check('restore jest poprzedzony migawką bezpieczeństwa', restoreGuard.allowed === true && /before-restore/.test(restoreGuard.path), restoreGuard);
+
+    await page.evaluate(async index => { await __player.loadIndex(index); }, originalIndex);
+    await page.click('#audioEditorBtn');
+    await poll(() => page.evaluate(() => PulsarAudioEditor.state().decoded));
+    await setCut(1, 2);
+    await page.select('#paeFormat', 'mp3');
+    await page.$eval('#paeImport', input => { input.checked = false; });
+    await page.click('#paeSave');
+    check('eksport MP3 przechodzi przez natywny FFmpeg', await poll(async () => fs.existsSync(NATIVE_OUTPUT_MP3) && fs.statSync(NATIVE_OUTPUT_MP3).size > 0));
+    check('FFmpeg otrzymuje kodek MP3, cięcia i fade', lastFfmpegCommand.includes('libmp3lame') && lastFfmpegCommand.includes('atrim=') && lastFfmpegCommand.includes('afade='), lastFfmpegCommand.slice(-500));
+    await poll(() => page.evaluate(() => !PulsarAudioEditor.state().open));
+
+    const enlarged = await page.evaluate(async index => {
+      await __player.loadIndex(index);
+      const file = __player.__editor.current().file;
+      try { Object.defineProperty(file, 'size', { value: 90 * 1024 * 1024, configurable: true }); return file.size > 80 * 1024 * 1024; } catch (e) { return false; }
+    }, originalIndex);
+    check('test może oznaczyć źródło jako duży plik', enlarged);
+    await page.click('#audioEditorBtn');
+    check('duży plik używa FFmpeg bez AudioBuffer', await poll(() => page.evaluate(() => PulsarAudioEditor.state().nativeMode && !PulsarAudioEditor.state().decoded)));
+    await page.evaluate(() => { PulsarAudioEditor.close(); const file = __player.__editor.current().file; try { delete file.size; } catch (e) {} });
+  }
   check('brak nieobsłużonych błędów JavaScript', pageErrors.length === 0, pageErrors);
 } finally {
   if (browser) await browser.close();

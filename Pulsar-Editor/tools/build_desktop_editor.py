@@ -5,12 +5,13 @@
   python Pulsar-Editor/tools/build_desktop_editor.py --check
   python Pulsar-Editor/tools/build_desktop_editor.py --platform windows
 
-Skrypt współpracuje z warstwą Pulsar-Sync: zmienia tylko zaczepy edytora,
-dodaje trzy własne zasoby i przelicza integralność resources.neu.
+Skrypt współpracuje z warstwą Pulsar-Sync: zmienia tylko zaczepy rozszerzeń,
+dodaje własne zasoby edytora/Auto-DJ/kopii i przelicza integralność resources.neu.
 """
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import shutil
 import sys
 import tempfile
@@ -18,10 +19,17 @@ from pathlib import Path
 
 EDITOR_DIR = Path(__file__).resolve().parents[1]
 REPO = EDITOR_DIR.parent
+EXTRAS_DIR = REPO / "Pulsar-Extras"
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
 sys.path.insert(0, str(REPO / "Pulsar-Sync" / "tools"))
 from runtime_patches import apply_editor_runtime_patches, editor_runtime_patched  # noqa: E402
+_EXTRAS_SPEC = importlib.util.spec_from_file_location("pulsar_extras_runtime_patches", EXTRAS_DIR / "tools" / "runtime_patches.py")
+_EXTRAS_PATCHES = importlib.util.module_from_spec(_EXTRAS_SPEC)
+assert _EXTRAS_SPEC and _EXTRAS_SPEC.loader
+_EXTRAS_SPEC.loader.exec_module(_EXTRAS_PATCHES)
+apply_extras_runtime_patches = _EXTRAS_PATCHES.apply_extras_runtime_patches
+extras_runtime_patched = _EXTRAS_PATCHES.extras_runtime_patched
 import neu  # noqa: E402
 
 INDEX = "resources/index.html"
@@ -29,11 +37,25 @@ ASSETS = {
     "resources/editor-core.js": EDITOR_DIR / "editor-core.js",
     "resources/audio-editor.js": EDITOR_DIR / "audio-editor.js",
     "resources/audio-editor.css": EDITOR_DIR / "audio-editor.css",
+    "resources/dj-core.js": EXTRAS_DIR / "dj-core.js",
+    "resources/backup-core.js": EXTRAS_DIR / "backup-core.js",
+    "resources/desktop-bridge.js": EXTRAS_DIR / "desktop-bridge.js",
+    "resources/auto-dj.js": EXTRAS_DIR / "auto-dj.js",
+    "resources/library-backup.js": EXTRAS_DIR / "library-backup.js",
+    "resources/extras.css": EXTRAS_DIR / "extras.css",
 }
-CSS_TAG = '  <link rel="stylesheet" href="audio-editor.css">\n'
+CSS_TAG = (
+    '  <link rel="stylesheet" href="audio-editor.css">\n'
+    '  <link rel="stylesheet" href="extras.css">\n'
+)
 SCRIPT_TAGS = (
     '  <script src="editor-core.js"></script>\n'
+    '  <script src="dj-core.js"></script>\n'
+    '  <script src="backup-core.js"></script>\n'
+    '  <script src="desktop-bridge.js"></script>\n'
     '  <script src="audio-editor.js"></script>\n'
+    '  <script src="auto-dj.js"></script>\n'
+    '  <script src="library-backup.js"></script>\n'
 )
 PLATFORMS = {
     "windows": REPO / "Pulsar-Windows" / "resources.neu",
@@ -45,9 +67,10 @@ def patch_asset_tags(html: str) -> str:
     for tag in (CSS_TAG, SCRIPT_TAGS):
         html = html.replace(tag, "")
     # Usuń także znaczniki z innym wcięciem po starszych buildach.
+    asset_names = tuple(Path(rel).name for rel in ASSETS)
     lines = [line for line in html.splitlines(keepends=True)
              if not any(name in line and ("<script" in line or "<link" in line)
-                        for name in ("editor-core.js", "audio-editor.js", "audio-editor.css"))]
+                        for name in asset_names)]
     html = "".join(lines)
     if html.count("</head>") != 1 or html.count("</body>") != 1:
         raise ValueError("index.html nie ma dokładnie jednego </head> i </body>")
@@ -58,7 +81,7 @@ def patch_asset_tags(html: str) -> str:
 
 def expected_index(original: bytes) -> bytes:
     html = original.decode("utf-8")
-    return patch_asset_tags(apply_editor_runtime_patches(html)).encode("utf-8")
+    return patch_asset_tags(apply_extras_runtime_patches(apply_editor_runtime_patches(html))).encode("utf-8")
 
 
 def run(platform: str, archive: Path, check_only: bool) -> bool:
@@ -82,7 +105,9 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
 
         patched = expected_index(files[INDEX])
         sources_match = all(files.get(rel) == source.read_bytes() for rel, source in ASSETS.items())
-        ready = files[INDEX] == patched and sources_match and editor_runtime_patched(patched.decode("utf-8"))
+        ready = (files[INDEX] == patched and sources_match
+                 and editor_runtime_patched(patched.decode("utf-8"))
+                 and extras_runtime_patched(patched.decode("utf-8")))
         if check_only:
             print(f"[{platform}] {'gotowe' if ready else 'wymaga przebudowania'}")
             return ready

@@ -114,8 +114,39 @@ test('renderCutWav wygładza wewnętrzne złączenie i odrzuca pusty wynik', () 
   assert.throws(() => core.renderCutWav(bufferFrom([samples], sr), [{ start: 0, end: 3 }]), /EMPTY_OUTPUT/);
 });
 
-test('nazwy plików są bezpieczne i zawsze mają rozszerzenie WAV', () => {
+test('regulowany próg i minimalna długość wpływają na wykrywanie ciszy', () => {
+  const sr = 1000;
+  const samples = new Float32Array(sr * 3);
+  samples.fill(0.2, 0, 1000); samples.fill(0.001, 1000, 2000); samples.fill(0.2, 2000);
+  assert.strictEqual(core.detectSilence(bufferFrom([samples], sr), { db: -45, minDuration: 1.1, padding: 0 }).length, 0);
+  assert.strictEqual(core.detectSilence(bufferFrom([samples], sr), { db: -45, minDuration: 0.9, padding: 0 }).length, 1);
+  assert.strictEqual(core.detectSilence(bufferFrom([samples], sr), { db: -100, minDuration: 0.9, padding: 0 }).length, 0);
+});
+
+test('fade-in i fade-out działają także bez wycinków', () => {
+  const sr = 1000;
+  const samples = new Float32Array(sr).fill(0.8);
+  const wav = core.renderCutWav(bufferFrom([samples], sr), [], { fadeInMs: 100, fadeOutMs: 100, joinFadeMs: 0 });
+  const view = new DataView(wav);
+  assert.strictEqual(view.getInt16(44, true), 0);
+  assert(view.getInt16(44 + 50 * 2, true) > 10000 && view.getInt16(44 + 50 * 2, true) < 20000);
+  assert.strictEqual(view.getInt16(wav.byteLength - 2, true), 0);
+});
+
+test('FFmpeg otrzymuje segmenty, przejścia, kodek i metadane jako osobne argumenty', () => {
+  const args = core.buildFfmpegArgs({ inputPath: '/tmp/wejście audio.mp3', outputPath: '/tmp/wynik.flac', format: 'flac', duration: 10, segments: [{ start: 0, end: 4 }, { start: 5, end: 10 }], fadeInMs: 100, fadeOutMs: 200, joinFadeMs: 20, title: 'Tytuł', artist: 'Artysta' });
+  assert(args.includes('/tmp/wejście audio.mp3')); assert(args.includes('/tmp/wynik.flac'));
+  assert(args.includes('flac')); assert(args.includes('title=Tytuł')); assert(args.includes('artist=Artysta'));
+  const filter = args[args.indexOf('-filter_complex') + 1];
+  assert(filter.includes('atrim=start=0.0:end=4.0')); assert(filter.includes('concat=n=2:v=0:a=1[out]'));
+  assert(filter.includes('afade=t=in:st=0:d=0.1')); assert(filter.includes('afade=t=out:st=4.8:d=0.2'));
+  assert.strictEqual(core.buildFfmpegArgs({ inputPath: 'a', outputPath: 'b', format: 'mp3', duration: 1 }).includes('libmp3lame'), true);
+});
+
+test('nazwy plików są bezpieczne i obsługują WAV, MP3 oraz FLAC', () => {
   assert.strictEqual(core.editedFileName('a:b/c?.mp3'), 'a_b_c_ (edycja).wav');
+  assert.strictEqual(core.editedFileName('a.wav', ' (edycja)', 'mp3'), 'a (edycja).mp3');
+  assert.strictEqual(core.editedFileName('a.wav', ' (edycja)', 'flac'), 'a (edycja).flac');
   assert.strictEqual(core.safeFileName('  a  b  '), 'a b');
 });
 
