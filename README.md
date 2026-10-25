@@ -26,6 +26,8 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 - 🖼️ **Covers & tags embedded** — saved tracks look right in Explorer, your phone, any player
 - 🌠 **Nebula visualizers** — audio-reactive 3D backgrounds, fullscreen ambient mode
 - 🎤 **Synced lyrics** — elegant column, buttery-smooth in fullscreen
+- ✂️ **Non-destructive audio editor** — cut out silence or unwanted parts, preview the joins and save a new WAV copy; no FFmpeg needed
+- ⏱️ **Lyrics timing controls** — shift subtitles per track, export adjusted LRC, and keep lyrics aligned automatically after audio cuts
 - 🎨 **Dynamic colours** — the whole UI picks up palettes from the current album cover
 - ⏱️ **Sleep timer & stats** — gentle fade-out, favourites, play counts, smart sorting
 - 📻 **Auto-DJ** — picks the next tracks by tempo and energy, keeps them fresh (no ping-pong between two songs)
@@ -67,12 +69,13 @@ asks for the synced folder instead.
 Pulsar-Windows/     the runnable Windows build   (pulsar.exe · resources.neu · yt-dlp.exe)
 Pulsar-Linux/       the runnable Linux build     (pulsar · resources.neu · yt-dlp · README.md)
 Pulsar-Sync/        shared cloud library layer  (engine, adapters, build + tests)
+Pulsar-Editor/      desktop audio/LRC editor    (UI, audio engine, build + tests)
 index.html          the project / download page  (served via GitHub Pages)
 Pulsar-Desktop.zip  packaged Windows release
 Pulsar-Linux.zip    packaged Linux release
 ```
 
-Each folder is the whole app: exactly the files needed to run it, nothing else. The player itself is closed-source — `resources.neu` is a packed runtime bundle, not editable sources.
+Each app folder is the whole app: exactly the files needed to run it, nothing else. The core player is closed-source — `resources.neu` is a packed runtime bundle. Open extension layers such as `Pulsar-Sync/` and `Pulsar-Editor/` have readable sources and reproducible build scripts that patch the bundle without replacing its other files.
 
 ## 🛠️ Tech
 

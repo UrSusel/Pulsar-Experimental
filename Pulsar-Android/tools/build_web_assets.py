@@ -98,6 +98,11 @@ def build(archive: Path, out_dir: Path, bridge: Path, drive_sync: Path) -> None:
     for desktop_only in (
         '  <script src="cloud-sync.js"></script>\n',
         '  <script src="drive-sync.js"></script>\n',
+        # Edytor audio jest funkcją desktopową; nie zostawiaj w Androidzie
+        # odnośników do zasobów, których ten build celowo nie kopiuje.
+        '  <link rel="stylesheet" href="audio-editor.css">\n',
+        '  <script src="editor-core.js"></script>\n',
+        '  <script src="audio-editor.js"></script>\n',
     ):
         html = html.replace(desktop_only, "")
     replacements = [

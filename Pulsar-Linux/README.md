@@ -42,6 +42,12 @@ Everything else — playback, downloads, covers, tags, library — works without
 sudo pacman -S ffmpeg     # or place an ffmpeg binary in this folder
 ```
 
+## Audio and lyrics editor
+
+Click the **scissors** next to the lyrics button to remove unwanted audio ranges or detected silence. Preview skips the cuts before saving; export creates a new WAV copy and never overwrites the original. This editor does **not** need FFmpeg.
+
+The **Lyrics** tab shifts synchronized subtitles earlier or later and remembers the offset per track. You can also export an adjusted `.lrc` file. When an edited audio copy has lyrics, their timing is remapped around the removed ranges automatically.
+
 ## Cloud library (Google Drive)
 
 The app can keep your library — titles, artists, favourites, play counts, albums — in a folder
