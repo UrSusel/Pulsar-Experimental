@@ -45,7 +45,7 @@ sudo pacman -S ffmpeg     # or place an ffmpeg binary in this folder
 
 Click the **scissors** next to the lyrics button to remove unwanted audio ranges or detected silence. Editor 2.0 adds 32× zoom, draggable/numeric 1 ms boundaries, adjustable silence threshold/duration, fades and resumable sessions. Preview skips the cuts before saving; export always creates a new copy and never overwrites the original. WAV works without FFmpeg; MP3/FLAC and files over 80 MB or 30 minutes use FFmpeg without decoding the whole recording in WebView.
 
-The **Lyrics** tab shifts synchronized subtitles earlier or later and remembers the offset per track. You can also export an adjusted `.lrc` file. When an edited audio copy has lyrics, their timing is remapped around the removed ranges automatically.
+The **Lyrics** tab shifts synchronized subtitles earlier or later and remembers the offset per track. You can also export an adjusted `.lrc` file. When an edited audio copy has lyrics, their timing is remapped around the removed ranges automatically. The regular lyrics panel uses real word timing from enhanced LRC or LRCLIB first, then tries the multi-source Lyrics+ service if LRCLIB has only line timing; if neither has words, ordinary line highlighting remains.
 
 ## Auto-DJ and automatic backups
 

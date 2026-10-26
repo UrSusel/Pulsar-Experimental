@@ -16,7 +16,7 @@ HELPER_END = "  /* ---- end Pulsar editor: lyrics offset ---- */"
 API_BEGIN = "    /* ---- Pulsar editor: library bridge ---- */"
 API_END = "    /* ---- end Pulsar editor: library bridge ---- */"
 
-LYRICS_METHODS = '''      data: () => lyricsData, parse: parseLRC, parseWords: parseLyricsfile, fetchFor: i => fetchLyrics(tracks[i]),
+LYRICS_METHODS = '''      data: () => lyricsData, parse: parseLRC, parseWords: parseLyricsfile, parsePlus: parseLyricsPlus, fetchFor: i => fetchLyrics(tracks[i]),
       forTrack: id => { const tr = tracks.find(x => x.id === id); if (!tr) return null; return lyricsCache.has(id) ? lyricsCache.get(id) : (tr.lyricsData || null); },
       render: function(data){ if (data !== undefined) lyricsData = data; renderLyricsLines(); }, highlight: () => updateLyricsHighlight(true),
       offset: () => lyricsOffset(), setOffset: v => setLyricsOffset(v)
@@ -124,6 +124,32 @@ LYRICS_RENDERER = r'''  /* Pulsar editor: word lyrics renderer */
     });
   }
   /* end word-synced lyrics rendering */'''
+
+LYRICSPLUS_BEGIN = "      /* ---- Pulsar editor: Lyrics+ fallback ---- */"
+LYRICSPLUS_END = "      /* ---- end Pulsar editor: Lyrics+ fallback ---- */"
+LYRICSPLUS_FALLBACK = r'''      /* ---- Pulsar editor: Lyrics+ fallback ---- */
+      // LRCLIB stays first. Lyrics+ is consulted only when real word timing
+      // is still missing; a lesser result never replaces better LRCLIB data.
+      if (!data || !data.wordSync){
+        let plusData = null;
+        for (const c of cands){
+          if (!c.artist) continue;
+          const plusUrl = 'https://lyricsplus.prjktla.my.id/v2/lyrics/get?title=' + encodeURIComponent(c.title)
+            + '&artist=' + encodeURIComponent(c.artist)
+            + (track.album ? '&album=' + encodeURIComponent(track.album) : '')
+            + (dur ? '&duration=' + dur : '');
+          const hit = await netJson(plusUrl, 14000);
+          const parsed = parseLyricsPlus(hit);
+          if (parsed){
+            parsed.source = 'lyricsplus';
+            parsed.provider = String(hit && hit.metadata && hit.metadata.source || hit && hit.selectedSongMetadata && hit.selectedSongMetadata.source || '');
+            if (!plusData || (parsed.synced && !plusData.synced)) plusData = parsed;
+            if (parsed.wordSync){ plusData = parsed; break; }
+          }
+        }
+        if (plusData && (!data || (plusData.wordSync && !data.wordSync) || (!data.synced && plusData.synced))) data = plusData;
+      }
+      /* ---- end Pulsar editor: Lyrics+ fallback ---- */'''
 
 WORD_STYLE_BEGIN = "  <!-- Pulsar editor: word lyrics styles -->"
 WORD_STYLE_END = "  <!-- end Pulsar editor: word lyrics styles -->"
@@ -284,6 +310,10 @@ def apply_editor_runtime_patches(html: str) -> str:
         "          const bestLyrics = rs.slice(0, 3).sort(function(a, b){ return Number(!!b.hasWordSync) - Number(!!a.hasWordSync); });\n"
         "          for (let k = 0; k < bestLyrics.length; k++){\n            data = pickFrom(bestLyrics[k]);",
     )
+    html = _replace_block(
+        html, LYRICSPLUS_BEGIN, LYRICSPLUS_END, LYRICSPLUS_FALLBACK,
+        "    }\n    lyricsData = data;\n    lyricsCurIdx = -1;", insert_before=True,
+    )
     html = _patch_lyrics_methods(html)
     html = _replace_once(
         html,
@@ -297,11 +327,22 @@ def apply_editor_runtime_patches(html: str) -> str:
         "        fav: !!item.fav, plays: item.plays || 0, lastPlay: item.lastPlay || 0, srcPath: item.srcPath || '',\n"
         "        lyricsData: item.lyricsData || null,\n",
     )
+    # Ignore line-only cache entries written before the multi-source resolver.
     html = _replace_once(
         html,
-        "    if (!lyricsCache.has(track.id)){\n      try { const ser = localStorage.getItem('playerLyrics:' + track.id);",
+        "localStorage.getItem('playerLyrics:' + track.id)",
+        "localStorage.getItem('playerLyricsV2:' + track.id)",
+    )
+    html = _replace_once(
+        html,
+        "    if (!lyricsCache.has(track.id)){\n      try { const ser = localStorage.getItem('playerLyricsV2:' + track.id);",
         "    if (!lyricsCache.has(track.id) && track.lyricsData) lyricsCache.set(track.id, track.lyricsData);\n"
-        "    if (!lyricsCache.has(track.id)){\n      try { const ser = localStorage.getItem('playerLyrics:' + track.id);",
+        "    if (!lyricsCache.has(track.id)){\n      try { const ser = localStorage.getItem('playerLyricsV2:' + track.id);",
+    )
+    html = _replace_once(
+        html,
+        "localStorage.setItem('playerLyrics:' + track.id, ser)",
+        "localStorage.setItem('playerLyricsV2:' + track.id, ser)",
     )
     return html
 
@@ -320,8 +361,11 @@ def editor_runtime_patched(html: str) -> bool:
         "Pulsar editor: word lyrics renderer",
         "Pulsar editor: LRCLIB word sync",
         "Pulsar editor: prefer LRCLIB word sync",
+        LYRICSPLUS_BEGIN,
+        LYRICSPLUS_END,
         WORD_STYLE_BEGIN,
         WORD_STYLE_END,
         "parseWords: parseLyricsfile",
+        "parsePlus: parseLyricsPlus",
     ]
-    return all(html.count(needle) == 1 for needle in needles)
+    return all(html.count(needle) == 1 for needle in needles) and html.count("playerLyricsV2:") == 2

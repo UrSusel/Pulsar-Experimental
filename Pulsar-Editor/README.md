@@ -18,6 +18,8 @@ Moduł dla wersji **Windows i Linux**, wbudowany w gotowe `resources.neu`. Zacho
 
 Edytor nigdy nie zapisuje pod ścieżką oryginału. Metadane, okładka i dopasowane napisy są przenoszone do wpisu biblioteki. Linie z usuniętych zakresów znikają, a pozostałe czasy są przeliczane po cięciach i ręcznym przesunięciu.
 
+Zwykły panel napisów najpierw używa lokalnego LRC i LRCLIB. Jeżeli LRCLIB nie ma czasów słów, resolver odpytuje publiczne **Lyrics+** (`lyricsplus.prjktla.my.id`), które agreguje m.in. Apple Music, QQ Music i Musixmatch. Wynik z prawdziwym `syllabus[]` zastępuje wynik liniowy; słabszy wynik nigdy nie nadpisuje lepszego. Nie jest wymagany token ani osobny tryb karaoke. Publiczna usługa może mieć limity lub przerwy — wtedy zostają dotychczasowe napisy LRCLIB.
+
 ## FFmpeg i duże pliki
 
 - **WAV** dla zwykłych plików nadal działa bez FFmpeg, przez Web Audio i PCM 16-bit.
@@ -31,7 +33,7 @@ Sesja w `localStorage` zawiera tylko zakresy, ustawienia i zoom — nigdy dane a
 ## Pliki
 
 - `editor-core.js` — cięcia, cisza, WAV, przejścia, argumenty FFmpeg i LRC; bez DOM;
-- `lyrics-core.js` — parser zwykłego/rozszerzonego LRC oraz LRCLIB Lyricsfile z rzeczywistymi czasami słów; jest wstawiany inline do wspólnego runtime;
+- `lyrics-core.js` — parser zwykłego/rozszerzonego LRC, LRCLIB Lyricsfile oraz Lyrics+ v2 (`Word`/`Syllable`) z rzeczywistymi czasami słów; jest wstawiany inline do wspólnego runtime;
 - `audio-editor.js` / `audio-editor.css` — panel, zoom, granice, sesje, podgląd i eksport;
 - `tools/runtime_patches.py` — idempotentne zaczepy runtime edytora;
 - `tools/build_desktop_editor.py` — wspólny build Windows/Linux dla edytora i `Pulsar-Extras`;
@@ -60,6 +62,6 @@ NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/e
 EDITOR_DESKTOP=1 NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/editor-test/resources
 ```
 
-E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, rzeczywiste rozjaśnianie słów w zwykłym panelu, fallback liniowy, brak osobnej nakładki karaoke, Auto-DJ oraz — w wariancie desktopowym — natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka.
+E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, rzeczywiste rozjaśnianie słów w zwykłym panelu, fallback liniowy, wybór Lyrics+ po odpowiedzi LRCLIB bez słów, brak osobnej nakładki karaoke, Auto-DJ oraz — w wariancie desktopowym — natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka.
 
 Android pomija desktopowe zasoby edytora i rozszerzeń w `Pulsar-Android/tools/build_web_assets.py`. Wspólny parser i renderer napisów są częścią inline `index.html`, więc czasy słów działają także na telefonie bez kopiowania desktopowych assetów.

@@ -1,4 +1,4 @@
-/* Pulsar editor: word-synced lyrics parser (LRC + LRCLIB Lyricsfile 1.0). */
+/* Pulsar editor: word-synced lyrics parser (LRC + LRCLIB Lyricsfile 1.0 + Lyrics+). */
 function pulsarLyricsTime(minutes, seconds, fraction){
   const frac = fraction ? parseInt(String(fraction).padEnd(3, '0'), 10) / 1000 : 0;
   return parseInt(minutes, 10) * 60 + parseInt(seconds, 10) + frac;
@@ -175,6 +175,46 @@ function parseLyricsfile(text){
   }
 }
 
+/* Lyrics+ v2 returns source timestamps in milliseconds. "syllabus" may
+ * contain words or timed parts of words; never invent missing timestamps. */
+function parseLyricsPlus(payload){
+  if (!payload || typeof payload !== 'object' || !Array.isArray(payload.lyrics)) return null;
+  if (!payload.lyrics.length || payload.lyrics.length > 5000) return null;
+  const type = String(payload.type || '');
+  const timed = type === 'Line' || type === 'Word' || type === 'Syllable';
+  if (!timed){
+    const plain = payload.lyrics.map(function(line){ return String(line && line.text || ''); }).filter(function(text){ return !!text.trim(); });
+    return plain.length ? { synced: null, plain: plain, wordSync: false } : null;
+  }
+  const out = [];
+  let hasWords = false;
+  payload.lyrics.forEach(function(line){
+    if (!line || typeof line.time !== 'number' || !Number.isFinite(line.time) || line.time < 0) return;
+    const words = [];
+    if (type !== 'Line' && Array.isArray(line.syllabus)){
+      line.syllabus.forEach(function(part, index, all){
+        if (!part || typeof part.time !== 'number' || !Number.isFinite(part.time) || part.time < 0 || typeof part.text !== 'string' || !part.text) return;
+        let text = part.text;
+        // Background vocals may directly precede the main vocal without a space.
+        if (part.isBackground && all[index + 1] && !/\s$/.test(text)) text += ' ';
+        words.push({ t: pulsarLyricsRound(part.time / 1000), txt: text });
+      });
+    }
+    const txt = (words.length ? words.map(function(word){ return word.txt; }).join('') : String(line.text || '')).trim();
+    if (!txt) return;
+    const item = { t: pulsarLyricsRound(line.time / 1000), txt: txt };
+    if (words.length){
+      let previous = -1;
+      const ordered = words.every(function(word){ const ok = word.t >= previous; previous = word.t; return ok; });
+      if (ordered){ item.words = words; hasWords = true; }
+    }
+    out.push(item);
+  });
+  if (!out.length) return null;
+  out.sort(function(a, b){ return a.t - b.t; });
+  return { synced: out, plain: null, wordSync: hasWords };
+}
+
 if (typeof module === 'object' && module.exports){
-  module.exports = { parseLRC: parseLRC, parseLyricsfile: parseLyricsfile };
+  module.exports = { parseLRC: parseLRC, parseLyricsfile: parseLyricsfile, parseLyricsPlus: parseLyricsPlus };
 }

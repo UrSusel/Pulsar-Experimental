@@ -1,6 +1,6 @@
 'use strict';
 const assert = require('assert');
-const { parseLRC, parseLyricsfile } = require('../lyrics-core.js');
+const { parseLRC, parseLyricsfile, parseLyricsPlus } = require('../lyrics-core.js');
 let passed = 0;
 function test(name, fn){ fn(); console.log('PASS ' + name); passed++; }
 const lyricsfile = `version: "1.0"
@@ -84,6 +84,62 @@ test('niezgodność słów z linią wyłącza tylko word-sync tej linii', () => 
 
 test('limit rozmiaru chroni runtime przed ogromnym YAML', () => {
   assert.deepStrictEqual(parseLyricsfile('x'.repeat(257 * 1024)), []);
+});
+
+const lyricsPlusWord = {
+  type: 'Word', metadata: { source: 'QQ Music' },
+  lyrics: [{
+    time: 30205, duration: 2398, text: 'I saw the fire in your eyes',
+    syllabus: [
+      { time: 30205, duration: 167, text: 'I ' },
+      { time: 30372, duration: 209, text: 'saw ' },
+      { time: 30581, duration: 198, text: 'the ' },
+      { time: 30779, duration: 520, text: 'fire ' },
+      { time: 31299, duration: 225, text: 'in ' },
+      { time: 31524, duration: 328, text: 'your ' },
+      { time: 31852, duration: 751, text: 'eyes' }
+    ]
+  }]
+};
+
+test('Lyrics+ konwertuje prawdziwe czasy Take My Breath z ms na sekundy', () => {
+  const data = parseLyricsPlus(lyricsPlusWord);
+  assert.strictEqual(data.wordSync, true);
+  assert.strictEqual(data.plain, null);
+  assert.strictEqual(data.synced.length, 1);
+  assert.strictEqual(data.synced[0].t, 30.205);
+  assert.strictEqual(data.synced[0].txt, 'I saw the fire in your eyes');
+  assert.deepStrictEqual(data.synced[0].words[0], { t: 30.205, txt: 'I ' });
+  assert.deepStrictEqual(data.synced[0].words[3], { t: 30.779, txt: 'fire ' });
+  assert.deepStrictEqual(data.synced[0].words[6], { t: 31.852, txt: 'eyes' });
+});
+
+test('Lyrics+ Line pozostaje liniowy nawet przy dodatkowych polach', () => {
+  const data = parseLyricsPlus({ ...lyricsPlusWord, type: 'Line' });
+  assert.strictEqual(data.wordSync, false);
+  assert.strictEqual(data.synced[0].words, undefined);
+  assert.strictEqual(data.synced[0].t, 30.205);
+});
+
+test('Lyrics+ bez synchronizacji zwraca zwykły tekst', () => {
+  assert.deepStrictEqual(parseLyricsPlus({ type: 'Static', lyrics: [{ text: 'Pierwsza' }, { text: ' ' }, { text: 'Druga' }] }), {
+    synced: null, plain: ['Pierwsza', 'Druga'], wordSync: false
+  });
+});
+
+test('Lyrics+ nie zgaduje brakujących czasów słów', () => {
+  const data = parseLyricsPlus({ type: 'Word', lyrics: [{ time: 1000, text: 'A man', syllabus: [{ text: 'A ' }] }] });
+  assert.strictEqual(data.wordSync, false);
+  assert.deepStrictEqual(data.synced, [{ t: 1, txt: 'A man' }]);
+  assert.strictEqual(parseLyricsPlus({ type: 'Word', lyrics: [{ text: 'Bez czasu' }] }), null);
+});
+
+test('Lyrics+ zachowuje odstęp przed głównym wokalem po chórku', () => {
+  const data = parseLyricsPlus({ type: 'Word', lyrics: [{ time: 0, text: '(Yes) main', syllabus: [
+    { time: 0, text: '(Yes)', isBackground: true }, { time: 100, text: 'main' }
+  ] }] });
+  assert.strictEqual(data.synced[0].txt, '(Yes) main');
+  assert.deepStrictEqual(data.synced[0].words, [{ t: 0, txt: '(Yes) ' }, { t: 0.1, txt: 'main' }]);
 });
 
 console.log(`\n${passed}/${passed} testów parsera napisów zaliczonych.`);

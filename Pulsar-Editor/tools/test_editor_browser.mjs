@@ -128,6 +128,24 @@ async function nativeFs(op, argsJson) {
 }
 let browser;
 let outputSize = 0;
+let mockLyricsProviders = false;
+const lyricsProviderRequests = [];
+const lrclibLineOnly = {
+  id: 1133018, duration: 6, hasWordSync: false,
+  syncedLyrics: '[00:01.00]Take my breath'
+};
+const lyricsPlusWord = {
+  type: 'Word', metadata: { source: 'QQ Music' },
+  lyrics: [{
+    time: 1000, duration: 1900, text: 'Take my breath',
+    syllabus: [
+      { time: 1000, duration: 250, text: 'Take ' },
+      { time: 1250, duration: 250, text: 'my ' },
+      { time: 1500, duration: 600, text: 'breath' }
+    ]
+  }],
+  selectedSongMetadata: { title: 'Take My Breath', artist: 'The Weeknd', duration: 6 }
+};
 try {
   const args = chromium.args.filter(arg => arg !== '--mute-audio' && !arg.startsWith('--single-process'))
     .concat(['--autoplay-policy=no-user-gesture-required', '--allow-file-access-from-files']);
@@ -138,8 +156,18 @@ try {
   page.on('dialog', dialog => { dialogMessages.push(dialog.message()); dialog.accept().catch(() => {}); });
   await page.setRequestInterception(true);
   page.on('request', request => {
-    if (/^https?:/.test(request.url()) && !request.url().startsWith(origin)) request.abort().catch(() => {});
-    else request.continue().catch(() => {});
+    const url = request.url();
+    if (/^https?:/.test(url) && !url.startsWith(origin)) {
+      if (mockLyricsProviders && (url.startsWith('https://lrclib.net/') || url.startsWith('https://lyricsplus.prjktla.my.id/'))) {
+        lyricsProviderRequests.push(url);
+        const body = url.startsWith('https://lrclib.net/') ? lrclibLineOnly : lyricsPlusWord;
+        request.respond({
+          status: 200, contentType: 'application/json',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify(body)
+        }).catch(() => {});
+      } else request.abort().catch(() => {});
+    } else request.continue().catch(() => {});
   });
   await page.evaluateOnNewDocument((desktop, nlPath) => {
     if (desktop) window.__NL_PATH = nlPath;
@@ -358,6 +386,38 @@ try {
     check('duży plik używa FFmpeg bez AudioBuffer', await poll(() => page.evaluate(() => PulsarAudioEditor.state().nativeMode && !PulsarAudioEditor.state().decoded)));
     await page.evaluate(() => { PulsarAudioEditor.close(); const file = __player.__editor.current().file; try { delete file.size; } catch (e) {} });
   }
+
+  await page.evaluate(() => __player.__lyrics.set(false));
+  const plusWavPath = path.join(TMP, 'The Weeknd - Take My Breath.wav');
+  makeWav(plusWavPath);
+  await page.$eval('#folderInput', input => input.removeAttribute('webkitdirectory'));
+  const plusInput = await page.$('#folderInput');
+  await plusInput.uploadFile(plusWavPath);
+  check('utwór bez lokalnego LRC trafia do testu źródeł online', await poll(() => page.evaluate(() => __player.state().tracks === 3)));
+  mockLyricsProviders = true;
+  const plusResult = await page.evaluate(async () => {
+    const index = __player.state().tracks - 1;
+    await __player.loadIndex(index);
+    const id = __player.__editor.current().id;
+    // Stary cache z wersji LRCLIB-only nie może blokować nowego resolvera.
+    localStorage.setItem('playerLyrics:' + id, JSON.stringify({ synced: [{ t: 0, txt: 'stary cache' }], plain: null, source: 'lrclib' }));
+    const data = await __player.__lyrics.fetchFor(index);
+    const cached = JSON.parse(localStorage.getItem('playerLyricsV2:' + id) || 'null');
+    return { data, cached, title: __player.__editor.current().title, artist: __player.__editor.current().artist };
+  });
+  mockLyricsProviders = false;
+  check('LRCLIB bez słów jest ulepszany przez Lyrics+ z prawdziwymi czasami', plusResult && plusResult.data && plusResult.data.source === 'lyricsplus' && plusResult.data.provider === 'QQ Music' && plusResult.data.wordSync === true && JSON.stringify(plusResult.data.synced[0].words) === JSON.stringify([
+    { t: 1, txt: 'Take ' }, { t: 1.25, txt: 'my ' }, { t: 1.5, txt: 'breath' }
+  ]), plusResult && plusResult.data);
+  check('Lyrics+ otrzymuje właściwy tytuł i wykonawcę po LRCLIB', (() => {
+    const lrclibAt = lyricsProviderRequests.findIndex(url => url.startsWith('https://lrclib.net/'));
+    const plusAt = lyricsProviderRequests.findIndex(url => url.startsWith('https://lyricsplus.prjktla.my.id/'));
+    if (lrclibAt < 0 || plusAt <= lrclibAt) return false;
+    const query = new URL(lyricsProviderRequests[plusAt]).searchParams;
+    return query.get('title') === 'Take My Breath' && query.get('artist') === 'The Weeknd';
+  })(), lyricsProviderRequests);
+  check('nowy cache zachowuje wynik word-sync i omija stary format', plusResult && plusResult.cached && plusResult.cached.source === 'lyricsplus' && plusResult.cached.wordSync === true, plusResult && plusResult.cached);
+
   check('brak nieobsłużonych błędów JavaScript', pageErrors.length === 0, pageErrors);
 } finally {
   if (browser) await browser.close();
