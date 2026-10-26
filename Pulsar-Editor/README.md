@@ -31,10 +31,11 @@ Sesja w `localStorage` zawiera tylko zakresy, ustawienia i zoom — nigdy dane a
 ## Pliki
 
 - `editor-core.js` — cięcia, cisza, WAV, przejścia, argumenty FFmpeg i LRC; bez DOM;
+- `lyrics-core.js` — parser zwykłego/rozszerzonego LRC oraz LRCLIB Lyricsfile z rzeczywistymi czasami słów; jest wstawiany inline do wspólnego runtime;
 - `audio-editor.js` / `audio-editor.css` — panel, zoom, granice, sesje, podgląd i eksport;
 - `tools/runtime_patches.py` — idempotentne zaczepy runtime edytora;
 - `tools/build_desktop_editor.py` — wspólny build Windows/Linux dla edytora i `Pulsar-Extras`;
-- `tools/test_editor_core.js`, `test_desktop_editor.py`, `test_editor_browser.mjs` — testy logiki, paczek i E2E.
+- `tools/test_editor_core.js`, `test_lyrics_core.js`, `test_desktop_editor.py`, `test_editor_browser.mjs` — testy logiki, parserów, paczek i E2E.
 
 Auto-DJ 2.0, automatyczne kopie i natywny mostek są opisane w [`Pulsar-Extras/README.md`](../Pulsar-Extras/README.md).
 
@@ -44,6 +45,7 @@ Auto-DJ 2.0, automatyczne kopie i natywny mostek są opisane w [`Pulsar-Extras/R
 python Pulsar-Editor/tools/build_desktop_editor.py
 python Pulsar-Editor/tools/build_desktop_editor.py --check
 node Pulsar-Editor/tools/test_editor_core.js
+node Pulsar-Editor/tools/test_lyrics_core.js
 node Pulsar-Extras/tools/test_extras.js
 python Pulsar-Editor/tools/test_desktop_editor.py
 python Pulsar-Sync/tools/test_desktop_bundle.py
@@ -58,6 +60,6 @@ NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/e
 EDITOR_DESKTOP=1 NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/editor-test/resources
 ```
 
-E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, Auto-DJ oraz — w wariancie desktopowym — natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka.
+E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, rzeczywiste rozjaśnianie słów w zwykłym panelu, fallback liniowy, brak osobnej nakładki karaoke, Auto-DJ oraz — w wariancie desktopowym — natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka.
 
-Android pomija wszystkie desktopowe zasoby edytora i rozszerzeń w `Pulsar-Android/tools/build_web_assets.py`.
+Android pomija desktopowe zasoby edytora i rozszerzeń w `Pulsar-Android/tools/build_web_assets.py`. Wspólny parser i renderer napisów są częścią inline `index.html`, więc czasy słów działają także na telefonie bez kopiowania desktopowych assetów.

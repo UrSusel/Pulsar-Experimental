@@ -160,7 +160,7 @@ try {
     const path = document.querySelector('#settingsBtn svg path');
     return !!path && path.getAttribute('d').startsWith('M10.325') && !path.getAttribute('d').includes('M12 2.8v3');
   }));
-  check('wspólny moduł karaoke startuje', await page.evaluate(() => !!window.PulsarKaraoke && !!document.getElementById('karaokeBtn')));
+  check('osobna nakładka karaoke jest całkowicie usunięta', await page.evaluate(() => !window.PulsarKaraoke && !document.getElementById('karaokeBtn') && !document.getElementById('karaokeMode')));
 
   await page.$eval('#folderInput', input => input.removeAttribute('webkitdirectory'));
   const input = await page.$('#folderInput');
@@ -265,46 +265,38 @@ try {
   const originalOffset = await page.evaluate(async (index) => { await __player.loadIndex(index); return __player.__lyrics.offset(); }, originalIndex);
   check('oryginał zachowuje własne przesunięcie +0,5 s', originalOffset === 0.5);
 
-  await page.click('#karaokeBtn');
-  check('karaoke wczytuje LRC bieżącego utworu', await poll(() => page.evaluate(index => {
-    const s = PulsarKaraoke.state();
-    return s.open && s.loadedTrack === index && s.lines === 4;
-  }, originalIndex)));
-  await page.evaluate(() => { document.getElementById('audio').currentTime = 3.05; });
-  check('duży tekst podąża za wspólnym offsetem', await poll(() => page.evaluate(() => {
-    const s = PulsarKaraoke.state();
-    const active = document.querySelector('#pkLines .pk-current .pk-line-text');
-    return s.activeLine === 1 && active && active.textContent === 'druga linia';
-  })));
-  check('widok zawiera poprzednie i następne wersy', await page.evaluate(() => document.querySelectorAll('#pkLines .pk-previous').length > 0 && document.querySelectorAll('#pkLines .pk-next').length > 0));
-  await page.click('#pkLarger');
-  check('skala dużego tekstu jest regulowana', await page.evaluate(() => PulsarKaraoke.state().scale > 1 && document.getElementById('pkScale').textContent !== '100%'));
-  await page.click('#pkAlign');
-  check('wyrównanie napisów jest regulowane', await page.evaluate(() => PulsarKaraoke.state().align === 'left' && document.querySelector('.pk-stage').dataset.align === 'left'));
-  await page.click('#pkOffsetPlus');
-  check('szybka korekta karaoke zmienia wspólny offset', await page.evaluate(() => PulsarKaraoke.state().offset === 0.6000000000000001 || PulsarKaraoke.state().offset === 0.6));
-  const clickedLineTime = await page.evaluate(() => {
-    document.getElementById('audio').currentTime = 2;
-    const line = document.querySelector('#pkLines [data-index="1"]');
-    if (line) line.click();
-    return { found: !!line, time: document.getElementById('audio').currentTime };
+  const wordView = await page.evaluate(async () => {
+    const api = __player.__lyrics, audio = document.getElementById('audio');
+    const original = api.data(), oldOffset = api.offset(), oldTime = audio.currentTime, wasOn = api.on();
+    const source = `version: "1.0"\nmetadata:\n  title: Test\n  artist: Test\nlines:\n  - text: A man that\n    words:\n      - text: "A "\n        start_ms: 1000\n      - text: "man "\n        start_ms: 1400\n      - text: that\n        start_ms: 1800\n    start_ms: 1000\n`;
+    try {
+      if (!wasOn) { api.set(true); await api.fetchFor(__player.state().currentIndex); }
+      api.setOffset(0);
+      const lines = api.parseWords(source);
+      api.render({ synced: lines, plain: null, source: 'lrclib', wordSync: true });
+      audio.currentTime = 1.5; api.highlight();
+      const active = document.querySelector('#lyricsBox .lyrics-line.active');
+      const words = active ? Array.from(active.querySelectorAll('.lyrics-word')) : [];
+      const middle = {
+        text: active && active.textContent,
+        sung: words.filter(word => word.classList.contains('sung')).map(word => word.textContent),
+        total: words.length,
+        colorsDiffer: words.length === 3 && getComputedStyle(words[0]).color !== getComputedStyle(words[2]).color
+      };
+      audio.currentTime = 1.9; api.highlight();
+      const allSung = words.length === 3 && words.every(word => word.classList.contains('sung'));
+      api.render({ synced: api.parse('[00:01.00]A man that'), plain: null, source: 'lrc' });
+      audio.currentTime = 1.5; api.highlight();
+      const standard = document.querySelector('#lyricsBox .lyrics-line.active');
+      return { middle, allSung, standardLine: !!standard && !standard.querySelector('.lyrics-word') && standard.textContent === 'A man that' };
+    } finally {
+      api.render(original); api.setOffset(oldOffset); audio.currentTime = oldTime; api.highlight();
+      if (!wasOn) api.set(false);
+    }
   });
-  check('kliknięcie wersu przewija do czasu z offsetem', clickedLineTime.found && Math.abs(clickedLineTime.time - 3.1) < 0.02, clickedLineTime);
-  check('karaoke wyświetla zwykły tekst bez znaczników czasu', await page.evaluate(() => {
-    window.__testLyricsData = __player.__lyrics.data;
-    __player.__lyrics.data = () => ({ plain: 'Pierwszy zwykły wers\nDrugi zwykły wers', synced: null });
-    PulsarKaraoke.refresh();
-    return PulsarKaraoke.state().plain === 2 && document.querySelectorAll('#pkLines.pk-plain p').length === 2;
-  }));
-  check('karaoke ma czytelny stan braku tekstu', await page.evaluate(() => {
-    __player.__lyrics.data = () => null; PulsarKaraoke.refresh();
-    return !!document.querySelector('#pkLines .pk-empty') && document.getElementById('pkLines').textContent.includes('Brak tekstu');
-  }));
-  await page.evaluate(() => { __player.__lyrics.data = window.__testLyricsData; delete window.__testLyricsData; PulsarKaraoke.refresh(); });
-  await page.click('#pkClose');
-  check('karaoke zamyka się bez zatrzymywania odtwarzacza', await poll(() => page.evaluate(() => !PulsarKaraoke.state().open)));
-  check('zamknięcie karaoke zachowuje wcześniej włączony panel napisów', await page.evaluate(() => __player.__lyrics.on()));
-  await page.evaluate(() => __player.__lyrics.setOffset(0.5));
+  check('zwykłe napisy rozjaśniają tylko słowa, których czas już nadszedł', wordView.middle.text === 'A man that' && wordView.middle.total === 3 && JSON.stringify(wordView.middle.sung) === JSON.stringify(['A ', 'man ']) && wordView.middle.colorsDiffer, wordView.middle);
+  check('kolejne słowo rozjaśnia się po swoim znaczniku czasu', wordView.allSung);
+  check('bez czasów słów zostaje standardowe podświetlanie całej linii', wordView.standardLine);
 
   check('panel Auto-DJ 2.0 jest dostępny', await page.evaluate(() => !!document.getElementById('pulsarDjPlus') && !!window.PulsarAutoDj));
   const djChoice = await page.evaluate(() => {

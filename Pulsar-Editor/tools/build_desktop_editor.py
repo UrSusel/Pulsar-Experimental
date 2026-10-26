@@ -20,7 +20,6 @@ from pathlib import Path
 EDITOR_DIR = Path(__file__).resolve().parents[1]
 REPO = EDITOR_DIR.parent
 EXTRAS_DIR = REPO / "Pulsar-Extras"
-KARAOKE_DIR = REPO / "Pulsar-Karaoke"
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
 sys.path.insert(0, str(REPO / "Pulsar-Sync" / "tools"))
@@ -44,14 +43,15 @@ ASSETS = {
     "resources/auto-dj.js": EXTRAS_DIR / "auto-dj.js",
     "resources/library-backup.js": EXTRAS_DIR / "library-backup.js",
     "resources/extras.css": EXTRAS_DIR / "extras.css",
-    "resources/karaoke-core.js": KARAOKE_DIR / "karaoke-core.js",
-    "resources/karaoke.js": KARAOKE_DIR / "karaoke.js",
-    "resources/karaoke.css": KARAOKE_DIR / "karaoke.css",
+}
+LEGACY_ASSETS = {
+    "resources/karaoke-core.js",
+    "resources/karaoke.js",
+    "resources/karaoke.css",
 }
 CSS_TAG = (
     '  <link rel="stylesheet" href="audio-editor.css">\n'
     '  <link rel="stylesheet" href="extras.css">\n'
-    '  <link rel="stylesheet" href="karaoke.css">\n'
 )
 SCRIPT_TAGS = (
     '  <script src="editor-core.js"></script>\n'
@@ -61,8 +61,6 @@ SCRIPT_TAGS = (
     '  <script src="audio-editor.js"></script>\n'
     '  <script src="auto-dj.js"></script>\n'
     '  <script src="library-backup.js"></script>\n'
-    '  <script src="karaoke-core.js"></script>\n'
-    '  <script src="karaoke.js"></script>\n'
 )
 PLATFORMS = {
     "windows": REPO / "Pulsar-Windows" / "resources.neu",
@@ -74,7 +72,7 @@ def patch_asset_tags(html: str) -> str:
     for tag in (CSS_TAG, SCRIPT_TAGS):
         html = html.replace(tag, "")
     # Usuń także znaczniki z innym wcięciem po starszych buildach.
-    asset_names = tuple(Path(rel).name for rel in ASSETS)
+    asset_names = tuple(Path(rel).name for rel in (*ASSETS.keys(), *LEGACY_ASSETS))
     lines = [line for line in html.splitlines(keepends=True)
              if not any(name in line and ("<script" in line or "<link" in line)
                         for name in asset_names)]
@@ -113,6 +111,7 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
         patched = expected_index(files[INDEX])
         sources_match = all(files.get(rel) == source.read_bytes() for rel, source in ASSETS.items())
         ready = (files[INDEX] == patched and sources_match
+                 and not any(rel in files for rel in LEGACY_ASSETS)
                  and editor_runtime_patched(patched.decode("utf-8"))
                  and extras_runtime_patched(patched.decode("utf-8")))
         if check_only:
@@ -123,6 +122,8 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
             return True
 
         (work / INDEX).write_bytes(patched)
+        for rel in LEGACY_ASSETS:
+            (work / rel).unlink(missing_ok=True)
         for rel, source in ASSETS.items():
             target = work / rel
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -135,6 +136,10 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
                  for rel, entry in neu.iter_files(after_header)}
         allowed = {INDEX, *ASSETS.keys()}
         for rel, blob in files.items():
+            if rel in LEGACY_ASSETS:
+                if rel in after:
+                    raise ValueError(f"przestarzały zasób {rel} nadal jest w archiwum")
+                continue
             if rel not in allowed and after.get(rel) != blob:
                 raise ValueError(f"plik {rel} zmienił się przy przebudowie")
         if after.get(INDEX) != patched:
