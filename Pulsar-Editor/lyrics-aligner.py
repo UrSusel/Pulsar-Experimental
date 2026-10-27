@@ -140,15 +140,41 @@ def convert_result(result: dict, source_lines: list[str]) -> dict:
     }
 
 
+def _decode_smoke() -> None:
+    """Decode a tiny PCM buffer; imports alone miss PyAV API incompatibilities."""
+    import io  # noqa: PLC0415
+    import wave  # noqa: PLC0415
+    from faster_whisper.audio import decode_audio  # noqa: PLC0415
+
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(b"\x00\x00" * 1600)
+    buffer.seek(0)
+    audio = decode_audio(buffer, sampling_rate=16000)
+    if getattr(audio, "size", 0) < 1600:
+        raise AlignmentError("PyAV nie zdekodował kontrolnego fragmentu audio")
+
+
 def check_environment() -> dict:
     import stable_whisper  # noqa: PLC0415
     import faster_whisper  # noqa: PLC0415
     import av  # noqa: PLC0415
+    pyav_version = str(getattr(av, "__version__", "unknown"))
+    try:
+        pyav_major = int(pyav_version.split(".", 1)[0])
+    except ValueError:
+        pyav_major = 0
+    if pyav_major >= 19:
+        raise AlignmentError("PyAV 19 jest niezgodny z Faster-Whisper 1.2.1 — wymagany jest av<19")
+    _decode_smoke()
     return {
         "ok": True,
         "stable_ts": str(getattr(stable_whisper, "__version__", "unknown")),
         "faster_whisper": str(getattr(faster_whisper, "__version__", "unknown")),
-        "pyav": str(getattr(av, "__version__", "unknown")),
+        "pyav": pyav_version,
     }
 
 

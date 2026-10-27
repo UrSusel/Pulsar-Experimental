@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import importlib.util
 import math
+import sys
+import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "lyrics-aligner.py"
 SPEC = importlib.util.spec_from_file_location("pulsar_lyrics_aligner", MODULE_PATH)
@@ -65,6 +68,46 @@ class RequestTests(unittest.TestCase):
         ):
             with self.subTest(changes=changes), self.assertRaises(aligner.AlignmentError):
                 aligner.validate_request(request(**changes))
+
+
+class EnvironmentTests(unittest.TestCase):
+    @staticmethod
+    def modules(pyav_version, decode_audio):
+        stable = types.ModuleType("stable_whisper")
+        stable.__version__ = "2.19.1"
+        faster = types.ModuleType("faster_whisper")
+        faster.__version__ = "1.2.1"
+        faster.__path__ = []
+        audio = types.ModuleType("faster_whisper.audio")
+        audio.decode_audio = decode_audio
+        faster.audio = audio
+        av = types.ModuleType("av")
+        av.__version__ = pyav_version
+        return {
+            "stable_whisper": stable,
+            "faster_whisper": faster,
+            "faster_whisper.audio": audio,
+            "av": av,
+        }
+
+    def test_pyav19_is_rejected_before_alignment(self):
+        def forbidden_decode(*args, **kwargs):
+            raise AssertionError("decoder should not run for a known incompatible version")
+        with patch.dict(sys.modules, self.modules("19.0.2", forbidden_decode)):
+            with self.assertRaisesRegex(aligner.AlignmentError, "av<19"):
+                aligner.check_environment()
+
+    def test_environment_check_really_decodes_pcm(self):
+        seen = {}
+        def decode(buffer, sampling_rate):
+            seen["header"] = buffer.read(4)
+            seen["rate"] = sampling_rate
+            return types.SimpleNamespace(size=1600)
+        with patch.dict(sys.modules, self.modules("18.1.0", decode)):
+            checked = aligner.check_environment()
+        self.assertTrue(checked["ok"])
+        self.assertEqual(checked["pyav"], "18.1.0")
+        self.assertEqual(seen, {"header": b"RIFF", "rate": 16000})
 
 
 class ConversionTests(unittest.TestCase):

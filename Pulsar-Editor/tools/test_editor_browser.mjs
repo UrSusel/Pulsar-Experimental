@@ -423,6 +423,17 @@ try {
     const setupSequence = aiSetupCommands.map(command => command.includes('pip --version') ? 'pip-check' : command.includes('ensurepip') ? 'ensurepip' : 'install');
     check('niekompletne venv bez pip jest naprawiane przed instalacją AI', pipRecovery.source === 'ai' && pipRecovery.words === 3 && JSON.stringify(setupSequence) === JSON.stringify(['pip-check', 'ensurepip', 'install']), { setupSequence, commands: aiSetupCommands });
     check('instalator używa python -m pip zamiast launchera pip.exe', aiSetupCommands.length === 3 && aiSetupCommands.every(command => command.includes(AI_PYTHON) && command.includes(' -m ')), aiSetupCommands);
+    aiCheckShouldFail = true; aiPipMissing = false; aiSetupCommands.length = 0;
+    const decoderRecovery = await page.evaluate(async () => {
+      const current = __player.__editor.current();
+      const result = await __pulsarDesktopTools.alignLyrics({
+        inputBlob: current.file, inputName: current.file.name,
+        lines: ['PyAV nineteen recovery'], language: 'en', model: 'base'
+      });
+      return { source: result.source, words: result.synced[0].words.length };
+    });
+    const decoderSequence = aiSetupCommands.map(command => command.includes('pip --version') ? 'pip-check' : 'install');
+    check('niezgodny PyAV jest wykrywany i naprawiany przez ograniczenie av<19', decoderRecovery.source === 'ai' && decoderRecovery.words === 3 && JSON.stringify(decoderSequence) === JSON.stringify(['pip-check', 'install']) && aiSetupCommands.some(command => command.includes('av>=12,<19')), { decoderSequence, commands: aiSetupCommands });
     await page.click('#paeClose');
   }
 

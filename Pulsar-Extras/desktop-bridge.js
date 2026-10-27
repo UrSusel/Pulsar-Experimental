@@ -103,7 +103,7 @@
       if (temporary) { try { await Neutralino.filesystem.remove(temporary); } catch (e) {} }
     }
   }
-  const AI_PACKAGES = ['stable-ts[fw]==2.19.1', 'faster-whisper==1.2.1'];
+  const AI_PACKAGES = ['stable-ts[fw]==2.19.1', 'faster-whisper==1.2.1', 'av>=12,<19'];
   let aiRoot = '';
   let systemPython;
   function aiError(message, code) { const error = new Error(message); if (code) error.code = code; return error; }
