@@ -21,6 +21,8 @@ Edytor nigdy nie zapisuje pod ścieżką oryginału. Metadane, okładka i dopaso
 
 Zwykły panel napisów najpierw używa lokalnego LRC i LRCLIB. Jeżeli LRCLIB nie ma czasów słów, resolver odpytuje publiczne **Lyrics+** (`lyricsplus.prjktla.my.id`), które agreguje m.in. Apple Music, QQ Music i Musixmatch. Wynik z prawdziwym `syllabus[]` zastępuje wynik liniowy; słabszy wynik nigdy nie nadpisuje lepszego. Nie jest wymagany token ani osobny tryb karaoke. Publiczna usługa może mieć limity lub przerwy — wtedy zostają dotychczasowe napisy LRCLIB.
 
+Bieżące słowo jest **stopniowo wypełniane białym gradientem bezpośrednio na tekście**, bez ruchomej linii lub paska. Renderer używa rzeczywistego `duration`/`end`, a jeśli go brak — odstępu do następnego słowa albo końca linii. Gdy długość ostatniego słowa jest nieznana, pozostaje dotychczasowe pojedyncze rozjaśnienie; czas trwania nie jest zgadywany.
+
 ## Eksperymentalne dopasowanie AI (Windows/Linux)
 
 - Funkcja wykonuje **forced alignment dostarczonego tekstu**, a nie transkrypcję: korzysta z linii już znalezionych przez lokalny LRC, LRCLIB lub Lyrics+ i wyznacza czasy słów do lokalnego audio.
@@ -75,6 +77,6 @@ NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/e
 EDITOR_DESKTOP=1 NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/editor-test/resources
 ```
 
-E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, rzeczywiste rozjaśnianie słów w zwykłym panelu, fallback liniowy, wybór Lyrics+ po odpowiedzi LRCLIB bez słów, brak osobnej nakładki karaoke, zapis/przywrócenie wyniku AI i blokadę źródłowego word-sync, Auto-DJ oraz — w wariancie desktopowym — pełny przepływ AI przez mostek, naprawę `venv` bez pip i niezgodnego PyAV, natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka. Analogicznie stub helpera AI sprawdza kontrakt, UI i zapis bez pobierania PyTorch/modelu — nie jest testem trafności alignmentu.
+E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, stopniowe wypełnianie słowa w zwykłym panelu (kontrola 25/50% i gradientu), fallback liniowy, wybór Lyrics+ po odpowiedzi LRCLIB bez słów, brak osobnej nakładki karaoke, zapis/przywrócenie wyniku AI i blokadę źródłowego word-sync, Auto-DJ oraz — w wariancie desktopowym — pełny przepływ AI przez mostek, naprawę `venv` bez pip i niezgodnego PyAV, natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka. Analogicznie stub helpera AI sprawdza kontrakt, UI i zapis bez pobierania PyTorch/modelu — nie jest testem trafności alignmentu.
 
 Android pomija desktopowe zasoby edytora i rozszerzeń w `Pulsar-Android/tools/build_web_assets.py`. Wspólny parser i renderer napisów są częścią inline `index.html`, więc czasy słów działają także na telefonie bez kopiowania desktopowych assetów.

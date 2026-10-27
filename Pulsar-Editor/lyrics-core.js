@@ -4,6 +4,11 @@ function pulsarLyricsTime(minutes, seconds, fraction){
   return parseInt(minutes, 10) * 60 + parseInt(seconds, 10) + frac;
 }
 function pulsarLyricsRound(value){ return Math.round(Number(value) * 1000) / 1000; }
+function pulsarLyricsDurationMs(start, end, duration){
+  const startMs = Number(start), endMs = Number(end), durationMs = Number(duration);
+  const value = Number.isFinite(durationMs) && durationMs > 0 ? durationMs : (Number.isFinite(endMs) && Number.isFinite(startMs) ? endMs - startMs : 0);
+  return Number.isFinite(value) && value > 0 ? pulsarLyricsRound(value / 1000) : 0;
+}
 
 function pulsarEnhancedLrcLine(body, lineTime){
   const source = String(body || '');
@@ -86,7 +91,10 @@ function parseLyricsfile(text){
   function finishWord(){
     if (!word || !line) return;
     if (!word.hasText || !Number.isFinite(word.start)) throw new Error('YAML_WORD');
-    line.words.push({ t: pulsarLyricsRound(word.start / 1000), txt: word.text });
+    const item = { t: pulsarLyricsRound(word.start / 1000), txt: word.text };
+    const duration = pulsarLyricsDurationMs(word.start, word.end, word.duration);
+    if (duration) item.d = duration;
+    line.words.push(item);
     word = null;
   }
   function finishLine(){
@@ -102,6 +110,8 @@ function parseLyricsfile(text){
         if (!ordered || words.map(function(item){ return item.txt; }).join('').trim() !== txt.trim()) words = [];
       }
       const item = { t: pulsarLyricsRound(line.start / 1000), txt: txt };
+      const duration = pulsarLyricsDurationMs(line.start, line.end, line.duration);
+      if (duration) item.d = duration;
       if (words.length) item.words = words;
       out.push(item);
     }
@@ -110,7 +120,8 @@ function parseLyricsfile(text){
   function assign(target, key, raw, isWord){
     if (key === 'text') { target.text = scalar(raw); target.hasText = true; }
     else if (key === 'start_ms') target.start = milliseconds(raw);
-    else if (key === 'end_ms') { milliseconds(raw); }
+    else if (key === 'end_ms') target.end = milliseconds(raw);
+    else if (key === 'duration_ms') target.duration = milliseconds(raw);
     else if (!isWord && key === 'words') {
       const value = String(raw || '').trim();
       if (value === '[]') inWords = false;
@@ -197,12 +208,17 @@ function parseLyricsPlus(payload){
         let text = part.text;
         // Background vocals may directly precede the main vocal without a space.
         if (part.isBackground && all[index + 1] && !/\s$/.test(text)) text += ' ';
-        words.push({ t: pulsarLyricsRound(part.time / 1000), txt: text });
+        const item = { t: pulsarLyricsRound(part.time / 1000), txt: text };
+        const duration = pulsarLyricsDurationMs(part.time, null, part.duration);
+        if (duration) item.d = duration;
+        words.push(item);
       });
     }
     const txt = (words.length ? words.map(function(word){ return word.txt; }).join('') : String(line.text || '')).trim();
     if (!txt) return;
     const item = { t: pulsarLyricsRound(line.time / 1000), txt: txt };
+    const duration = pulsarLyricsDurationMs(line.time, null, line.duration);
+    if (duration) item.d = duration;
     if (words.length){
       let previous = -1;
       const ordered = words.every(function(word){ const ok = word.t >= previous; previous = word.t; return ok; });

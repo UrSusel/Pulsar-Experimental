@@ -25,7 +25,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 - 🎧 **Built-in YouTube downloader** — yt-dlp ships inside the app and starts itself in the background
 - 🖼️ **Covers & tags embedded** — saved tracks look right in Explorer, your phone, any player
 - 🌠 **Nebula visualizers** — audio-reactive 3D backgrounds, fullscreen ambient mode
-- 🎤 **Word-synced lyrics** — the regular lyrics panel brightens each word at its real timestamp from enhanced LRC, LRCLIB Lyricsfile, or the multi-source Lyrics+ fallback (used when LRCLIB has no word timing); otherwise it keeps the standard line-by-line highlighting
+- 🎤 **Word-synced lyrics** — the regular lyrics panel gradually fills each word over its real duration from enhanced LRC, LRCLIB Lyricsfile, or the multi-source Lyrics+ fallback (used when LRCLIB has no word timing); otherwise it keeps the standard line-by-line highlighting
 - 🧪 **Experimental local AI alignment** — on Windows/Linux, manually align a track's existing lyrics to its audio with Stable-TS/Faster-Whisper on CPU; first-time downloads require consent, source word-sync stays protected, and the original lyrics can be restored offline
 - ✂️ **Audio Editor 2.0** — 32× waveform zoom, 1 ms cut boundaries, configurable silence detection, fades, resumable sessions and non-destructive WAV export
 - 🎞️ **MP3 / FLAC & long recordings** — optional FFmpeg export; large files are edited without decoding the whole recording in WebView

@@ -146,8 +146,8 @@ async function nativeFs(op, argsJson) {
         lastAiRequest = request;
         const lines = request.lines.map((text, index) => {
           const tokens = text.split(/\s+/).filter(Boolean);
-          return { t: index + 1, txt: text, words: tokens.map((token, wordIndex) => ({
-            t: index + 1 + wordIndex * 0.1,
+          return { t: index + 1, d: tokens.length * 0.1, txt: text, words: tokens.map((token, wordIndex) => ({
+            t: index + 1 + wordIndex * 0.1, d: 0.1,
             txt: token + (wordIndex + 1 < tokens.length ? ' ' : '')
           })) };
         });
@@ -336,12 +336,14 @@ try {
   const wordView = await page.evaluate(async () => {
     const api = __player.__lyrics, audio = document.getElementById('audio');
     const original = api.data(), oldOffset = api.offset(), oldTime = audio.currentTime, wasOn = api.on();
-    const source = `version: "1.0"\nmetadata:\n  title: Test\n  artist: Test\nlines:\n  - text: A man that\n    words:\n      - text: "A "\n        start_ms: 1000\n      - text: "man "\n        start_ms: 1400\n      - text: that\n        start_ms: 1800\n    start_ms: 1000\n`;
+    const source = `version: "1.0"\nmetadata:\n  title: Test\n  artist: Test\nlines:\n  - text: A man that\n    words:\n      - text: "A "\n        start_ms: 1000\n      - text: "man "\n        start_ms: 1400\n        end_ms: 1600\n      - text: that\n        start_ms: 1800\n    start_ms: 1000\n    end_ms: 2200\n`;
     try {
       if (!wasOn) { api.set(true); await api.fetchFor(__player.state().currentIndex); }
       api.setOffset(0);
       const lines = api.parseWords(source);
       api.render({ synced: lines, plain: null, source: 'lrclib', wordSync: true });
+      audio.currentTime = 1.2; api.highlight();
+      const derivedProgress = parseFloat(document.querySelector('#lyricsBox .lyrics-word').style.getPropertyValue('--word-progress'));
       audio.currentTime = 1.5; api.highlight();
       const active = document.querySelector('#lyricsBox .lyrics-line.active');
       const words = active ? Array.from(active.querySelectorAll('.lyrics-word')) : [];
@@ -349,21 +351,27 @@ try {
         text: active && active.textContent,
         sung: words.filter(word => word.classList.contains('sung')).map(word => word.textContent),
         total: words.length,
+        progress: words.length === 3 ? parseFloat(words[1].style.getPropertyValue('--word-progress')) : null,
+        gradient: words.length === 3 && getComputedStyle(words[1]).backgroundImage.includes('linear-gradient'),
         colorsDiffer: words.length === 3 && getComputedStyle(words[0]).color !== getComputedStyle(words[2]).color
       };
       audio.currentTime = 1.9; api.highlight();
       const allSung = words.length === 3 && words.every(word => word.classList.contains('sung'));
+      const lastProgress = words.length === 3 ? parseFloat(words[2].style.getPropertyValue('--word-progress')) : null;
       api.render({ synced: api.parse('[00:01.00]A man that'), plain: null, source: 'lrc' });
       audio.currentTime = 1.5; api.highlight();
       const standard = document.querySelector('#lyricsBox .lyrics-line.active');
-      return { middle, allSung, standardLine: !!standard && !standard.querySelector('.lyrics-word') && standard.textContent === 'A man that' };
+      return { middle, derivedProgress, allSung, lastProgress, standardLine: !!standard && !standard.querySelector('.lyrics-word') && standard.textContent === 'A man that' };
     } finally {
       api.render(original); api.setOffset(oldOffset); audio.currentTime = oldTime; api.highlight();
       if (!wasOn) api.set(false);
     }
   });
   check('zwykłe napisy rozjaśniają tylko słowa, których czas już nadszedł', wordView.middle.text === 'A man that' && wordView.middle.total === 3 && JSON.stringify(wordView.middle.sung) === JSON.stringify(['A ', 'man ']) && wordView.middle.colorsDiffer, wordView.middle);
+  check('bieżące słowo wypełnia się stopniowo zgodnie z rzeczywistym end_ms', Math.abs(wordView.middle.progress - 50) < 0.2 && wordView.middle.gradient, { progress: wordView.middle.progress, gradient: wordView.middle.gradient });
+  check('bez własnego czasu słowo używa odstępu do następnego', Math.abs(wordView.derivedProgress - 50) < 0.2, wordView.derivedProgress);
   check('kolejne słowo rozjaśnia się po swoim znaczniku czasu', wordView.allSung);
+  check('ostatnie słowo może użyć rzeczywistego końca linii', Math.abs(wordView.lastProgress - 25) < 0.2, wordView.lastProgress);
   check('bez czasów słów zostaje standardowe podświetlanie całej linii', wordView.standardLine);
 
   const generatedLifecycle = await page.evaluate(async () => {
@@ -395,6 +403,10 @@ try {
       const data = __player.__lyrics.forTrack(__player.__editor.current().id);
       return data && data.source === 'ai' && data.generated && data.wordSync && data.synced.length === 4 && data.synced[0].words.length > 0;
     })));
+    check('wynik AI zachowuje rzeczywiste czasy trwania słów', await page.evaluate(() => {
+      const data = __player.__lyrics.forTrack(__player.__editor.current().id);
+      return data && data.synced[0].d > 0 && data.synced[0].words[0].d === 0.1;
+    }));
     check('helper dostaje język, model i rzeczywiste linie tekstu', lastAiRequest && lastAiRequest.language === 'en' && lastAiRequest.model === 'base' && lastAiRequest.lines.length === 4 && /w pierwszej ciszy/.test(lastAiRequest.lines[0]) && /\.wav$/i.test(lastAiRequest.audio_path), lastAiRequest && { language: lastAiRequest.language, model: lastAiRequest.model, lines: lastAiRequest.lines.length });
     check('wynik AI ma oznaczenie i przycisk przywrócenia', await page.evaluate(() => /Eksperymentalny wynik AI/.test(document.getElementById('paeAiStatus').textContent) && !document.getElementById('paeAiRestore').hidden));
     const aiPersisted = await page.evaluate(() => new Promise(resolve => {
@@ -518,7 +530,7 @@ try {
   });
   mockLyricsProviders = false;
   check('LRCLIB bez słów jest ulepszany przez Lyrics+ z prawdziwymi czasami', plusResult && plusResult.data && plusResult.data.source === 'lyricsplus' && plusResult.data.provider === 'QQ Music' && plusResult.data.wordSync === true && JSON.stringify(plusResult.data.synced[0].words) === JSON.stringify([
-    { t: 1, txt: 'Take ' }, { t: 1.25, txt: 'my ' }, { t: 1.5, txt: 'breath' }
+    { t: 1, txt: 'Take ', d: 0.25 }, { t: 1.25, txt: 'my ', d: 0.25 }, { t: 1.5, txt: 'breath', d: 0.6 }
   ]), plusResult && plusResult.data);
   check('Lyrics+ otrzymuje właściwy tytuł i wykonawcę po LRCLIB', (() => {
     const lrclibAt = lyricsProviderRequests.findIndex(url => url.startsWith('https://lrclib.net/'));

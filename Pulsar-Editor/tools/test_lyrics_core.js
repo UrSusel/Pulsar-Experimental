@@ -42,10 +42,19 @@ test('LRCLIB Lyricsfile zachowuje tekst i prawdziwe czasy słów', () => {
   assert.strictEqual(lines.length, 2);
   assert.strictEqual(lines[0].txt, 'Alguna vez yo esperé, por ti');
   assert.strictEqual(lines[0].t, 22.113);
+  assert.strictEqual(lines[0].d, 5.654);
   assert.deepStrictEqual(lines[0].words[0], { t: 22.113, txt: 'Alguna ' });
   assert.deepStrictEqual(lines[0].words[5], { t: 26.722, txt: 'ti' });
   assert.strictEqual(lines[1].txt, "It's 'solo' #1");
   assert.strictEqual(lines[1].words[2].txt, '#1');
+});
+
+test('Lyricsfile zachowuje rzeczywiste czasy trwania linii i słów', () => {
+  const lines = parseLyricsfile(`version: "1.0"\nlines:\n  - text: A B\n    words:\n      - text: "A "\n        start_ms: 1000\n        end_ms: 1400\n      - text: B\n        start_ms: 1400\n        duration_ms: 600\n    start_ms: 1000\n    end_ms: 2000\n`);
+  assert.strictEqual(lines[0].d, 1);
+  assert.deepStrictEqual(lines[0].words, [
+    { t: 1, txt: 'A ', d: 0.4 }, { t: 1.4, txt: 'B', d: 0.6 }
+  ]);
 });
 
 test('Enhanced LRC rozjaśnia słowa, ale txt pozostaje czysty', () => {
@@ -108,10 +117,11 @@ test('Lyrics+ konwertuje prawdziwe czasy Take My Breath z ms na sekundy', () => 
   assert.strictEqual(data.plain, null);
   assert.strictEqual(data.synced.length, 1);
   assert.strictEqual(data.synced[0].t, 30.205);
+  assert.strictEqual(data.synced[0].d, 2.398);
   assert.strictEqual(data.synced[0].txt, 'I saw the fire in your eyes');
-  assert.deepStrictEqual(data.synced[0].words[0], { t: 30.205, txt: 'I ' });
-  assert.deepStrictEqual(data.synced[0].words[3], { t: 30.779, txt: 'fire ' });
-  assert.deepStrictEqual(data.synced[0].words[6], { t: 31.852, txt: 'eyes' });
+  assert.deepStrictEqual(data.synced[0].words[0], { t: 30.205, txt: 'I ', d: 0.167 });
+  assert.deepStrictEqual(data.synced[0].words[3], { t: 30.779, txt: 'fire ', d: 0.52 });
+  assert.deepStrictEqual(data.synced[0].words[6], { t: 31.852, txt: 'eyes', d: 0.751 });
 });
 
 test('Lyrics+ Line pozostaje liniowy nawet przy dodatkowych polach', () => {

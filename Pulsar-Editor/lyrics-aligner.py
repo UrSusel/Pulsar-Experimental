@@ -76,7 +76,11 @@ def _segment_words(segment: dict) -> list[dict]:
         start = raw.get("start")
         if not isinstance(text, str) or not text or not _finite(start) or start < 0:
             continue
-        words.append({"t": round(float(start), 3), "txt": text})
+        item = {"t": round(float(start), 3), "txt": text}
+        end = raw.get("end")
+        if _finite(end) and end > start:
+            item["d"] = round(float(end - start), 3)
+        words.append(item)
     previous = -1.0
     for word in words:
         if word["t"] < previous:
@@ -113,6 +117,9 @@ def convert_result(result: dict, source_lines: list[str]) -> dict:
         if not text:
             continue
         item = {"t": round(float(start), 3), "txt": text}
+        end = segment.get("end")
+        if _finite(end) and end > start:
+            item["d"] = round(float(end - start), 3)
         if words and _text_key("".join(w["txt"] for w in words)) == _text_key(text):
             item["words"] = words
             for raw in segment.get("words") or []:

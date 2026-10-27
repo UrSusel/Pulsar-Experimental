@@ -33,6 +33,7 @@ def result():
         "segments": [
             {
                 "start": 30.205,
+                "end": 31.299,
                 "text": "I saw the fire",
                 "words": [
                     {"word": "I ", "start": 30.205, "end": 30.372, "probability": 0.9},
@@ -43,6 +44,7 @@ def result():
             },
             {
                 "start": 78.68,
+                "end": 79.761,
                 "text": "Take my breath",
                 "words": [
                     {"word": "Take ", "start": 78.68, "end": 78.897},
@@ -116,8 +118,9 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(converted["word_count"], 7)
         self.assertEqual(converted["coverage"], 1.0)
         self.assertEqual(converted["lines"][0]["t"], 30.205)
-        self.assertEqual(converted["lines"][0]["words"][0], {"t": 30.205, "txt": "I "})
-        self.assertEqual(converted["lines"][1]["words"][2], {"t": 79.137, "txt": "breath"})
+        self.assertEqual(converted["lines"][0]["d"], 1.094)
+        self.assertEqual(converted["lines"][0]["words"][0], {"t": 30.205, "txt": "I ", "d": 0.167})
+        self.assertEqual(converted["lines"][1]["words"][2], {"t": 79.137, "txt": "breath", "d": 0.624})
         self.assertAlmostEqual(converted["mean_probability"], 0.875)
 
     def test_missing_time_is_not_replaced_with_zero(self):

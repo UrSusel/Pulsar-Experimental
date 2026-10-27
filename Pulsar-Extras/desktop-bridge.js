@@ -210,13 +210,16 @@
     for (const item of raw.lines) {
       if (!item || typeof item.t !== 'number' || !Number.isFinite(item.t) || item.t < 0 || typeof item.txt !== 'string' || !item.txt.trim()) continue;
       const line = { t: Math.round(Number(item.t) * 1000) / 1000, txt: item.txt };
+      if (typeof item.d === 'number' && Number.isFinite(item.d) && item.d > 0) line.d = Math.round(item.d * 1000) / 1000;
       if (Array.isArray(item.words) && item.words.length) {
         let previous = -1;
         const words = [];
         for (const word of item.words) {
           if (!word || typeof word.t !== 'number' || !Number.isFinite(word.t) || word.t < previous || word.t < 0 || typeof word.txt !== 'string' || !word.txt) { words.length = 0; break; }
           previous = Number(word.t);
-          words.push({ t: Math.round(previous * 1000) / 1000, txt: word.txt });
+          const normalized = { t: Math.round(previous * 1000) / 1000, txt: word.txt };
+          if (typeof word.d === 'number' && Number.isFinite(word.d) && word.d > 0) normalized.d = Math.round(word.d * 1000) / 1000;
+          words.push(normalized);
         }
         if (words.length && aiTextKey(words.map(function (word) { return word.txt; }).join('')) === aiTextKey(line.txt)) line.words = words;
       }

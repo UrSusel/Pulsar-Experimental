@@ -97,6 +97,19 @@ LYRICS_HELPER = r'''  /* ---- Pulsar editor: lyrics offset ---- */
   /* ---- end Pulsar editor: lyrics offset ---- */'''
 
 LYRICS_RENDERER = r'''  /* Pulsar editor: word lyrics renderer */
+  function lyricsWordDuration(line, index){
+    const word = line.words[index];
+    const own = Number(word && word.d);
+    if (Number.isFinite(own) && own > 0) return own;
+    const next = line.words[index + 1];
+    if (next && Number(next.t) > Number(word.t)) return Number(next.t) - Number(word.t);
+    const lineDuration = Number(line.d);
+    if (Number.isFinite(lineDuration) && lineDuration > 0){
+      const remaining = Number(line.t) + lineDuration - Number(word.t);
+      if (remaining > 0) return remaining;
+    }
+    return 0;
+  }
   function renderLyricsLines(){
     if (!lyricsBox) return;
     lyricsBox.hidden = !lyricsOn;
@@ -110,9 +123,10 @@ LYRICS_RENDERER = r'''  /* Pulsar editor: word lyrics renderer */
         d.className = 'lyrics-line'; d.dataset.i = String(i); d.dataset.t = String(l.t);
         if (Array.isArray(l.words) && l.words.length){
           d.classList.add('lyrics-line-words');
-          l.words.forEach(function(word){
+          l.words.forEach(function(word, wordIndex){
             const span = document.createElement('span');
-            span.className = 'lyrics-word'; span.dataset.t = String(word.t); span.textContent = word.txt;
+            span.className = 'lyrics-word'; span.dataset.t = String(word.t); span.dataset.d = String(lyricsWordDuration(l, wordIndex)); span.textContent = word.txt;
+            span.style.setProperty('--word-progress', '0%');
             d.appendChild(span);
           });
         } else d.textContent = l.txt;
@@ -168,7 +182,11 @@ LYRICS_RENDERER = r'''  /* Pulsar editor: word lyrics renderer */
     const active = lyricsBox.querySelector('.lyrics-line[data-i="' + idx + '"]');
     if (!active || !active.classList.contains('lyrics-line-words')) return;
     active.querySelectorAll('.lyrics-word').forEach(function(span){
-      span.classList.toggle('sung', Number(span.dataset.t) <= t);
+      const start = Number(span.dataset.t), duration = Number(span.dataset.d);
+      let progress = 0;
+      if (t >= start) progress = duration > 0 ? Math.max(0, Math.min(1, (t - start) / duration)) : 1;
+      span.classList.toggle('sung', progress > 0);
+      span.style.setProperty('--word-progress', String(Math.round(progress * 1000) / 10) + '%');
     });
   }
   /* end word-synced lyrics rendering */'''
@@ -205,7 +223,11 @@ WORD_LYRICS_STYLE = '''  <!-- Pulsar editor: word lyrics styles -->
   <style>
   .lyrics-line .lyrics-word { color: inherit; }
   .lyrics-line.active .lyrics-word { color: rgba(255,255,255,.36); text-shadow: none; }
-  .lyrics-line.active .lyrics-word.sung { color: #fff; text-shadow: none; }
+  .lyrics-line.active .lyrics-word.sung {
+    background-image: linear-gradient(90deg, #fff 0%, #fff var(--word-progress, 100%), rgba(255,255,255,.36) var(--word-progress, 100%), rgba(255,255,255,.36) 100%);
+    background-clip: text; -webkit-background-clip: text;
+    color: transparent; -webkit-text-fill-color: transparent; text-shadow: none;
+  }
   </style>
   <!-- end Pulsar editor: word lyrics styles -->'''
 
@@ -409,6 +431,9 @@ def editor_runtime_patched(html: str) -> bool:
         "track.lyricsData) lyricsCache.set(track.id, track.lyricsData)",
         "Pulsar editor: word-synced lyrics parser",
         "Pulsar editor: word lyrics renderer",
+        "function lyricsWordDuration(line, index)",
+        "span.style.setProperty('--word-progress', '0%')",
+        "background-clip: text; -webkit-background-clip: text;",
         "Pulsar editor: LRCLIB word sync",
         "Pulsar editor: prefer LRCLIB word sync",
         LYRICSPLUS_BEGIN,
