@@ -336,6 +336,7 @@ try {
   const wordView = await page.evaluate(async () => {
     const api = __player.__lyrics, audio = document.getElementById('audio');
     const original = api.data(), oldOffset = api.offset(), oldTime = audio.currentTime, wasOn = api.on();
+    const audioDurationDescriptor = Object.getOwnPropertyDescriptor(audio, 'duration');
     const source = `version: "1.0"\nmetadata:\n  title: Test\n  artist: Test\nlines:\n  - text: A man that\n    words:\n      - text: "A "\n        start_ms: 1000\n      - text: "man "\n        start_ms: 1400\n        end_ms: 1600\n      - text: that\n        start_ms: 1800\n    start_ms: 1000\n    end_ms: 2200\n`;
     try {
       if (!wasOn) { api.set(true); await api.fetchFor(__player.state().currentIndex); }
@@ -358,11 +359,21 @@ try {
       audio.currentTime = 1.9; api.highlight();
       const allSung = words.length === 3 && words.every(word => word.classList.contains('sung'));
       const lastProgress = words.length === 3 ? parseFloat(words[2].style.getPropertyValue('--word-progress')) : null;
+      const boundaryLines = api.parseWords(`version: "1.0"\nlines:\n  - text: A B\n    words:\n      - text: "A "\n        start_ms: 1000\n      - text: B\n        start_ms: 1400\n    start_ms: 1000\n  - text: Next end\n    words:\n      - text: "Next "\n        start_ms: 2000\n      - text: end\n        start_ms: 3000\n    start_ms: 2000\n`);
+      api.render({ synced: boundaryLines, plain: null, source: 'lrclib', wordSync: true });
+      audio.currentTime = 1.7; api.highlight();
+      const nextLineProgress = parseFloat(document.querySelector('#lyricsBox .lyrics-line.active .lyrics-word:last-child').style.getPropertyValue('--word-progress'));
+      Object.defineProperty(audio, 'duration', { configurable: true, value: 6 });
+      audio.currentTime = 4.5; api.highlight();
+      const audioEndProgress = parseFloat(document.querySelector('#lyricsBox .lyrics-line.active .lyrics-word:last-child').style.getPropertyValue('--word-progress'));
+      const mediaDuration = audio.duration;
+      const audioEndExpected = (4.5 - 3) / (mediaDuration - 3) * 100;
       api.render({ synced: api.parse('[00:01.00]A man that'), plain: null, source: 'lrc' });
       audio.currentTime = 1.5; api.highlight();
       const standard = document.querySelector('#lyricsBox .lyrics-line.active');
-      return { middle, derivedProgress, allSung, lastProgress, standardLine: !!standard && !standard.querySelector('.lyrics-word') && standard.textContent === 'A man that' };
+      return { middle, derivedProgress, allSung, lastProgress, nextLineProgress, audioEndProgress, audioEndExpected, standardLine: !!standard && !standard.querySelector('.lyrics-word') && standard.textContent === 'A man that' };
     } finally {
+      if (audioDurationDescriptor) Object.defineProperty(audio, 'duration', audioDurationDescriptor); else delete audio.duration;
       api.render(original); api.setOffset(oldOffset); audio.currentTime = oldTime; api.highlight();
       if (!wasOn) api.set(false);
     }
@@ -372,6 +383,8 @@ try {
   check('bez własnego czasu słowo używa odstępu do następnego', Math.abs(wordView.derivedProgress - 50) < 0.2, wordView.derivedProgress);
   check('kolejne słowo rozjaśnia się po swoim znaczniku czasu', wordView.allSung);
   check('ostatnie słowo może użyć rzeczywistego końca linii', Math.abs(wordView.lastProgress - 25) < 0.2, wordView.lastProgress);
+  check('ostatnie słowo bez end_ms wypełnia się do następnej linii', Math.abs(wordView.nextLineProgress - 50) < 0.2, wordView.nextLineProgress);
+  check('ostatnie słowo ostatniej linii wypełnia się do końca audio', Number.isFinite(wordView.audioEndExpected) && Math.abs(wordView.audioEndProgress - wordView.audioEndExpected) < 0.2, { actual: wordView.audioEndProgress, expected: wordView.audioEndExpected });
   check('bez czasów słów zostaje standardowe podświetlanie całej linii', wordView.standardLine);
 
   const generatedLifecycle = await page.evaluate(async () => {

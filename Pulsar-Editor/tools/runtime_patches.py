@@ -182,7 +182,17 @@ LYRICS_RENDERER = r'''  /* Pulsar editor: word lyrics renderer */
     const active = lyricsBox.querySelector('.lyrics-line[data-i="' + idx + '"]');
     if (!active || !active.classList.contains('lyrics-line-words')) return;
     active.querySelectorAll('.lyrics-word').forEach(function(span){
-      const start = Number(span.dataset.t), duration = Number(span.dataset.d);
+      const start = Number(span.dataset.t);
+      let duration = Number(span.dataset.d);
+      if (!(duration > 0)){
+        // The last word often has no explicit end in Lyricsfile/enhanced LRC.
+        // Bound it by the next real line, or by the real audio end for the final line.
+        const nextLine = arr[idx + 1];
+        const track = tracks[currentIndex];
+        const mediaDuration = Number.isFinite(audio.duration) && audio.duration > 0 ? Number(audio.duration) : Number(track && track.durMs) / 1000;
+        const boundary = nextLine ? Number(nextLine.t) : mediaDuration - lyricsOffset();
+        if (Number.isFinite(boundary) && boundary > start) duration = boundary - start;
+      }
       let progress = 0;
       if (t >= start) progress = duration > 0 ? Math.max(0, Math.min(1, (t - start) / duration)) : 1;
       span.classList.toggle('sung', progress > 0);
@@ -433,6 +443,7 @@ def editor_runtime_patched(html: str) -> bool:
         "Pulsar editor: word lyrics renderer",
         "function lyricsWordDuration(line, index)",
         "span.style.setProperty('--word-progress', '0%')",
+        "const boundary = nextLine ? Number(nextLine.t) : mediaDuration - lyricsOffset();",
         "background-clip: text; -webkit-background-clip: text;",
         "Pulsar editor: LRCLIB word sync",
         "Pulsar editor: prefer LRCLIB word sync",

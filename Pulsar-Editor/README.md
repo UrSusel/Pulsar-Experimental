@@ -21,7 +21,7 @@ Edytor nigdy nie zapisuje pod ścieżką oryginału. Metadane, okładka i dopaso
 
 Zwykły panel napisów najpierw używa lokalnego LRC i LRCLIB. Jeżeli LRCLIB nie ma czasów słów, resolver odpytuje publiczne **Lyrics+** (`lyricsplus.prjktla.my.id`), które agreguje m.in. Apple Music, QQ Music i Musixmatch. Wynik z prawdziwym `syllabus[]` zastępuje wynik liniowy; słabszy wynik nigdy nie nadpisuje lepszego. Nie jest wymagany token ani osobny tryb karaoke. Publiczna usługa może mieć limity lub przerwy — wtedy zostają dotychczasowe napisy LRCLIB.
 
-Bieżące słowo jest **stopniowo wypełniane białym gradientem bezpośrednio na tekście**, bez ruchomej linii lub paska. Renderer używa rzeczywistego `duration`/`end`, a jeśli go brak — odstępu do następnego słowa albo końca linii. Gdy długość ostatniego słowa jest nieznana, pozostaje dotychczasowe pojedyncze rozjaśnienie; czas trwania nie jest zgadywany.
+Bieżące słowo jest **stopniowo wypełniane białym gradientem bezpośrednio na tekście**, bez ruchomej linii lub paska. Renderer używa rzeczywistego `duration`/`end`, a jeśli go brak — odstępu do następnego słowa albo końca linii. Ostatni wyraz bez `end_ms` jest ograniczony następnym rzeczywistym znacznikiem linii, a w ostatniej linii znanym końcem audio; nie jest mu przypisywany arbitralny czas.
 
 ## Eksperymentalne dopasowanie AI (Windows/Linux)
 
