@@ -23,6 +23,9 @@ const AI_PYTHON = path.join(TMP, 'pulsar', 'lyrics-ai', 'env', 'bin', 'python');
 fs.mkdirSync(path.dirname(AI_PYTHON), { recursive: true }); fs.writeFileSync(AI_PYTHON, 'test python placeholder');
 let lastFfmpegCommand = '';
 let lastAiRequest = null;
+let aiCheckShouldFail = false;
+let aiPipMissing = false;
+const aiSetupCommands = [];
 const NEUTRALINO_STUB = String.raw`
 (function(){
   var handlers = {};
@@ -118,7 +121,24 @@ async function nativeFs(op, argsJson) {
     if (op === 'execCommand') {
       const command = String(args[0] || '');
       if (command === 'command -v ffmpeg' || command === 'where ffmpeg' || command.includes('command -v ffmpeg')) return JSON.stringify({ stdOut: '/usr/bin/ffmpeg\n', stdErr: '', exitCode: 0 });
-      if (command.includes('lyrics-aligner.py') && command.includes('--check')) return JSON.stringify({ stdOut: '{"ok":true,"stable_ts":"2.19.1"}\n', stdErr: '', exitCode: 0 });
+      if (command.includes('lyrics-aligner.py') && command.includes('--check')) {
+        if (aiCheckShouldFail) return JSON.stringify({ stdOut: '', stdErr: "PULSAR_AI_ERROR: No module named 'stable_whisper'", exitCode: 2 });
+        return JSON.stringify({ stdOut: '{"ok":true,"stable_ts":"2.19.1"}\n', stdErr: '', exitCode: 0 });
+      }
+      if (command.includes(' -m pip --version')) {
+        aiSetupCommands.push(command);
+        return JSON.stringify(aiPipMissing ? { stdOut: '', stdErr: 'No module named pip', exitCode: 1 } : { stdOut: 'pip 26.0\n', stdErr: '', exitCode: 0 });
+      }
+      if (command.includes(' -m ensurepip --upgrade')) {
+        aiSetupCommands.push(command); aiPipMissing = false;
+        return JSON.stringify({ stdOut: 'pip bootstrapped\n', stdErr: '', exitCode: 0 });
+      }
+      if (command.includes(' -m pip install ')) {
+        aiSetupCommands.push(command);
+        if (aiPipMissing) return JSON.stringify({ stdOut: '', stdErr: 'No module named pip', exitCode: 1 });
+        aiCheckShouldFail = false;
+        return JSON.stringify({ stdOut: 'AI packages installed\n', stdErr: '', exitCode: 0 });
+      }
       if (command.includes('lyrics-aligner.py') && command.includes('--request')) {
         const match = command.match(/--request '([^']+)' --output '([^']+)'/);
         if (!match) return JSON.stringify({ stdOut: '', stdErr: 'no AI request path', exitCode: 2 });
@@ -391,6 +411,18 @@ try {
       const data = __player.__lyrics.forTrack(__player.__editor.current().id);
       return data && data.source === 'lrc' && data.synced.length === 4 && !data.generated;
     })));
+    aiCheckShouldFail = true; aiPipMissing = true; aiSetupCommands.length = 0;
+    const pipRecovery = await page.evaluate(async () => {
+      const current = __player.__editor.current();
+      const result = await __pulsarDesktopTools.alignLyrics({
+        inputBlob: current.file, inputName: current.file.name,
+        lines: ['Broken venv recovery'], language: 'en', model: 'base'
+      });
+      return { source: result.source, words: result.synced[0].words.length };
+    });
+    const setupSequence = aiSetupCommands.map(command => command.includes('pip --version') ? 'pip-check' : command.includes('ensurepip') ? 'ensurepip' : 'install');
+    check('niekompletne venv bez pip jest naprawiane przed instalacją AI', pipRecovery.source === 'ai' && pipRecovery.words === 3 && JSON.stringify(setupSequence) === JSON.stringify(['pip-check', 'ensurepip', 'install']), { setupSequence, commands: aiSetupCommands });
+    check('instalator używa python -m pip zamiast launchera pip.exe', aiSetupCommands.length === 3 && aiSetupCommands.every(command => command.includes(AI_PYTHON) && command.includes(' -m ')), aiSetupCommands);
     await page.click('#paeClose');
   }
 

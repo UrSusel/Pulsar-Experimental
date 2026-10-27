@@ -165,8 +165,16 @@
     let check = await checkAiEnvironment(root, python, helper);
     if (!check.ok && install) {
       progressOf(onProgress, 'install');
-      const pip = join(join(root, 'env'), WINDOWS ? 'Scripts/pip.exe' : 'bin/pip');
-      const installed = resultOf(await run(quote(pip) + ' install --disable-pip-version-check ' + AI_PACKAGES.map(quote).join(' '), 3600000));
+      // A previous interrupted setup can leave python.exe without Scripts/pip.exe.
+      // Use the interpreter that already passed --check and bootstrap pip if needed.
+      const pipReady = resultOf(await run(quote(python) + ' -m pip --version', 30000));
+      if (pipReady.code !== 0) {
+        const bootstrapped = resultOf(await run(quote(python) + ' -m ensurepip --upgrade', 180000));
+        if (bootstrapped.code !== 0) {
+          throw new Error('Nie można przygotować pip w środowisku AI: ' + (bootstrapped.stderr.split(/\r?\n/).slice(-3).join(' ') || ('kod ' + bootstrapped.code)));
+        }
+      }
+      const installed = resultOf(await run(quote(python) + ' -m pip install --disable-pip-version-check ' + AI_PACKAGES.map(quote).join(' '), 3600000));
       if (installed.code !== 0) {
         throw new Error('Instalacja AI nie powiodła się: ' + (installed.stderr.split(/\r?\n/).slice(-4).join(' ') || ('kod ' + installed.code)));
       }

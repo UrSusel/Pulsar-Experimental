@@ -39,7 +39,7 @@ Przy usuwaniu jedynej lokalnej kopii pojawia się osobne ostrzeżenie z nazwami 
 
 `desktop-bridge.js` wykrywa FFmpeg obok aplikacji i w `PATH`, udostępnia bezpieczne argumenty procesu, zapis blobów w kawałkach 8 MB, pliki tymczasowe, dialogi oraz operacje potrzebne kopiom. Nie uruchamia usługi HTTP i nie korzysta z zewnętrznego backendu.
 
-Dla ręcznego eksperymentu napisów mostek udostępnia ograniczone `lyricsAiCapabilities()` i `alignLyrics()`. Helper jest kopiowany z zasobów do katalogu użytkownika; ścieżki są cytowane, a żądanie i wynik przechodzą przez tymczasowy JSON. Izolowane `venv` i przypięte pakiety `stable-ts[fw]==2.19.1` / `faster-whisper==1.2.1` są instalowane dopiero po potwierdzeniu w UI. Model jest pobierany do tego samego katalogu cache, nie do repo ani `resources.neu`. Mostek odrzuca wynik bez rzeczywistych, zgodnych czasów słów i nie uruchamia AI dla źródłowego word-sync.
+Dla ręcznego eksperymentu napisów mostek udostępnia ograniczone `lyricsAiCapabilities()` i `alignLyrics()`. Helper jest kopiowany z zasobów do katalogu użytkownika; ścieżki są cytowane, a żądanie i wynik przechodzą przez tymczasowy JSON. Izolowane `venv` i przypięte pakiety `stable-ts[fw]==2.19.1` / `faster-whisper==1.2.1` są instalowane dopiero po potwierdzeniu w UI. Instalator używa `python -m pip`; jeżeli przerwana konfiguracja zostawiła środowisko bez działającego pip, najpierw wykonuje `python -m ensurepip --upgrade`. Model jest pobierany do tego samego katalogu cache, nie do repo ani `resources.neu`. Mostek odrzuca wynik bez rzeczywistych, zgodnych czasów słów i nie uruchamia AI dla źródłowego word-sync.
 
 ## Pliki i testy
 
