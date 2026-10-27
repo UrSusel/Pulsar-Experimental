@@ -19,7 +19,10 @@ const DOWNLOADS = path.join(TMP, 'downloads'); fs.mkdirSync(DOWNLOADS);
 const NATIVE_DIR = path.join(TMP, 'native'); fs.mkdirSync(NATIVE_DIR);
 const NATIVE_OUTPUT = path.join(NATIVE_DIR, 'Test Artist - Test Song (edycja).wav');
 const NATIVE_OUTPUT_MP3 = path.join(NATIVE_DIR, 'Test Artist - Test Song (edycja).mp3');
+const AI_PYTHON = path.join(TMP, 'pulsar', 'lyrics-ai', 'env', 'bin', 'python');
+fs.mkdirSync(path.dirname(AI_PYTHON), { recursive: true }); fs.writeFileSync(AI_PYTHON, 'test python placeholder');
 let lastFfmpegCommand = '';
+let lastAiRequest = null;
 const NEUTRALINO_STUB = String.raw`
 (function(){
   var handlers = {};
@@ -33,7 +36,7 @@ const NEUTRALINO_STUB = String.raw`
     init:function(){},
     events:{on:function(e,f){(handlers[e]=handlers[e]||[]).push(f);return Promise.resolve();},off:noop,dispatch:noop,broadcast:noop},
     filesystem:ns({
-      getStats:function(p){return call('getStats',p);}, readBinaryFile:function(p){return call('readBinaryFile',p).then(b64ToAb);},
+      getStats:function(p){return call('getStats',p);}, readBinaryFile:function(p){return call('readBinaryFile',p).then(b64ToAb);}, readFile:function(p){return call('readFile',p);},
       writeBinaryFile:function(p,b){return call('writeBinaryFile',p,abToB64(b));}, appendBinaryFile:function(p,b){return call('appendBinaryFile',p,abToB64(b));},
       writeFile:function(p,s){return call('writeFile',p,s);}, createDirectory:function(p){return call('createDirectory',p);}, remove:function(p){return call('remove',p);},
       readDirectory:function(p,o){return call('readDirectory',p,o||{});}, createWatcher:function(){return Promise.resolve(1);}, removeWatcher:noop
@@ -77,7 +80,7 @@ function makeWav(file) {
   fs.writeFileSync(file, out);
 }
 
-const mime = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css', png: 'image/png', wav: 'audio/wav', lrc: 'text/plain; charset=utf-8' };
+const mime = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css', png: 'image/png', wav: 'audio/wav', lrc: 'text/plain; charset=utf-8', py: 'text/x-python; charset=utf-8' };
 const server = http.createServer((req, res) => {
   let pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
   if (pathname === '/') pathname = '/index.html';
@@ -103,6 +106,7 @@ async function nativeFs(op, argsJson) {
     if (op === 'writeBinaryFile') { fs.writeFileSync(args[0], Buffer.from(args[1], 'base64')); return 'null'; }
     if (op === 'appendBinaryFile') { fs.appendFileSync(args[0], Buffer.from(args[1], 'base64')); return 'null'; }
     if (op === 'readBinaryFile') return JSON.stringify(fs.readFileSync(args[0]).toString('base64'));
+    if (op === 'readFile') return JSON.stringify(fs.readFileSync(args[0], 'utf8'));
     if (op === 'writeFile') { fs.writeFileSync(args[0], args[1]); return 'null'; }
     if (op === 'createDirectory') { fs.mkdirSync(args[0], { recursive: true }); return 'null'; }
     if (op === 'remove') { fs.rmSync(args[0], { force: true, recursive: true }); return 'null'; }
@@ -114,6 +118,22 @@ async function nativeFs(op, argsJson) {
     if (op === 'execCommand') {
       const command = String(args[0] || '');
       if (command === 'command -v ffmpeg' || command === 'where ffmpeg' || command.includes('command -v ffmpeg')) return JSON.stringify({ stdOut: '/usr/bin/ffmpeg\n', stdErr: '', exitCode: 0 });
+      if (command.includes('lyrics-aligner.py') && command.includes('--check')) return JSON.stringify({ stdOut: '{"ok":true,"stable_ts":"2.19.1"}\n', stdErr: '', exitCode: 0 });
+      if (command.includes('lyrics-aligner.py') && command.includes('--request')) {
+        const match = command.match(/--request '([^']+)' --output '([^']+)'/);
+        if (!match) return JSON.stringify({ stdOut: '', stdErr: 'no AI request path', exitCode: 2 });
+        const request = JSON.parse(fs.readFileSync(match[1], 'utf8'));
+        lastAiRequest = request;
+        const lines = request.lines.map((text, index) => {
+          const tokens = text.split(/\s+/).filter(Boolean);
+          return { t: index + 1, txt: text, words: tokens.map((token, wordIndex) => ({
+            t: index + 1 + wordIndex * 0.1,
+            txt: token + (wordIndex + 1 < tokens.length ? ' ' : '')
+          })) };
+        });
+        fs.writeFileSync(match[2], JSON.stringify({ version: 1, lines, model: request.model, language: request.language, duration: 6, mean_probability: 0.9 }));
+        return JSON.stringify({ stdOut: '', stdErr: '', exitCode: 0 });
+      }
       if (command.includes('-hide_banner') && command.includes('-filter_complex')) {
         lastFfmpegCommand = command;
         const match = command.match(/'([^']+)'\s*$/) || command.match(/"([^"]+)"\s*$/);
@@ -326,6 +346,54 @@ try {
   check('kolejne słowo rozjaśnia się po swoim znaczniku czasu', wordView.allSung);
   check('bez czasów słów zostaje standardowe podświetlanie całej linii', wordView.standardLine);
 
+  const generatedLifecycle = await page.evaluate(async () => {
+    const api = __player.__lyrics, id = __player.__editor.current().id;
+    const generated = {
+      synced: [{ t: 2, txt: 'druga linia', words: [{ t: 2, txt: 'druga ' }, { t: 2.2, txt: 'linia' }] }],
+      plain: null, source: 'ai', generated: true, experimental: true, wordSync: true, model: 'base', coverage: 1
+    };
+    api.applyFor(id, generated);
+    const applied = api.forTrack(id);
+    const cached = JSON.parse(localStorage.getItem('playerLyricsV2:' + id) || 'null');
+    await api.resetFor(id);
+    const restored = api.forTrack(id);
+    return { applied, cached, restored };
+  });
+  check('wynik AI trafia do cache i jest oznaczony jako eksperymentalny', generatedLifecycle.applied && generatedLifecycle.applied.source === 'ai' && generatedLifecycle.applied.generated === true && generatedLifecycle.applied.synced[0].words.length === 2 && generatedLifecycle.cached && generatedLifecycle.cached.source === 'ai', generatedLifecycle.applied);
+  check('przywracanie usuwa wynik AI i ponownie używa lokalnego LRC', generatedLifecycle.restored && generatedLifecycle.restored.source === 'lrc' && generatedLifecycle.restored.synced.length === 4 && !generatedLifecycle.restored.synced.some(line => line.words), generatedLifecycle.restored);
+
+  if (DESKTOP) {
+    await page.click('#audioEditorBtn');
+    await page.click('[data-tab="lyrics"]');
+    check('przycisk AI jest dostępny dla tekstu bez źródłowego word-sync', await poll(() => page.evaluate(() => {
+      const button = document.getElementById('paeAiAlign');
+      return button && !button.disabled && !!document.getElementById('paeAiLanguage');
+    })));
+    await page.select('#paeAiLanguage', 'en');
+    await page.click('#paeAiAlign');
+    check('UI AI zapisuje wynik słów przez prawdziwy mostek', await poll(() => page.evaluate(() => {
+      const data = __player.__lyrics.forTrack(__player.__editor.current().id);
+      return data && data.source === 'ai' && data.generated && data.wordSync && data.synced.length === 4 && data.synced[0].words.length > 0;
+    })));
+    check('helper dostaje język, model i rzeczywiste linie tekstu', lastAiRequest && lastAiRequest.language === 'en' && lastAiRequest.model === 'base' && lastAiRequest.lines.length === 4 && /w pierwszej ciszy/.test(lastAiRequest.lines[0]) && /\.wav$/i.test(lastAiRequest.audio_path), lastAiRequest && { language: lastAiRequest.language, model: lastAiRequest.model, lines: lastAiRequest.lines.length });
+    check('wynik AI ma oznaczenie i przycisk przywrócenia', await page.evaluate(() => /Eksperymentalny wynik AI/.test(document.getElementById('paeAiStatus').textContent) && !document.getElementById('paeAiRestore').hidden));
+    const aiPersisted = await page.evaluate(() => new Promise(resolve => {
+      const id = __player.__editor.current().id;
+      const request = indexedDB.open('ambient-player-library', 2);
+      request.onsuccess = () => {
+        const get = request.result.transaction('tracks').objectStore('tracks').getAll();
+        get.onsuccess = () => { const item = get.result.find(x => x.id === id); resolve(item && item.lyricsData); };
+      };
+    }));
+    check('wynik AI jest trwale zapisany przy utworze', aiPersisted && aiPersisted.source === 'ai' && aiPersisted.generated === true && aiPersisted.synced[0].words.length > 0, aiPersisted && { source: aiPersisted.source, generated: aiPersisted.generated });
+    await page.click('#paeAiRestore');
+    check('przycisk przywraca źródło po teście AI', await poll(() => page.evaluate(() => {
+      const data = __player.__lyrics.forTrack(__player.__editor.current().id);
+      return data && data.source === 'lrc' && data.synced.length === 4 && !data.generated;
+    })));
+    await page.click('#paeClose');
+  }
+
   check('panel Auto-DJ 2.0 jest dostępny', await page.evaluate(() => !!document.getElementById('pulsarDjPlus') && !!window.PulsarAutoDj));
   const djChoice = await page.evaluate(() => {
     PulsarAutoDj.set({ mood: 'calm', artistDiversity: 80, genreDiversity: 60 });
@@ -417,6 +485,17 @@ try {
     return query.get('title') === 'Take My Breath' && query.get('artist') === 'The Weeknd';
   })(), lyricsProviderRequests);
   check('nowy cache zachowuje wynik word-sync i omija stary format', plusResult && plusResult.cached && plusResult.cached.source === 'lyricsplus' && plusResult.cached.wordSync === true, plusResult && plusResult.cached);
+
+  const aiSourceGuard = await page.evaluate(() => {
+    try {
+      __player.__lyrics.applyFor(__player.__editor.current().id, {
+        synced: [{ t: 1, txt: 'Take my breath', words: [{ t: 1, txt: 'Take ' }, { t: 1.2, txt: 'my ' }, { t: 1.4, txt: 'breath' }] }],
+        source: 'ai', generated: true, wordSync: true
+      });
+      return '';
+    } catch (error) { return String(error && error.message || error); }
+  });
+  check('API nie pozwala AI nadpisać źródłowego word-sync', /priorytet/.test(aiSourceGuard), aiSourceGuard);
 
   check('brak nieobsłużonych błędów JavaScript', pageErrors.length === 0, pageErrors);
 } finally {

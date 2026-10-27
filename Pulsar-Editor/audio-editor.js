@@ -24,6 +24,9 @@
   let decodeToken = 0;
   let lyricsToken = 0;
   let lyricsLoadedId = '';
+  let aiBusy = false;
+  let aiBusyId = '';
+  let aiCaps = null;
   let raf = 0;
   let lastLyricsPaint = 0;
   let ui = {};
@@ -257,6 +260,23 @@
               <button type="button" class="pae-btn" data-offset-step="0.1">+0,1 s</button>
               <button type="button" class="pae-btn" data-offset-step="0.5">+0,5 s</button>
             </div>
+            <section class="pae-section pae-ai-section">
+              <div class="pae-section-title"><h3>Dopasowanie AI <span class="pae-badge">EKSPERYMENT</span></h3><span>Windows · Linux · lokalnie</span></div>
+              <p class="pae-note">Stable-TS dopasowuje <strong>istniejący tekst</strong> do tego nagrania na poziomie słów. Nie zastępuje źródłowych czasów słów. Pierwsze uruchomienie może pobrać od ok. 2 GB zależności (zależnie od platformy) i model — dopiero po Twoim potwierdzeniu.</p>
+              <div class="pae-ai-controls">
+                <label class="pae-field">Język tekstu
+                  <select class="pae-input" id="paeAiLanguage">
+                    <option value="pl">polski</option><option value="en">angielski</option><option value="de">niemiecki</option>
+                    <option value="es">hiszpański</option><option value="fr">francuski</option><option value="it">włoski</option>
+                    <option value="pt">portugalski</option><option value="nl">niderlandzki</option><option value="uk">ukraiński</option>
+                    <option value="ru">rosyjski</option><option value="ja">japoński</option><option value="ko">koreański</option><option value="zh">chiński</option>
+                  </select>
+                </label>
+                <button type="button" class="pae-btn primary" id="paeAiAlign">Dopasuj tekst do audio</button>
+                <button type="button" class="pae-btn danger" id="paeAiRestore" hidden>Przywróć napisy źródłowe</button>
+              </div>
+              <div class="pae-status" id="paeAiStatus" aria-live="polite"></div>
+            </section>
             <section class="pae-section">
               <div class="pae-section-title"><h3>Podgląd synchronizacji</h3><span>czasy po przesunięciu</span></div>
               <div class="pae-lyrics-preview" id="paeLyricsPreview"></div>
@@ -284,7 +304,8 @@
       start: byId('paeCutStart'), end: byId('paeCutEnd'), addCut: byId('paeAddCut'), cuts: byId('paeCuts'),
       audioStatus: byId('paeAudioStatus'), import: byId('paeImport'), save: byId('paeSave'),
       offsetValue: byId('paeOffsetValue'), offsetRange: byId('paeOffsetRange'), offsetNumber: byId('paeOffsetNumber'),
-      lyricsPreview: byId('paeLyricsPreview'), lyricsStatus: byId('paeLyricsStatus'), exportLrc: byId('paeExportLrc')
+      lyricsPreview: byId('paeLyricsPreview'), lyricsStatus: byId('paeLyricsStatus'), exportLrc: byId('paeExportLrc'),
+      aiLanguage: byId('paeAiLanguage'), aiAlign: byId('paeAiAlign'), aiRestore: byId('paeAiRestore'), aiStatus: byId('paeAiStatus')
     };
 
     byId('paeClose').addEventListener('click', closeEditor);
@@ -331,6 +352,8 @@
       });
     });
     ui.exportLrc.addEventListener('click', exportShiftedLrc);
+    ui.aiAlign.addEventListener('click', runAiAlignment);
+    ui.aiRestore.addEventListener('click', restoreSourceLyrics);
     bindWaveEvents();
     return dim;
   }
@@ -456,6 +479,8 @@
     ui.start.max = ui.end.max = String(duration || 0);
     setStatus(ui.audioStatus, '');
     setStatus(ui.lyricsStatus, '');
+    setStatus(ui.aiStatus, '');
+    updateAiUi();
     setPreview(false);
     setTab(tab || 'audio');
     restoreSession(); syncOptionInputs();
@@ -898,11 +923,135 @@
     if (completed && open) closeEditor();
   }
 
+  function editorLyricsData() {
+    if (!track) return null;
+    return player.__lyrics.forTrack ? player.__lyrics.forTrack(track.id) : (player.__lyrics.data ? player.__lyrics.data() : null);
+  }
+  function lyricsHaveWords(data) {
+    return !!(data && Array.isArray(data.synced) && data.synced.some(function (line) { return Array.isArray(line.words) && line.words.length; }));
+  }
+  function lyricsSourceLines(data) {
+    if (!data) return [];
+    const source = Array.isArray(data.synced) && data.synced.length ? data.synced.map(function (line) { return line && line.txt; }) : (Array.isArray(data.plain) ? data.plain : []);
+    return source.map(function (line) { return String(line || '').trim(); }).filter(Boolean);
+  }
+  function aiProgress(stage) {
+    if (!open || !track || track.id !== aiBusyId) return;
+    const messages = {
+      check: 'Sprawdzanie lokalnego środowiska AI…',
+      prepare: 'Przygotowywanie modułu AI…',
+      python: 'Tworzenie izolowanego środowiska Python…',
+      install: 'Instalowanie Stable-TS i Faster-Whisper… To jednorazowe, duże pobranie.',
+      align: 'Analiza audio i dopasowywanie słów na CPU… Przy pierwszym użyciu trwa też pobieranie modelu base.',
+      done: 'Zapisywanie wyniku…'
+    };
+    setStatus(ui.aiStatus, messages[stage] || messages.prepare, '', true);
+  }
+  function updateAiUi(keepStatus) {
+    if (!ui.aiAlign) return;
+    const tools = window.__pulsarDesktopTools;
+    const supported = !!(tools && tools.available && typeof tools.alignLyrics === 'function' && player.__lyrics.applyFor);
+    const data = editorLyricsData();
+    const sourceWords = !!(data && !data.generated && lyricsHaveWords(data));
+    const hasText = lyricsSourceLines(data).length > 0;
+    const thisBusy = aiBusy && track && aiBusyId === track.id;
+    ui.aiAlign.disabled = !supported || aiBusy || sourceWords || !hasText;
+    ui.aiAlign.textContent = thisBusy ? 'Przetwarzanie…' : 'Dopasuj tekst do audio';
+    ui.aiLanguage.disabled = aiBusy || sourceWords;
+    ui.aiRestore.hidden = !(data && data.generated);
+    ui.aiRestore.disabled = aiBusy;
+    if (thisBusy || keepStatus) return;
+    if (aiBusy) { setStatus(ui.aiStatus, 'Inny utwór jest teraz analizowany. Poczekaj na zakończenie.', ''); return; }
+    if (!supported) { setStatus(ui.aiStatus, 'Lokalne dopasowanie AI jest dostępne w desktopowej wersji Pulsara dla Windows i Linux.', ''); return; }
+    if (sourceWords) { setStatus(ui.aiStatus, 'Źródło ma już rzeczywiste czasy słów. AI nie zastępuje lepszego word-sync.', 'success'); return; }
+    if (data && data.generated) {
+      const coverage = Number.isFinite(Number(data.coverage)) ? ' Pokrycie tekstu: ' + Math.round(Number(data.coverage) * 100) + '%.' : '';
+      setStatus(ui.aiStatus, 'Eksperymentalny wynik AI · model ' + String(data.model || 'base') + '.' + coverage + ' Możesz przywrócić napisy źródłowe.', 'success');
+      return;
+    }
+    if (!hasText) { setStatus(ui.aiStatus, 'Najpierw znajdź tekst utworu. AI dopasowuje istniejące napisy, a nie zgaduje ich treść.', ''); return; }
+    if (aiCaps && aiCaps.ready) setStatus(ui.aiStatus, 'Środowisko i model base są gotowe. Analiza rozpocznie się dopiero po kliknięciu.', 'success');
+    else setStatus(ui.aiStatus, 'Gotowe do ręcznego uruchomienia. Przed pierwszym pobraniem zobaczysz potwierdzenie.', '');
+  }
+  async function refreshAiCapabilities() {
+    const tools = window.__pulsarDesktopTools;
+    if (!tools || !tools.available || typeof tools.lyricsAiCapabilities !== 'function') {
+      aiCaps = { available: false, ready: false }; updateAiUi(); return;
+    }
+    try { aiCaps = await tools.lyricsAiCapabilities(); }
+    catch (error) { aiCaps = { available: true, ready: false, error: String(error && error.message || error) }; }
+    updateAiUi();
+  }
+  async function runAiAlignment() {
+    if (aiBusy || !track) return;
+    const tools = window.__pulsarDesktopTools;
+    const data = editorLyricsData();
+    if (!tools || !tools.available || typeof tools.alignLyrics !== 'function') { setStatus(ui.aiStatus, 'Ta funkcja wymaga desktopowej wersji Pulsara.', 'error'); return; }
+    if (data && !data.generated && lyricsHaveWords(data)) { setStatus(ui.aiStatus, 'Źródłowe czasy słów mają priorytet — AI nie zostanie uruchomione.', 'error'); return; }
+    const lines = lyricsSourceLines(data);
+    if (!lines.length) { setStatus(ui.aiStatus, 'Brak tekstu do dopasowania.', 'error'); return; }
+    const jobTrack = track;
+    const id = jobTrack.id;
+    aiBusy = true; aiBusyId = id; updateAiUi(); aiProgress('check');
+    let failed = false;
+    try {
+      aiCaps = await tools.lyricsAiCapabilities();
+      // Do not show an installation consent prompt after the user closed the editor.
+      if (!open || !track || track.id !== id) return;
+      const ready = !!(aiCaps && aiCaps.ready);
+      const download = ready
+        ? 'Lokalne środowisko AI jest gotowe. Jeśli model base nie był jeszcze pobrany, pierwsza analiza pobierze ok. 150 MB.'
+        : 'Przed analizą Pulsar pobierze izolowane środowisko Python (od ok. 2 GB, zależnie od platformy) oraz model base (ok. 150 MB). Wymagany jest Python 3.10+ i dostęp do internetu.';
+      if (!window.confirm('Eksperymentalne dopasowanie AI\n\n' + download + '\n\nAnaliza na CPU może potrwać od kilku do kilkudziesięciu minut. Tekst i audio są przetwarzane lokalnie. Kontynuować?')) return;
+      aiProgress('prepare');
+      const result = await tools.alignLyrics({
+        inputPath: jobTrack.srcPath || '', inputBlob: jobTrack.file, inputName: jobTrack.file.name,
+        lines: lines, language: ui.aiLanguage.value, model: 'base',
+        hasSourceWordSync: !!(data && !data.generated && lyricsHaveWords(data))
+      }, aiProgress);
+      player.__lyrics.applyFor(id, result);
+      if (open && track && track.id === id) {
+        lyricsLoadedId = id;
+        renderLyricsPreview();
+        toast('Eksperymentalne napisy AI zapisano przy utworze');
+      } else toast('Zakończono analizę AI: ' + (jobTrack.title || jobTrack.file.name));
+    } catch (error) {
+      failed = true;
+      const message = String(error && error.message || error);
+      if (open && track && track.id === id) setStatus(ui.aiStatus, 'Dopasowanie nie powiodło się: ' + message, 'error');
+      else { console.warn('Pulsar AI:', error); toast('Dopasowanie AI nie powiodło się'); }
+    } finally {
+      aiBusy = false; aiBusyId = '';
+      if (open) { updateAiUi(failed); if (track && track.id === id) renderLyricsPreview(); }
+    }
+  }
+  async function restoreSourceLyrics() {
+    if (aiBusy || !track || !player.__lyrics.resetFor) return;
+    const data = editorLyricsData();
+    if (!data || !data.generated) return;
+    if (!window.confirm('Usunąć eksperymentalne czasy AI i ponownie użyć napisów ze źródła?')) return;
+    const id = track.id;
+    ui.aiRestore.disabled = true;
+    setStatus(ui.aiStatus, 'Przywracanie napisów źródłowych…', '', true);
+    let failed = false;
+    try {
+      await player.__lyrics.resetFor(id);
+      if (open && track && track.id === id) {
+        lyricsLoadedId = id;
+        renderLyricsPreview();
+        toast('Przywrócono napisy źródłowe');
+      }
+    } catch (error) {
+      failed = true;
+      if (open && track && track.id === id) setStatus(ui.aiStatus, 'Nie udało się przywrócić źródła: ' + (error.message || error), 'error');
+    } finally { if (open) updateAiUi(failed); }
+  }
+
   async function ensureLyrics() {
     if (!open || !track) return;
     const token = ++lyricsToken;
     updateLyricsOffsetUi();
-    if (lyricsLoadedId === track.id) { renderLyricsPreview(); return; }
+    if (lyricsLoadedId === track.id) { renderLyricsPreview(); updateAiUi(); return; }
     setStatus(ui.lyricsStatus, 'Wczytywanie napisów…', '', true);
     try {
       if (player.__lyrics.set) player.__lyrics.set(true);
@@ -916,10 +1065,13 @@
       if (data && data.synced) setStatus(ui.lyricsStatus, 'Przeciągnij suwak podczas odtwarzania, aby dopasować tekst.', 'success');
       else if (data && data.plain) setStatus(ui.lyricsStatus, 'Ten tekst nie ma znaczników czasu. Przesuwać i eksportować można tylko napisy zsynchronizowane (LRC).', '');
       else setStatus(ui.lyricsStatus, 'Nie znaleziono napisów dla tego utworu.', '');
+      updateAiUi();
+      refreshAiCapabilities();
     } catch (error) {
       if (!open || token !== lyricsToken) return;
       setStatus(ui.lyricsStatus, 'Nie udało się wczytać napisów: ' + (error.message || error), 'error');
       renderLyricsPreview();
+      updateAiUi();
     }
   }
 
@@ -1018,6 +1170,6 @@
     open: openEditor,
     close: closeEditor,
     saveSession: function () { sessionEnabled = true; saveSession(true); },
-    state: function () { return { open: open, tab: activeTab, trackId: track && track.id, cuts: cuts.map(function (cut) { return { start: cut.start, end: cut.end }; }), preview: preview, decoded: !!buffer, nativeMode: nativeMode, ffmpeg: ffmpegAvailable, busy: saveBusy, zoom: zoom, viewStart: viewStart, fadeInMs: fadeInMs, fadeOutMs: fadeOutMs, joinFadeMs: joinFadeMs, silenceDb: silenceDb, silenceMin: silenceMin, format: outputFormat, sessionKey: sessionKey() }; }
+    state: function () { return { open: open, tab: activeTab, trackId: track && track.id, cuts: cuts.map(function (cut) { return { start: cut.start, end: cut.end }; }), preview: preview, decoded: !!buffer, nativeMode: nativeMode, ffmpeg: ffmpegAvailable, busy: saveBusy, aiBusy: aiBusy, aiBusyId: aiBusyId, zoom: zoom, viewStart: viewStart, fadeInMs: fadeInMs, fadeOutMs: fadeOutMs, joinFadeMs: joinFadeMs, silenceDb: silenceDb, silenceMin: silenceMin, format: outputFormat, sessionKey: sessionKey() }; }
   };
 })();

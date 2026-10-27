@@ -15,10 +15,21 @@ Moduł dla wersji **Windows i Linux**, wbudowany w gotowe `resources.neu`. Zacho
    - **Zapisz sesję** zachowuje decyzje edycji. Zmiany zapisują się też automatycznie i wracają po ponownym otwarciu utworu. **Usuń sesję** czyści zapisane decyzje, nie audio.
 3. Wybierz **WAV PCM**, **MP3 192 kbps** albo **FLAC** i eksportuj jako nowy utwór. Import wyniku do biblioteki jest opcjonalny.
 4. W zakładce **Napisy** reguluj przesunięcie suwakiem, polem liczbowym lub przyciskami ±0,1/±0,5 s. Dodatnia wartość opóźnia tekst, ujemna przyspiesza. **Eksportuj przesunięte .lrc** zapisuje osobny plik.
+5. Eksperymentalne **Dopasowanie AI** uruchamiasz ręcznie w tej samej zakładce: wybierz język, zaakceptuj jednorazowe pobranie i poczekaj na analizę. **Przywróć napisy źródłowe** usuwa wynik AI i przywraca zapamiętane źródło także offline.
 
 Edytor nigdy nie zapisuje pod ścieżką oryginału. Metadane, okładka i dopasowane napisy są przenoszone do wpisu biblioteki. Linie z usuniętych zakresów znikają, a pozostałe czasy są przeliczane po cięciach i ręcznym przesunięciu.
 
 Zwykły panel napisów najpierw używa lokalnego LRC i LRCLIB. Jeżeli LRCLIB nie ma czasów słów, resolver odpytuje publiczne **Lyrics+** (`lyricsplus.prjktla.my.id`), które agreguje m.in. Apple Music, QQ Music i Musixmatch. Wynik z prawdziwym `syllabus[]` zastępuje wynik liniowy; słabszy wynik nigdy nie nadpisuje lepszego. Nie jest wymagany token ani osobny tryb karaoke. Publiczna usługa może mieć limity lub przerwy — wtedy zostają dotychczasowe napisy LRCLIB.
+
+## Eksperymentalne dopasowanie AI (Windows/Linux)
+
+- Funkcja wykonuje **forced alignment dostarczonego tekstu**, a nie transkrypcję: korzysta z linii już znalezionych przez lokalny LRC, LRCLIB lub Lyrics+ i wyznacza czasy słów do lokalnego audio.
+- Silnik to przypięte **Stable-TS 2.19.1 + Faster-Whisper 1.2.1**, wielojęzyczny model **base**, CPU/`int8`. Dekodowanie używa PyAV, więc systemowy FFmpeg nie jest potrzebny.
+- Przed pierwszą instalacją użytkownik zobaczy potwierdzenie i informację o dużym pobraniu. Dopiero wtedy mostek tworzy izolowane `venv`, instaluje pakiety i pozwala pobrać model. Wymagany jest Python **3.10+** (`python3-venv` na dystrybucjach, które wydzielają ten moduł).
+- Dane pozostają poza aplikacją i paczkami: `%LOCALAPPDATA%\Pulsar\LyricsAI` na Windows oraz `$XDG_CACHE_HOME/pulsar/lyrics-ai` albo `~/.cache/pulsar/lyrics-ai` na Linuxie. Audio nie jest wysyłane do usługi AI; podczas pierwszego uruchomienia sieć służy do pobrania pakietów/modelu.
+- AI nigdy nie uruchamia się automatycznie i nie zastępuje źródłowego word-sync. Brakujące, ujemne, nieuporządkowane lub tekstowo niezgodne czasy nie są „naprawiane” równomiernym rozłożeniem słów; niepełny wynik zostaje odrzucony albo pozostaje zwykłą linią.
+- Wynik ma oznaczenie eksperymentalne, zapisuje się w cache i przy utworze. Kopia poprzednich napisów jest zachowana, więc przywrócenie źródła nie wymaga sieci.
+- To eksperyment: śpiew, chóry, instrumenty i przekłady mogą obniżać trafność. Integracja jest testowana z atrapą procesu; rzeczywista jakość modelu na utworach wymaga osobnej walidacji. Funkcja nie jest częścią Androida.
 
 ## FFmpeg i duże pliki
 
@@ -34,10 +45,11 @@ Sesja w `localStorage` zawiera tylko zakresy, ustawienia i zoom — nigdy dane a
 
 - `editor-core.js` — cięcia, cisza, WAV, przejścia, argumenty FFmpeg i LRC; bez DOM;
 - `lyrics-core.js` — parser zwykłego/rozszerzonego LRC, LRCLIB Lyricsfile oraz Lyrics+ v2 (`Word`/`Syllable`) z rzeczywistymi czasami słów; jest wstawiany inline do wspólnego runtime;
-- `audio-editor.js` / `audio-editor.css` — panel, zoom, granice, sesje, podgląd i eksport;
+- `lyrics-aligner.py` — osobny helper forced alignmentu z leniwymi importami AI, walidacją żądania i konwerterem wyniku bez sztucznych czasów;
+- `audio-editor.js` / `audio-editor.css` — panel, zoom, granice, sesje, podgląd, eksport i ręczny eksperyment AI;
 - `tools/runtime_patches.py` — idempotentne zaczepy runtime edytora;
 - `tools/build_desktop_editor.py` — wspólny build Windows/Linux dla edytora i `Pulsar-Extras`;
-- `tools/test_editor_core.js`, `test_lyrics_core.js`, `test_desktop_editor.py`, `test_editor_browser.mjs` — testy logiki, parserów, paczek i E2E.
+- `tools/test_editor_core.js`, `test_lyrics_core.js`, `test_lyrics_aligner.py`, `test_desktop_editor.py`, `test_editor_browser.mjs` — testy logiki, parserów, konwersji AI, paczek i E2E.
 
 Auto-DJ 2.0, automatyczne kopie i natywny mostek są opisane w [`Pulsar-Extras/README.md`](../Pulsar-Extras/README.md).
 
@@ -48,6 +60,7 @@ python Pulsar-Editor/tools/build_desktop_editor.py
 python Pulsar-Editor/tools/build_desktop_editor.py --check
 node Pulsar-Editor/tools/test_editor_core.js
 node Pulsar-Editor/tools/test_lyrics_core.js
+python Pulsar-Editor/tools/test_lyrics_aligner.py
 node Pulsar-Extras/tools/test_extras.js
 python Pulsar-Editor/tools/test_desktop_editor.py
 python Pulsar-Sync/tools/test_desktop_bundle.py
@@ -62,6 +75,6 @@ NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/e
 EDITOR_DESKTOP=1 NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/editor-test/resources
 ```
 
-E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, rzeczywiste rozjaśnianie słów w zwykłym panelu, fallback liniowy, wybór Lyrics+ po odpowiedzi LRCLIB bez słów, brak osobnej nakładki karaoke, Auto-DJ oraz — w wariancie desktopowym — natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka.
+E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, rzeczywiste rozjaśnianie słów w zwykłym panelu, fallback liniowy, wybór Lyrics+ po odpowiedzi LRCLIB bez słów, brak osobnej nakładki karaoke, zapis/przywrócenie wyniku AI i blokadę źródłowego word-sync, Auto-DJ oraz — w wariancie desktopowym — pełny przepływ AI przez mostek, natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka. Analogicznie stub helpera AI sprawdza kontrakt, UI i zapis bez pobierania PyTorch/modelu — nie jest testem trafności alignmentu.
 
 Android pomija desktopowe zasoby edytora i rozszerzeń w `Pulsar-Android/tools/build_web_assets.py`. Wspólny parser i renderer napisów są częścią inline `index.html`, więc czasy słów działają także na telefonie bez kopiowania desktopowych assetów.

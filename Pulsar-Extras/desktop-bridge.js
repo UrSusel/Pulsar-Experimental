@@ -1,4 +1,4 @@
-/* Pulsar Desktop — wspólny, natywny mostek FFmpeg i systemu plików. */
+/* Pulsar Desktop — wspólny, natywny mostek FFmpeg, lokalnego AI i systemu plików. */
 (function () {
   'use strict';
 
@@ -103,6 +103,170 @@
       if (temporary) { try { await Neutralino.filesystem.remove(temporary); } catch (e) {} }
     }
   }
+  const AI_PACKAGES = ['stable-ts[fw]==2.19.1', 'faster-whisper==1.2.1'];
+  let aiRoot = '';
+  let systemPython;
+  function aiError(message, code) { const error = new Error(message); if (code) error.code = code; return error; }
+  function progressOf(callback, stage) { if (typeof callback === 'function') { try { callback(stage); } catch (e) {} } }
+  async function getAiRoot() {
+    if (aiRoot) return aiRoot;
+    let home = '';
+    if (WINDOWS) home = await env(['LOCALAPPDATA', 'USERPROFILE']);
+    else {
+      home = await env(['XDG_CACHE_HOME']);
+      if (!home) { const userHome = await env(['HOME']); if (userHome) home = join(userHome, '.cache'); }
+    }
+    aiRoot = join(home || await getTmp(), WINDOWS ? 'Pulsar/LyricsAI' : 'pulsar/lyrics-ai');
+    await mkdir(aiRoot);
+    return aiRoot;
+  }
+  function aiPython(root) { return join(join(root, 'env'), WINDOWS ? 'Scripts/python.exe' : 'bin/python'); }
+  async function resolveSystemPython() {
+    if (systemPython !== undefined) return systemPython;
+    const candidates = WINDOWS ? ['py -3', 'python', 'python3'] : ['python3', 'python'];
+    for (const candidate of candidates) {
+      try {
+        const result = resultOf(await run(candidate + ' -c ' + quote('import sys;assert sys.version_info >= (3,10);print(sys.executable)'), 15000));
+        const found = result.stdout.trim().split(/\r?\n/)[0].trim();
+        if (result.code === 0 && found) { systemPython = found; return found; }
+      } catch (e) {}
+    }
+    systemPython = null;
+    return null;
+  }
+  async function materializeAiHelper(root) {
+    const response = await fetch('lyrics-aligner.py', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Nie można odczytać modułu AI z zasobów Pulsara');
+    const source = await response.text();
+    const path = join(root, 'lyrics-aligner.py');
+    await Neutralino.filesystem.writeFile(path, source);
+    return path;
+  }
+  async function checkAiEnvironment(root, python, helper) {
+    const result = resultOf(await run(quote(python) + ' ' + quote(helper) + ' --check', 120000));
+    return { result: result, ok: result.code === 0 && /"ok"\s*:\s*true/.test(result.stdout) };
+  }
+  async function ensureAiEnvironment(install, onProgress) {
+    const root = await getAiRoot();
+    const helper = await materializeAiHelper(root);
+    let python = aiPython(root);
+    if (!await exists(python)) {
+      if (!install) throw aiError('Środowisko AI nie jest jeszcze zainstalowane', 'AI_SETUP_REQUIRED');
+      const system = await resolveSystemPython();
+      if (!system) throw new Error(WINDOWS
+        ? 'Zainstaluj Python 3.10 lub nowszy z python.org i zaznacz „Add Python to PATH”, potem spróbuj ponownie'
+        : 'Zainstaluj pakiety python3 i python3-venv, potem spróbuj ponownie');
+      progressOf(onProgress, 'python');
+      const made = resultOf(await run(quote(system) + ' -m venv ' + quote(join(root, 'env')), 180000));
+      if (made.code !== 0 || !await exists(python)) {
+        throw new Error(made.stderr.split(/\r?\n/).slice(-3).join(' ') || 'Nie można utworzyć środowiska Python');
+      }
+    }
+    let check = await checkAiEnvironment(root, python, helper);
+    if (!check.ok && install) {
+      progressOf(onProgress, 'install');
+      const pip = join(join(root, 'env'), WINDOWS ? 'Scripts/pip.exe' : 'bin/pip');
+      const installed = resultOf(await run(quote(pip) + ' install --disable-pip-version-check ' + AI_PACKAGES.map(quote).join(' '), 3600000));
+      if (installed.code !== 0) {
+        throw new Error('Instalacja AI nie powiodła się: ' + (installed.stderr.split(/\r?\n/).slice(-4).join(' ') || ('kod ' + installed.code)));
+      }
+      check = await checkAiEnvironment(root, python, helper);
+    }
+    if (!check.ok) {
+      throw aiError('Moduły AI nie są gotowe: ' + (check.result.stderr.split(/\r?\n/).slice(-2).join(' ') || 'wymagana instalacja'), 'AI_SETUP_REQUIRED');
+    }
+    return { root: root, python: python, helper: helper };
+  }
+  async function lyricsAiCapabilities() {
+    try {
+      const root = await getAiRoot();
+      const python = aiPython(root);
+      if (!await exists(python)) {
+        return { available: true, ready: false, needsInstall: true, model: 'base', platform: WINDOWS ? 'windows' : 'linux' };
+      }
+      const helper = await materializeAiHelper(root);
+      const check = await checkAiEnvironment(root, python, helper);
+      return {
+        available: true, ready: check.ok, needsInstall: !check.ok, model: 'base',
+        platform: WINDOWS ? 'windows' : 'linux',
+        error: check.ok ? '' : check.result.stderr.split(/\r?\n/).slice(-2).join(' ')
+      };
+    } catch (error) {
+      return { available: true, ready: false, needsInstall: true, model: 'base', error: String(error && error.message || error) };
+    }
+  }
+  function aiTextKey(value) { return String(value || '').replace(/\s+/g, ''); }
+  function normalizeAiResult(raw, job) {
+    if (!raw || raw.version !== 1 || !Array.isArray(raw.lines) || !raw.lines.length) throw new Error('AI zwróciło niepoprawny wynik');
+    const lines = [];
+    for (const item of raw.lines) {
+      if (!item || typeof item.t !== 'number' || !Number.isFinite(item.t) || item.t < 0 || typeof item.txt !== 'string' || !item.txt.trim()) continue;
+      const line = { t: Math.round(Number(item.t) * 1000) / 1000, txt: item.txt };
+      if (Array.isArray(item.words) && item.words.length) {
+        let previous = -1;
+        const words = [];
+        for (const word of item.words) {
+          if (!word || typeof word.t !== 'number' || !Number.isFinite(word.t) || word.t < previous || word.t < 0 || typeof word.txt !== 'string' || !word.txt) { words.length = 0; break; }
+          previous = Number(word.t);
+          words.push({ t: Math.round(previous * 1000) / 1000, txt: word.txt });
+        }
+        if (words.length && aiTextKey(words.map(function (word) { return word.txt; }).join('')) === aiTextKey(line.txt)) line.words = words;
+      }
+      lines.push(line);
+    }
+    lines.sort(function (a, b) { return a.t - b.t; });
+    const wordCount = lines.reduce(function (sum, line) { return sum + (line.words ? line.words.length : 0); }, 0);
+    const expected = (job.lines || []).reduce(function (sum, text) { return sum + String(text || '').trim().split(/\s+/).filter(Boolean).length; }, 0);
+    const coverage = Math.min(1, wordCount / Math.max(1, expected));
+    if (!lines.length || !wordCount) throw new Error('AI nie wyznaczyło wiarygodnych czasów słów');
+    if (coverage < 0.4) throw new Error('AI dopasowało zbyt małą część tekstu — wynik odrzucono');
+    return {
+      synced: lines, plain: null, source: 'ai', provider: 'Pulsar AI · Stable-TS',
+      wordSync: true, generated: true, experimental: true,
+      engine: 'stable-ts', backend: 'faster-whisper', model: String(raw.model || job.model || 'base'),
+      language: String(raw.language || job.language || ''), coverage: Math.round(coverage * 1000) / 1000,
+      meanProbability: typeof raw.mean_probability === 'number' && Number.isFinite(raw.mean_probability) ? raw.mean_probability : null,
+      duration: typeof raw.duration === 'number' && Number.isFinite(raw.duration) ? raw.duration : null,
+      generatedAt: new Date().toISOString()
+    };
+  }
+  async function alignLyrics(job, onProgress) {
+    if (!job || !Array.isArray(job.lines) || !job.lines.some(function (line) { return String(line || '').trim(); })) throw new Error('Brak tekstu do dopasowania');
+    if (job.hasSourceWordSync) throw new Error('Utwór ma już źródłowe czasy słów — AI ich nie zastępuje');
+    progressOf(onProgress, 'prepare');
+    const setup = await ensureAiEnvironment(true, onProgress);
+    let input = String(job.inputPath || '');
+    let temporary = '';
+    const requestPath = await tempFile('json');
+    const outputPath = await tempFile('json');
+    if (!input) {
+      if (!job.inputBlob) throw new Error('Brak źródła audio');
+      input = temporary = await tempFile(extension(job.inputName) || 'audio');
+      await writeBlob(input, job.inputBlob);
+    }
+    try {
+      const modelRoot = join(setup.root, 'models');
+      await mkdir(modelRoot);
+      const request = {
+        audio_path: input, lines: job.lines, language: job.language,
+        model: job.model || 'base', model_root: modelRoot
+      };
+      await Neutralino.filesystem.writeFile(requestPath, JSON.stringify(request));
+      progressOf(onProgress, 'align');
+      const command = quote(setup.python) + ' ' + quote(setup.helper) + ' --request ' + quote(requestPath) + ' --output ' + quote(outputPath);
+      const result = resultOf(await run(command, Math.max(3600000, Number(job.timeout) || 7200000)));
+      if (result.code !== 0) throw new Error(result.stderr.split(/\r?\n/).slice(-4).join(' ') || ('AI zakończyło kodem ' + result.code));
+      const raw = JSON.parse(await Neutralino.filesystem.readFile(outputPath));
+      const data = normalizeAiResult(raw, job);
+      progressOf(onProgress, 'done');
+      return data;
+    } finally {
+      for (const path of [temporary, requestPath, outputPath]) {
+        if (path) { try { await Neutralino.filesystem.remove(path); } catch (e) {} }
+      }
+    }
+  }
+
   async function defaultBackupDirectory() {
     if (WINDOWS) {
       const home = await env(['USERPROFILE']);
@@ -134,6 +298,8 @@
   Object.assign(api, {
     available: true,
     capabilities: capabilities,
+    lyricsAiCapabilities: lyricsAiCapabilities,
+    alignLyrics: alignLyrics,
     tempFile: tempFile,
     exportAudio: exportAudio,
     defaultBackupDirectory: defaultBackupDirectory,

@@ -108,6 +108,11 @@
 .pae-offset-number { width: 110px; }
 .pae-range { width: 100%; accent-color: rgb(var(--accent-rgb,77,227,255)); cursor: pointer; }
 .pae-step-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px; }
+.pae-ai-section { border-color: rgba(255,196,99,.18); background: linear-gradient(135deg, rgba(255,180,70,.045), rgba(255,255,255,.018)); }
+.pae-section-title h3 .pae-badge { display: inline-block; margin-left: 5px; padding: 2px 5px; border: 1px solid rgba(255,196,99,.28); border-radius: 4px; color: #ffd479; font-size: 8px; font-weight: 700; letter-spacing: .08em; vertical-align: 2px; }
+.pae-ai-controls { display: grid; grid-template-columns: minmax(140px, 1fr) auto auto; gap: 9px; align-items: end; margin-top: 12px; }
+.pae-ai-controls .pae-btn { min-height: 36px; }
+.pae-ai-section .pae-status { margin-top: 9px; }
 .pae-lyrics-preview { display: flex; flex-direction: column; gap: 2px; max-height: 215px; overflow-y: auto; border-radius: 10px; background: rgba(0,0,0,.15); padding: 7px; }
 .pae-lyric-row { display: grid; grid-template-columns: 66px 1fr; gap: 10px; padding: 7px 8px; border-radius: 7px; color: rgba(255,255,255,.55); font-size: 12.5px; line-height: 1.4; }
 .pae-lyric-row time { color: rgba(255,255,255,.32); font-variant-numeric: tabular-nums; }
@@ -131,12 +136,17 @@
   .pae-offset-controls > label:first-child { grid-column: 1 / -1; }
   .pae-wave-wrap { height: 140px; }
   .pae-options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pae-ai-controls { grid-template-columns: 1fr 1fr; }
+  .pae-ai-controls .pae-field { grid-column: 1 / -1; }
+  .pae-ai-controls .pae-btn { width: 100%; }
   .pae-zoombar > span { width: 100%; margin-left: 0; }
 }
 @media (max-width: 420px) {
   .pae-cut-row { grid-template-columns: 20px minmax(58px, 1fr) 8px minmax(58px, 1fr) auto auto; gap: 4px; padding-left: 5px; }
   .pae-cut-len { display: none; }
   .pae-offset-number { width: 94px; }
+  .pae-ai-controls { grid-template-columns: 1fr; }
+  .pae-ai-controls .pae-field { grid-column: auto; }
   .pae-save { align-items: stretch; flex-direction: column; }
   .pae-save .pae-btn { width: 100%; }
 }

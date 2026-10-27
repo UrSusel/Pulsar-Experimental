@@ -40,6 +40,7 @@ ASSETS = {
     "resources/dj-core.js": EXTRAS_DIR / "dj-core.js",
     "resources/backup-core.js": EXTRAS_DIR / "backup-core.js",
     "resources/desktop-bridge.js": EXTRAS_DIR / "desktop-bridge.js",
+    "resources/lyrics-aligner.py": EDITOR_DIR / "lyrics-aligner.py",
     "resources/auto-dj.js": EXTRAS_DIR / "auto-dj.js",
     "resources/library-backup.js": EXTRAS_DIR / "library-backup.js",
     "resources/extras.css": EXTRAS_DIR / "extras.css",

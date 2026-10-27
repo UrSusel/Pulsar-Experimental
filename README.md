@@ -18,7 +18,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 > **Linux:** the only system dependency is WebKitGTK, and the download manager (`yt-dlp`) is bundled.
 > Arch / CachyOS: `sudo pacman -S gtk3 webkit2gtk-4.1 gst-libav gst-plugins-ugly gst-plugins-good` · Debian / Ubuntu: `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 gstreamer1.0-libav gstreamer1.0-plugins-ugly gstreamer1.0-plugins-good`
 > (the GStreamer packages are what actually decode MP3/AAC — without them the player stays silent)
-> `ffmpeg` is optional: it unlocks MP3/FLAC export and memory-safe editing of very long recordings. On Wayland everything works through XWayland out of the box.
+> `ffmpeg` is optional: it unlocks MP3/FLAC export and memory-safe editing of very long recordings. The optional experimental AI lyrics aligner needs Python 3.10+ on first use, but does not need system FFmpeg. On Wayland everything works through XWayland out of the box.
 
 ## ✨ Features
 
@@ -26,6 +26,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 - 🖼️ **Covers & tags embedded** — saved tracks look right in Explorer, your phone, any player
 - 🌠 **Nebula visualizers** — audio-reactive 3D backgrounds, fullscreen ambient mode
 - 🎤 **Word-synced lyrics** — the regular lyrics panel brightens each word at its real timestamp from enhanced LRC, LRCLIB Lyricsfile, or the multi-source Lyrics+ fallback (used when LRCLIB has no word timing); otherwise it keeps the standard line-by-line highlighting
+- 🧪 **Experimental local AI alignment** — on Windows/Linux, manually align a track's existing lyrics to its audio with Stable-TS/Faster-Whisper on CPU; first-time downloads require consent, source word-sync stays protected, and the original lyrics can be restored offline
 - ✂️ **Audio Editor 2.0** — 32× waveform zoom, 1 ms cut boundaries, configurable silence detection, fades, resumable sessions and non-destructive WAV export
 - 🎞️ **MP3 / FLAC & long recordings** — optional FFmpeg export; large files are edited without decoding the whole recording in WebView
 - ⏱️ **Lyrics timing controls** — shift subtitles per track, export adjusted LRC, and keep lyrics aligned automatically after audio cuts

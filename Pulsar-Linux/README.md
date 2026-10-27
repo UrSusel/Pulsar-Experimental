@@ -47,6 +47,12 @@ Click the **scissors** next to the lyrics button to remove unwanted audio ranges
 
 The **Lyrics** tab shifts synchronized subtitles earlier or later and remembers the offset per track. You can also export an adjusted `.lrc` file. When an edited audio copy has lyrics, their timing is remapped around the removed ranges automatically. The regular lyrics panel uses real word timing from enhanced LRC or LRCLIB first, then tries the multi-source Lyrics+ service if LRCLIB has only line timing; if neither has words, ordinary line highlighting remains.
 
+### Optional experimental AI alignment
+
+The same **Lyrics** tab can manually align existing lyrics to the local audio at word level. It uses Stable-TS/Faster-Whisper on CPU, not a cloud transcription service, and never replaces source-provided word timing. The first run asks before creating an isolated Python environment and downloading packages/model (from about 2 GB depending on the platform, plus the roughly 150 MB `base` model). Install Python 3.10+ and, on Debian/Ubuntu, `python3-venv` if it is separate. PyAV decodes audio, so system FFmpeg is not required for this feature.
+
+AI files live in `$XDG_CACHE_HOME/pulsar/lyrics-ai` or `~/.cache/pulsar/lyrics-ai`, not in the app folder. The result is marked experimental and saved with the track; **Restore source lyrics** brings back the saved source even offline. Singing over a full mix can still align imperfectly, so check the result before relying on it.
+
 ## Auto-DJ and automatic backups
 
 **Settings → Playback → Auto-DJ 2.0** provides moods, “more like this”, artist/genre diversity, a reason for the next pick and undoable DJ history.
