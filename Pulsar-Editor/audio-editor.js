@@ -262,7 +262,7 @@
             </div>
             <section class="pae-section pae-ai-section">
               <div class="pae-section-title"><h3>Dopasowanie AI <span class="pae-badge">EKSPERYMENT</span></h3><span>Windows · Linux · lokalnie</span></div>
-              <p class="pae-note">Stable-TS dopasowuje <strong>istniejący tekst</strong> do tego nagrania na poziomie słów. Nie zastępuje źródłowych czasów słów. Pierwsze uruchomienie może pobrać od ok. 2 GB zależności (zależnie od platformy) i model — dopiero po Twoim potwierdzeniu.</p>
+              <p class="pae-note">Stable-TS dopasowuje <strong>istniejący tekst</strong> do tego nagrania na poziomie słów. Możesz użyć go także przy istniejącym word-sync, jeśli czasy pochodzą z innej wersji — np. z wersji studyjnej zamiast teledysku. Poprzednie napisy będzie można przywrócić. Pierwsze uruchomienie może pobrać od ok. 2 GB zależności (zależnie od platformy) i model — dopiero po Twoim potwierdzeniu.</p>
               <div class="pae-ai-controls">
                 <label class="pae-field">Język tekstu
                   <select class="pae-input" id="paeAiLanguage">
@@ -955,15 +955,15 @@
     const sourceWords = !!(data && !data.generated && lyricsHaveWords(data));
     const hasText = lyricsSourceLines(data).length > 0;
     const thisBusy = aiBusy && track && aiBusyId === track.id;
-    ui.aiAlign.disabled = !supported || aiBusy || sourceWords || !hasText;
+    ui.aiAlign.disabled = !supported || aiBusy || !hasText;
     ui.aiAlign.textContent = thisBusy ? 'Przetwarzanie…' : 'Dopasuj tekst do audio';
-    ui.aiLanguage.disabled = aiBusy || sourceWords;
+    ui.aiLanguage.disabled = aiBusy;
     ui.aiRestore.hidden = !(data && data.generated);
     ui.aiRestore.disabled = aiBusy;
     if (thisBusy || keepStatus) return;
     if (aiBusy) { setStatus(ui.aiStatus, 'Inny utwór jest teraz analizowany. Poczekaj na zakończenie.', ''); return; }
     if (!supported) { setStatus(ui.aiStatus, 'Lokalne dopasowanie AI jest dostępne w desktopowej wersji Pulsara dla Windows i Linux.', ''); return; }
-    if (sourceWords) { setStatus(ui.aiStatus, 'Źródło ma już rzeczywiste czasy słów. AI nie zastępuje lepszego word-sync.', 'success'); return; }
+    if (sourceWords) { setStatus(ui.aiStatus, 'Źródło ma już czasy słów. Jeśli nie pasują do tego nagrania, możesz ręcznie wykonać nowe dopasowanie. Poprzednie napisy zostaną zachowane do przywrócenia.', ''); return; }
     if (data && data.generated) {
       const coverage = Number.isFinite(Number(data.coverage)) ? ' Pokrycie tekstu: ' + Math.round(Number(data.coverage) * 100) + '%.' : '';
       setStatus(ui.aiStatus, 'Eksperymentalny wynik AI · model ' + String(data.model || 'base') + '.' + coverage + ' Możesz przywrócić napisy źródłowe.', 'success');
@@ -987,7 +987,7 @@
     const tools = window.__pulsarDesktopTools;
     const data = editorLyricsData();
     if (!tools || !tools.available || typeof tools.alignLyrics !== 'function') { setStatus(ui.aiStatus, 'Ta funkcja wymaga desktopowej wersji Pulsara.', 'error'); return; }
-    if (data && !data.generated && lyricsHaveWords(data)) { setStatus(ui.aiStatus, 'Źródłowe czasy słów mają priorytet — AI nie zostanie uruchomione.', 'error'); return; }
+    const sourceWords = !!(data && !data.generated && lyricsHaveWords(data));
     const lines = lyricsSourceLines(data);
     if (!lines.length) { setStatus(ui.aiStatus, 'Brak tekstu do dopasowania.', 'error'); return; }
     const jobTrack = track;
@@ -1002,14 +1002,15 @@
       const download = ready
         ? 'Lokalne środowisko AI jest gotowe. Jeśli model base nie był jeszcze pobrany, pierwsza analiza pobierze ok. 150 MB.'
         : 'Przed analizą Pulsar pobierze izolowane środowisko Python (od ok. 2 GB, zależnie od platformy) oraz model base (ok. 150 MB). Wymagany jest Python 3.10+ i dostęp do internetu.';
-      if (!window.confirm('Eksperymentalne dopasowanie AI\n\n' + download + '\n\nAnaliza na CPU może potrwać od kilku do kilkudziesięciu minut. Tekst i audio są przetwarzane lokalnie. Kontynuować?')) return;
+      const replacement = sourceWords ? '\n\nTen utwór ma już word-sync. Wynik AI zastąpi go tylko dla tego nagrania, a poprzednie napisy źródłowe zostaną zachowane do przywrócenia.' : '';
+      if (!window.confirm('Eksperymentalne dopasowanie AI\n\n' + download + replacement + '\n\nAnaliza na CPU może potrwać od kilku do kilkudziesięciu minut. Tekst i audio są przetwarzane lokalnie. Kontynuować?')) return;
       aiProgress('prepare');
       const result = await tools.alignLyrics({
         inputPath: jobTrack.srcPath || '', inputBlob: jobTrack.file, inputName: jobTrack.file.name,
         lines: lines, language: ui.aiLanguage.value, model: 'base',
-        hasSourceWordSync: !!(data && !data.generated && lyricsHaveWords(data))
+        hasSourceWordSync: sourceWords, allowSourceWordSync: sourceWords
       }, aiProgress);
-      player.__lyrics.applyFor(id, result);
+      player.__lyrics.applyFor(id, result, { allowSourceWordSync: sourceWords });
       if (open && track && track.id === id) {
         lyricsLoadedId = id;
         renderLyricsPreview();

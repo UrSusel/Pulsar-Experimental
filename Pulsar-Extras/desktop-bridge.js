@@ -243,7 +243,7 @@
   }
   async function alignLyrics(job, onProgress) {
     if (!job || !Array.isArray(job.lines) || !job.lines.some(function (line) { return String(line || '').trim(); })) throw new Error('Brak tekstu do dopasowania');
-    if (job.hasSourceWordSync) throw new Error('Utwór ma już źródłowe czasy słów — AI ich nie zastępuje');
+    if (job.hasSourceWordSync && !job.allowSourceWordSync) throw new Error('Zastąpienie źródłowego word-sync wymaga ręcznego potwierdzenia');
     progressOf(onProgress, 'prepare');
     const setup = await ensureAiEnvironment(true, onProgress);
     let input = String(job.inputPath || '');

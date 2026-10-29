@@ -18,7 +18,7 @@ API_END = "    /* ---- end Pulsar editor: library bridge ---- */"
 
 LYRICS_METHODS = '''      data: () => lyricsData, parse: parseLRC, parseWords: parseLyricsfile, parsePlus: parseLyricsPlus, fetchFor: i => fetchLyrics(tracks[i]),
       forTrack: id => { const tr = tracks.find(x => x.id === id); if (!tr) return null; return lyricsCache.has(id) ? lyricsCache.get(id) : (tr.lyricsData || null); },
-      applyFor: (id, data) => applyGeneratedLyrics(id, data), resetFor: id => resetGeneratedLyrics(id),
+      applyFor: (id, data, options) => applyGeneratedLyrics(id, data, !!(options && options.allowSourceWordSync)), resetFor: id => resetGeneratedLyrics(id),
       render: function(data){ if (data !== undefined) lyricsData = data; renderLyricsLines(); }, highlight: () => updateLyricsHighlight(true),
       offset: () => lyricsOffset(), setOffset: v => setLyricsOffset(v)
 '''
@@ -47,14 +47,14 @@ LYRICS_HELPER = r'''  /* ---- Pulsar editor: lyrics offset ---- */
     try { document.dispatchEvent(new CustomEvent('pulsar:lyricsoffset', { detail: { trackId: tr.id, offset: next } })); } catch(e){}
     return next;
   }
-  function applyGeneratedLyrics(id, data){
+  function applyGeneratedLyrics(id, data, allowSourceWordSync){
     const tr = tracks.find(function(x){ return x.id === id; });
     if (!tr || !data || !data.generated || !Array.isArray(data.synced) || !data.synced.length) throw new Error('Niepoprawny wynik AI');
     if (!data.synced.some(function(line){ return Array.isArray(line.words) && line.words.length; })) throw new Error('Wynik AI nie zawiera czasów słów');
     let previous = lyricsCache.has(id) ? lyricsCache.get(id) : tr.lyricsData;
     if (!previous){ try { previous = JSON.parse(localStorage.getItem('playerLyricsV2:' + id) || 'null'); } catch(e){} }
-    if (previous && !previous.generated && Array.isArray(previous.synced) && previous.synced.some(function(line){ return Array.isArray(line.words) && line.words.length; })){
-      throw new Error('Źródłowe czasy słów mają priorytet — AI ich nie zastępuje');
+    if (!allowSourceWordSync && previous && !previous.generated && Array.isArray(previous.synced) && previous.synced.some(function(line){ return Array.isArray(line.words) && line.words.length; })){
+      throw new Error('Zastąpienie źródłowych czasów słów wymaga ręcznego potwierdzenia');
     }
     data = Object.assign({}, data);
     delete data.previousLyrics;
@@ -434,7 +434,8 @@ def editor_runtime_patched(html: str) -> bool:
         "audio.currentTime = Math.max(0, l.t + lyricsOffset())",
         "offset: () => lyricsOffset(), setOffset: v => setLyricsOffset(v)",
         "forTrack: id => { const tr = tracks.find(x => x.id === id)",
-        "applyFor: (id, data) => applyGeneratedLyrics(id, data)",
+        "applyFor: (id, data, options) => applyGeneratedLyrics(id, data, !!(options && options.allowSourceWordSync))",
+        "if (!allowSourceWordSync && previous && !previous.generated",
         "resetFor: id => resetGeneratedLyrics(id)",
         "lyricsData: track.lyricsData || null",
         "lyricsData: item.lyricsData || null",

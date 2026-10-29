@@ -49,7 +49,7 @@ The **Lyrics** tab shifts synchronized subtitles earlier or later and remembers 
 
 ### Optional experimental AI alignment
 
-The same **Lyrics** tab can manually align existing lyrics to the local audio at word level. It uses Stable-TS/Faster-Whisper on CPU, not a cloud transcription service, and never replaces source-provided word timing. The first run asks before creating an isolated Python environment and downloading packages/model (from about 2 GB depending on the platform, plus the roughly 150 MB `base` model). Install Python 3.10+ and, on Debian/Ubuntu, `python3-venv` if it is separate. PyAV decodes audio, so system FFmpeg is not required for this feature.
+The same **Lyrics** tab can manually align existing lyrics to the local audio at word level. It uses Stable-TS/Faster-Whisper on CPU, not a cloud transcription service. Existing word timing can also be realigned after explicit confirmation — useful when it belongs to the studio recording rather than a music video — and the source remains restorable. The first run asks before creating an isolated Python environment and downloading packages/model (from about 2 GB depending on the platform, plus the roughly 150 MB `base` model). Install Python 3.10+ and, on Debian/Ubuntu, `python3-venv` if it is separate. PyAV decodes audio, so system FFmpeg is not required for this feature.
 
 AI files live in `$XDG_CACHE_HOME/pulsar/lyrics-ai` or `~/.cache/pulsar/lyrics-ai`, not in the app folder. The result is marked experimental and saved with the track; **Restore source lyrics** brings back the saved source even offline. Singing over a full mix can still align imperfectly, so check the result before relying on it.
 

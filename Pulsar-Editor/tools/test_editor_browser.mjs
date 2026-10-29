@@ -554,16 +554,60 @@ try {
   })(), lyricsProviderRequests);
   check('nowy cache zachowuje wynik word-sync i omija stary format', plusResult && plusResult.cached && plusResult.cached.source === 'lyricsplus' && plusResult.cached.wordSync === true, plusResult && plusResult.cached);
 
-  const aiSourceGuard = await page.evaluate(() => {
+  const aiSourceOverride = await page.evaluate(async () => {
+    const id = __player.__editor.current().id;
+    const generated = {
+      synced: [{ t: 1, txt: 'Take my breath', words: [{ t: 1, txt: 'Take ' }, { t: 1.2, txt: 'my ' }, { t: 1.4, txt: 'breath' }] }],
+      source: 'ai', generated: true, wordSync: true
+    };
+    let guard = '', applied = null, restored = null, error = '';
+    try { __player.__lyrics.applyFor(id, generated); } catch (caught) { guard = String(caught && caught.message || caught); }
     try {
-      __player.__lyrics.applyFor(__player.__editor.current().id, {
-        synced: [{ t: 1, txt: 'Take my breath', words: [{ t: 1, txt: 'Take ' }, { t: 1.2, txt: 'my ' }, { t: 1.4, txt: 'breath' }] }],
-        source: 'ai', generated: true, wordSync: true
-      });
-      return '';
-    } catch (error) { return String(error && error.message || error); }
+      __player.__lyrics.applyFor(id, generated, { allowSourceWordSync: true });
+      applied = __player.__lyrics.forTrack(id);
+      restored = await __player.__lyrics.resetFor(id);
+    } catch (caught) { error = String(caught && caught.message || caught); }
+    return { guard, applied, restored, error };
   });
-  check('API nie pozwala AI nadpisać źródłowego word-sync', /priorytet/.test(aiSourceGuard), aiSourceGuard);
+  check('API bez potwierdzenia nadal chroni źródłowy word-sync', /potwierdzenia/.test(aiSourceOverride.guard), aiSourceOverride.guard);
+  check('ręczne dopasowanie może zastąpić źródłowy word-sync i zachowuje kopię', !aiSourceOverride.error && aiSourceOverride.applied && aiSourceOverride.applied.source === 'ai' && aiSourceOverride.applied.previousLyrics && aiSourceOverride.applied.previousLyrics.source === 'lyricsplus', aiSourceOverride);
+  check('przywrócenie odzyskuje źródłowy word-sync po ręcznym zastąpieniu', aiSourceOverride.restored && aiSourceOverride.restored.source === 'lyricsplus' && aiSourceOverride.restored.wordSync === true && aiSourceOverride.restored.synced[0].words.length === 3, aiSourceOverride.restored);
+
+  if (DESKTOP) {
+    const bridgeGuard = await page.evaluate(async () => {
+      try { await __pulsarDesktopTools.alignLyrics({ lines: ['Take my breath'], hasSourceWordSync: true }); return ''; }
+      catch (error) { return String(error && error.message || error); }
+    });
+    check('mostek bez potwierdzenia nadal odrzuca zastąpienie word-sync', /potwierdzenia/.test(bridgeGuard), bridgeGuard);
+    await page.click('#audioEditorBtn');
+    await page.click('[data-tab="lyrics"]');
+    check('word-sync nie blokuje już ręcznego przycisku AI', await poll(() => page.evaluate(() => {
+      const button = document.getElementById('paeAiAlign');
+      return button && !button.disabled && /możesz ręcznie/.test(document.getElementById('paeAiStatus').textContent);
+    })));
+    await page.select('#paeAiLanguage', 'en');
+    await page.evaluate(() => {
+      const tools = __pulsarDesktopTools, align = tools.alignLyrics;
+      window.__testSourceAiJob = null;
+      tools.alignLyrics = function (job, onProgress) {
+        window.__testSourceAiJob = { hasSourceWordSync: job.hasSourceWordSync, allowSourceWordSync: job.allowSourceWordSync };
+        return align.call(this, job, onProgress);
+      };
+    });
+    await page.click('#paeAiAlign');
+    check('UI pozwala dopasować wersję teledysku mimo źródłowego word-sync', await poll(() => page.evaluate(() => {
+      const data = __player.__lyrics.forTrack(__player.__editor.current().id);
+      return data && data.source === 'ai' && data.generated && data.previousLyrics && data.previousLyrics.source === 'lyricsplus';
+    })));
+    const sourceAiJob = await page.evaluate(() => window.__testSourceAiJob);
+    check('mostek dostaje jawne zezwolenie na zastąpienie źródłowego word-sync', sourceAiJob && sourceAiJob.hasSourceWordSync === true && sourceAiJob.allowSourceWordSync === true, sourceAiJob);
+    check('potwierdzenie informuje o zastąpieniu i możliwości przywrócenia', dialogMessages.some(message => /ma już word-sync/.test(message) && /zachowane do przywrócenia/.test(message)), dialogMessages);
+    await page.click('#paeAiRestore');
+    check('przycisk przywraca źródło także po dopasowaniu wersji teledysku', await poll(() => page.evaluate(() => {
+      const data = __player.__lyrics.forTrack(__player.__editor.current().id);
+      return data && data.source === 'lyricsplus' && data.wordSync && data.synced[0].words.length === 3;
+    })));
+  }
 
   check('brak nieobsłużonych błędów JavaScript', pageErrors.length === 0, pageErrors);
 } finally {
