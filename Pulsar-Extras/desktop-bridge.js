@@ -238,12 +238,15 @@
       language: String(raw.language || job.language || ''), coverage: Math.round(coverage * 1000) / 1000,
       meanProbability: typeof raw.mean_probability === 'number' && Number.isFinite(raw.mean_probability) ? raw.mean_probability : null,
       duration: typeof raw.duration === 'number' && Number.isFinite(raw.duration) ? raw.duration : null,
+      alignmentRange: Number.isFinite(job.audioStart) && Number.isFinite(job.audioEnd) ? { start: job.audioStart, end: job.audioEnd } : null,
       generatedAt: new Date().toISOString()
     };
   }
   async function alignLyrics(job, onProgress) {
     if (!job || !Array.isArray(job.lines) || !job.lines.some(function (line) { return String(line || '').trim(); })) throw new Error('Brak tekstu do dopasowania');
     if (job.hasSourceWordSync && !job.allowSourceWordSync) throw new Error('Zastąpienie źródłowego word-sync wymaga ręcznego potwierdzenia');
+    const partial = job.audioStart != null || job.audioEnd != null;
+    if (partial && (!Number.isFinite(job.audioStart) || !Number.isFinite(job.audioEnd) || job.audioStart < 0 || job.audioEnd <= job.audioStart)) throw new Error('Niepoprawny zakres dopasowania');
     progressOf(onProgress, 'prepare');
     const setup = await ensureAiEnvironment(true, onProgress);
     let input = String(job.inputPath || '');
@@ -262,6 +265,7 @@
         audio_path: input, lines: job.lines, language: job.language,
         model: job.model || 'base', model_root: modelRoot
       };
+      if (partial) { request.audio_start = job.audioStart; request.audio_end = job.audioEnd; }
       await Neutralino.filesystem.writeFile(requestPath, JSON.stringify(request));
       progressOf(onProgress, 'align');
       const command = quote(setup.python) + ' ' + quote(setup.helper) + ' --request ' + quote(requestPath) + ' --output ' + quote(outputPath);

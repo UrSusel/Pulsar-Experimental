@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import math
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -62,11 +63,14 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(parsed["lines"], ["I saw the fire", "Take my breath"])
         self.assertEqual(parsed["language"], "en")
         self.assertEqual(parsed["model"], "base")
+        ranged = aligner.validate_request(request(audio_start=2.0, audio_end=4.5))
+        self.assertEqual((ranged["audio_start"], ranged["audio_end"]), (2.0, 4.5))
 
     def test_invalid_requests_fail_closed(self):
         for changes in (
             {"audio_path": ""}, {"lines": []}, {"lines": [" "]},
             {"language": "auto"}, {"model": "large-v3"}, {"model_root": ""},
+            {"audio_start": -1}, {"audio_start": 4, "audio_end": 4}, {"audio_end": math.nan},
         ):
             with self.subTest(changes=changes), self.assertRaises(aligner.AlignmentError):
                 aligner.validate_request(request(**changes))
@@ -112,6 +116,44 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(seen, {"header": b"RIFF", "rate": 16000})
 
 
+class AlignmentTests(unittest.TestCase):
+    def test_model_receives_only_the_selected_pcm_slice(self):
+        class FakeAudio:
+            def __init__(self, values): self.values, self.size = values, len(values)
+            def __getitem__(self, item): return FakeAudio(self.values[item])
+        class FakeResult:
+            def to_dict(self): return result()
+        captured = {}
+        class FakeModel:
+            def align(self, audio, text, **kwargs):
+                captured.update(values=audio.values, text=text, kwargs=kwargs)
+                return FakeResult()
+        stable = types.ModuleType("stable_whisper")
+        stable.load_faster_whisper = lambda *args, **kwargs: FakeModel()
+        faster = types.ModuleType("faster_whisper")
+        audio_module = types.ModuleType("faster_whisper.audio")
+        audio_module.decode_audio = lambda *args, **kwargs: FakeAudio(list(range(6 * 16000)))
+        faster.audio = audio_module
+        torch = types.ModuleType("torch")
+        torch.set_num_threads = lambda threads: None
+        modules = {"stable_whisper": stable, "faster_whisper": faster, "faster_whisper.audio": audio_module, "torch": torch}
+        with tempfile.TemporaryDirectory() as tmp:
+            audio_path = Path(tmp) / "song.wav"
+            audio_path.write_bytes(b"test")
+            with patch.dict(sys.modules, modules):
+                payload = aligner.run_alignment(request(
+                    audio_path=str(audio_path), model_root=str(Path(tmp) / "models"),
+                    audio_start=2, audio_end=4,
+                ))
+        self.assertEqual(len(captured["values"]), 2 * 16000)
+        self.assertEqual(captured["values"][0], 2 * 16000)
+        self.assertEqual(captured["text"], "I saw the fire\nTake my breath")
+        self.assertTrue(captured["kwargs"]["original_split"])
+        self.assertEqual(payload["duration"], 2.0)
+        self.assertEqual(payload["audio_start"], 2.0)
+        self.assertEqual(payload["lines"][0]["t"], 32.205)
+
+
 class ConversionTests(unittest.TestCase):
     def test_real_word_times_and_source_text_are_preserved(self):
         converted = aligner.convert_result(result(), ["I saw the fire", "Take my breath"])
@@ -122,6 +164,13 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(converted["lines"][0]["words"][0], {"t": 30.205, "txt": "I ", "d": 0.167})
         self.assertEqual(converted["lines"][1]["words"][2], {"t": 79.137, "txt": "breath", "d": 0.624})
         self.assertAlmostEqual(converted["mean_probability"], 0.875)
+
+    def test_partial_alignment_restores_absolute_audio_times(self):
+        converted = aligner.convert_result(result(), ["I saw the fire", "Take my breath"], time_offset=12.5)
+        self.assertEqual(converted["lines"][0]["t"], 42.705)
+        self.assertEqual(converted["lines"][0]["d"], 1.094)
+        self.assertEqual(converted["lines"][0]["words"][0], {"t": 42.705, "txt": "I ", "d": 0.167})
+        self.assertEqual(converted["lines"][1]["words"][2]["t"], 91.637)
 
     def test_missing_time_is_not_replaced_with_zero(self):
         data = result()

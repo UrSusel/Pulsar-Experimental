@@ -92,6 +92,44 @@
     }).sort(function (a, b) { return a.t - b.t; });
   }
 
+  /** Przesuwa linie bez utraty czasów słów i pozostałych metadanych. */
+  function shiftLyricsDetailed(lines, offset, clamp) {
+    const by = finite(offset, 0);
+    const shifted = function (value) { const time = round(finite(value, 0) + by, 3); return clamp === false ? time : Math.max(0, time); };
+    return (Array.isArray(lines) ? lines : []).map(function (line) {
+      const copy = Object.assign({}, line, { t: shifted(line && line.t), txt: String(line && line.txt || '') });
+      if (Array.isArray(line && line.words)) copy.words = line.words.map(function (word) {
+        return Object.assign({}, word, { t: shifted(word && word.t) });
+      });
+      return copy;
+    }).sort(function (a, b) { return a.t - b.t; });
+  }
+
+  function lyricsTextsInRange(lines, start, end, offset) {
+    const from = finite(start, 0), to = finite(end, 0);
+    if (!(to > from)) return [];
+    return shiftLyricsDetailed(lines, offset).filter(function (line) { return line.t >= from && line.t < to && line.txt.trim(); }).map(function (line) { return line.txt.trim(); });
+  }
+
+  /** Scala wynik częściowego AI z zachowanymi liniami poza zakresem. */
+  function mergeLyricsRange(lines, aligned, start, end, offset) {
+    const from = finite(start, 0), to = finite(end, 0);
+    if (!(to > from)) throw new Error('INVALID_LYRICS_RANGE');
+    const kept = shiftLyricsDetailed(lines, offset).filter(function (line) { return line.t < from || line.t >= to; });
+    const inserted = shiftLyricsDetailed(aligned, 0).filter(function (line) { return line.t >= from && line.t < to; });
+    return kept.concat(inserted).sort(function (a, b) { return a.t - b.t; });
+  }
+
+  function firstLyricsTime(lines) {
+    let first = Infinity;
+    (Array.isArray(lines) ? lines : []).forEach(function (line) {
+      const words = Array.isArray(line && line.words) ? line.words.filter(function (word) { return Number.isFinite(Number(word && word.t)); }) : [];
+      if (words.length) first = Math.min(first, Number(words[0].t));
+      else if (Number.isFinite(Number(line && line.t))) first = Math.min(first, Number(line.t));
+    });
+    return Number.isFinite(first) ? first : null;
+  }
+
   /** Najpierw stosuje ręczne przesunięcie, potem skraca oś po wycięciach. */
   function remapLyrics(lines, cuts, offset, duration) {
     const by = finite(offset, 0);
@@ -321,6 +359,10 @@
     editedDuration: editedDuration,
     mapTime: mapTime,
     shiftLyrics: shiftLyrics,
+    shiftLyricsDetailed: shiftLyricsDetailed,
+    lyricsTextsInRange: lyricsTextsInRange,
+    mergeLyricsRange: mergeLyricsRange,
+    firstLyricsTime: firstLyricsTime,
     remapLyrics: remapLyrics,
     formatLRC: formatLRC,
     lrcTimestamp: lrcTimestamp,

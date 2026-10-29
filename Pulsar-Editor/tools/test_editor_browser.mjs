@@ -144,10 +144,11 @@ async function nativeFs(op, argsJson) {
         if (!match) return JSON.stringify({ stdOut: '', stdErr: 'no AI request path', exitCode: 2 });
         const request = JSON.parse(fs.readFileSync(match[1], 'utf8'));
         lastAiRequest = request;
+        const audioStart = Number(request.audio_start) || 0;
         const lines = request.lines.map((text, index) => {
           const tokens = text.split(/\s+/).filter(Boolean);
-          return { t: index + 1, d: tokens.length * 0.1, txt: text, words: tokens.map((token, wordIndex) => ({
-            t: index + 1 + wordIndex * 0.1, d: 0.1,
+          return { t: audioStart + index + 1, d: tokens.length * 0.1, txt: text, words: tokens.map((token, wordIndex) => ({
+            t: audioStart + index + 1 + wordIndex * 0.1, d: 0.1,
             txt: token + (wordIndex + 1 < tokens.length ? ' ' : '')
           })) };
         });
@@ -184,7 +185,7 @@ const lyricsPlusWord = {
       { time: 1500, duration: 600, text: 'breath' }
     ]
   }],
-  selectedSongMetadata: { title: 'Take My Breath', artist: 'The Weeknd', duration: 6 }
+  processingTime: { selectedSongMetadata: { title: 'Take My Breath', artist: 'The Weeknd', duration: 6 } }
 };
 try {
   const args = chromium.args.filter(arg => arg !== '--mute-audio' && !arg.startsWith('--single-process'))
@@ -412,10 +413,36 @@ try {
     })));
     await page.select('#paeAiLanguage', 'en');
     await page.click('#paeAiAlign');
-    check('UI AI zapisuje wynik słów przez prawdziwy mostek', await poll(() => page.evaluate(() => {
+    check('AI pokazuje kandydata bez zapisywania go przy utworze', await poll(() => page.evaluate(() => {
+      const id = __player.__editor.current().id, saved = __player.__lyrics.forTrack(id), preview = __player.__lyrics.data();
+      return !document.getElementById('paeAiCandidate').hidden && saved && saved.source === 'lrc' && preview && preview.source === 'ai';
+    })));
+    await page.evaluate(() => __player.__lyrics.setOffset(1.25));
+    await page.click('#paeAiPreviewSource');
+    check('porównanie A/B potrafi wrócić do źródła bez zmiany cache', await page.evaluate(() => {
+      const id = __player.__editor.current().id;
+      return __player.__lyrics.data().source === 'lrc' && __player.__lyrics.forTrack(id).source === 'lrc' && !document.getElementById('paeAiCandidate').hidden;
+    }));
+    await page.click('#paeAiPreviewNew');
+    check('podgląd AI nie nalicza starego offsetu podczas porównania', await page.evaluate(() => {
+      const preview = __player.__lyrics.data(), offset = __player.__lyrics.offset();
+      return preview.source === 'ai' && Math.abs(preview.synced[0].t + offset - 1) < 0.001;
+    }));
+    await page.evaluate(() => document.getElementById('audio').pause());
+    await page.click('#paeAiDiscard');
+    check('odrzucenie usuwa kandydata i zachowuje poprzednie napisy', await page.evaluate(() => {
+      const id = __player.__editor.current().id;
+      return document.getElementById('paeAiCandidate').hidden && __player.__lyrics.data().source === 'lrc' && __player.__lyrics.forTrack(id).source === 'lrc' && __player.__lyrics.offset() === 1.25;
+    }));
+    await page.click('#paeAiAlign');
+    await poll(() => page.evaluate(() => !document.getElementById('paeAiCandidate').hidden));
+    await page.evaluate(() => __player.__lyrics.setOffset(1.25));
+    await page.click('#paeAiAccept');
+    check('dopiero akceptacja zapisuje wynik słów przez prawdziwy mostek', await poll(() => page.evaluate(() => {
       const data = __player.__lyrics.forTrack(__player.__editor.current().id);
       return data && data.source === 'ai' && data.generated && data.wordSync && data.synced.length === 4 && data.synced[0].words.length > 0;
     })));
+    check('akceptacja AI zeruje stary offset, aby nie naliczyć go ponownie', await page.evaluate(() => __player.__lyrics.offset() === 0));
     check('wynik AI zachowuje rzeczywiste czasy trwania słów', await page.evaluate(() => {
       const data = __player.__lyrics.forTrack(__player.__editor.current().id);
       return data && data.synced[0].d > 0 && data.synced[0].words[0].d === 0.1;
@@ -436,6 +463,20 @@ try {
       const data = __player.__lyrics.forTrack(__player.__editor.current().id);
       return data && data.source === 'lrc' && data.synced.length === 4 && !data.generated;
     })));
+    await page.select('#paeAiScope', 'range');
+    await page.$eval('#paeAiRangeStart', input => { input.value = '2'; });
+    await page.$eval('#paeAiRangeEnd', input => { input.value = '4'; });
+    await page.click('#paeAiAlign');
+    check('zakres AI tworzy niezapisanego kandydata i wysyła tylko wybraną linię', await poll(() => page.evaluate(() => !document.getElementById('paeAiCandidate').hidden)) && lastAiRequest && lastAiRequest.audio_start === 2 && lastAiRequest.audio_end === 4 && JSON.stringify(lastAiRequest.lines) === JSON.stringify(['druga linia']), lastAiRequest);
+    await page.click('#paeAiAccept');
+    const partialMerged = await poll(() => page.evaluate(() => {
+      const data = __player.__lyrics.forTrack(__player.__editor.current().id);
+      return data && data.generated ? data : null;
+    }));
+    check('akceptacja zakresu scala wynik bez ruszania linii poza nim', partialMerged && partialMerged.partial && JSON.stringify(partialMerged.synced.map(line => line.t)) === JSON.stringify([1, 3, 4.5, 5.5]) && partialMerged.synced[0].txt.includes('pierwszej') && partialMerged.synced[2].txt.includes('drugiej') && partialMerged.synced[3].txt.includes('ostatnia'), partialMerged);
+    await page.click('#paeAiRestore');
+    await poll(() => page.evaluate(() => __player.__lyrics.forTrack(__player.__editor.current().id).source === 'lrc'));
+    await page.select('#paeAiScope', 'full');
     aiCheckShouldFail = true; aiPipMissing = true; aiSetupCommands.length = 0;
     const pipRecovery = await page.evaluate(async () => {
       const current = __player.__editor.current();
@@ -553,6 +594,21 @@ try {
     return query.get('title') === 'Take My Breath' && query.get('artist') === 'The Weeknd';
   })(), lyricsProviderRequests);
   check('nowy cache zachowuje wynik word-sync i omija stary format', plusResult && plusResult.cached && plusResult.cached.source === 'lyricsplus' && plusResult.cached.wordSync === true, plusResult && plusResult.cached);
+  check('źródło napisów przekazuje deklarowaną długość do kontroli wersji', plusResult && plusResult.data.sourceDuration === 6 && plusResult.cached.sourceDuration === 6, plusResult && { data: plusResult.data.sourceDuration, cached: plusResult.cached.sourceDuration });
+
+  await page.evaluate(() => { __player.__lyrics.forTrack(__player.__editor.current().id).sourceDuration = 12; });
+  await page.click('#audioEditorBtn'); await page.click('[data-tab="lyrics"]');
+  check('duża różnica długości pokazuje możliwość innej wersji, nie pewnik', await poll(() => page.evaluate(() => {
+    const warning = document.getElementById('paeVersionWarning');
+    return warning && !warning.hidden && /mogą pochodzić z innej wersji/.test(warning.textContent) && /12|00:12/.test(warning.textContent);
+  })));
+  const firstWordOffset = await page.evaluate(() => {
+    const audio = document.getElementById('audio'); audio.pause(); audio.currentTime = 3.25; return audio.currentTime;
+  });
+  await page.click('#paeOffsetFirst');
+  check('pierwsze słowo kalibruje globalny offset z bieżącej pozycji', await poll(() => page.evaluate(() => Math.abs(__player.__lyrics.offset() - 2.25) < 0.001)), firstWordOffset);
+  await page.evaluate(() => { __player.__lyrics.setOffset(0); __player.__lyrics.forTrack(__player.__editor.current().id).sourceDuration = 6; });
+  await page.click('#paeClose');
 
   const aiSourceOverride = await page.evaluate(async () => {
     const id = __player.__editor.current().id;
@@ -579,6 +635,11 @@ try {
       catch (error) { return String(error && error.message || error); }
     });
     check('mostek bez potwierdzenia nadal odrzuca zastąpienie word-sync', /potwierdzenia/.test(bridgeGuard), bridgeGuard);
+    const bridgeRangeGuard = await page.evaluate(async () => {
+      try { await __pulsarDesktopTools.alignLyrics({ lines: ['Take my breath'], audioStart: 3, audioEnd: 2 }); return ''; }
+      catch (error) { return String(error && error.message || error); }
+    });
+    check('mostek odrzuca niepoprawny zakres przed uruchomieniem analizy', /zakres/.test(bridgeRangeGuard), bridgeRangeGuard);
     await page.click('#audioEditorBtn');
     await page.click('[data-tab="lyrics"]');
     check('word-sync nie blokuje już ręcznego przycisku AI', await poll(() => page.evaluate(() => {
@@ -595,7 +656,12 @@ try {
       };
     });
     await page.click('#paeAiAlign');
-    check('UI pozwala dopasować wersję teledysku mimo źródłowego word-sync', await poll(() => page.evaluate(() => {
+    check('mimo źródłowego word-sync wynik również czeka na akceptację', await poll(() => page.evaluate(() => {
+      const id = __player.__editor.current().id;
+      return !document.getElementById('paeAiCandidate').hidden && __player.__lyrics.forTrack(id).source === 'lyricsplus' && __player.__lyrics.data().source === 'ai';
+    })));
+    await page.click('#paeAiAccept');
+    check('UI pozwala zapisać dopasowanie wersji teledysku mimo źródłowego word-sync', await poll(() => page.evaluate(() => {
       const data = __player.__lyrics.forTrack(__player.__editor.current().id);
       return data && data.source === 'ai' && data.generated && data.previousLyrics && data.previousLyrics.source === 'lyricsplus';
     })));

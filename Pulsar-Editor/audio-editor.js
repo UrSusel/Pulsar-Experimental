@@ -27,6 +27,8 @@
   let aiBusy = false;
   let aiBusyId = '';
   let aiCaps = null;
+  let aiCandidate = null;
+  let aiPreviewVariant = '';
   let raf = 0;
   let lastLyricsPaint = 0;
   let ui = {};
@@ -244,6 +246,10 @@
 
           <div class="pae-pane" id="paeLyricsPane" role="tabpanel" hidden>
             <p class="pae-note">Przesunięcie działa od razu i jest zapamiętywane osobno dla tego utworu. <strong>Wartość dodatnia pokazuje napisy później, ujemna — wcześniej.</strong></p>
+            <div class="pae-version-warning" id="paeVersionWarning" hidden>
+              <span id="paeVersionWarningText"></span>
+              <button type="button" class="pae-btn" id="paeVersionAi">Sprawdź dopasowanie</button>
+            </div>
             <div class="pae-offset-hero"><span class="pae-offset-value" id="paeOffsetValue">+0,00 s</span><span>aktualne przesunięcie napisów</span></div>
             <div class="pae-offset-controls">
               <label class="pae-field">Regulacja płynna
@@ -259,10 +265,20 @@
               <button type="button" class="pae-btn" data-offset-step="-0.1">−0,1 s</button>
               <button type="button" class="pae-btn" data-offset-step="0.1">+0,1 s</button>
               <button type="button" class="pae-btn" data-offset-step="0.5">+0,5 s</button>
+              <button type="button" class="pae-btn" id="paeOffsetFirst">Pierwsze słowo: teraz</button>
             </div>
             <section class="pae-section pae-ai-section">
               <div class="pae-section-title"><h3>Dopasowanie AI <span class="pae-badge">EKSPERYMENT</span></h3><span>Windows · Linux · lokalnie</span></div>
               <p class="pae-note">Stable-TS dopasowuje <strong>istniejący tekst</strong> do tego nagrania na poziomie słów. Możesz użyć go także przy istniejącym word-sync, jeśli czasy pochodzą z innej wersji — np. z wersji studyjnej zamiast teledysku. Poprzednie napisy będzie można przywrócić. Pierwsze uruchomienie może pobrać od ok. 2 GB zależności (zależnie od platformy) i model — dopiero po Twoim potwierdzeniu.</p>
+              <div class="pae-ai-range">
+                <label class="pae-field">Zakres analizy
+                  <select class="pae-input" id="paeAiScope"><option value="full">Cały utwór</option><option value="range">Wybrany zakres</option></select>
+                </label>
+                <label class="pae-field">Od (s)<input class="pae-input" id="paeAiRangeStart" type="number" min="0" step="0.05" value="0"></label>
+                <label class="pae-field">Do (s)<input class="pae-input" id="paeAiRangeEnd" type="number" min="0" step="0.05" value="30"></label>
+                <button type="button" class="pae-btn" id="paeAiRangeNowStart">Start: teraz</button>
+                <button type="button" class="pae-btn" id="paeAiRangeNowEnd">Koniec: teraz</button>
+              </div>
               <div class="pae-ai-controls">
                 <label class="pae-field">Język tekstu
                   <select class="pae-input" id="paeAiLanguage">
@@ -276,6 +292,17 @@
                 <button type="button" class="pae-btn danger" id="paeAiRestore" hidden>Przywróć napisy źródłowe</button>
               </div>
               <div class="pae-status" id="paeAiStatus" aria-live="polite"></div>
+              <div class="pae-ai-candidate" id="paeAiCandidate" hidden>
+                <strong>Wynik jest gotowy, ale jeszcze niezapisany.</strong>
+                <div class="pae-ai-compare">
+                  <button type="button" class="pae-btn" id="paeAiPreviewSource">Odsłuch: źródło</button>
+                  <button type="button" class="pae-btn" id="paeAiPreviewNew">Odsłuch: nowe AI</button>
+                </div>
+                <div class="pae-ai-compare">
+                  <button type="button" class="pae-btn primary" id="paeAiAccept">Zapisz nowe dopasowanie</button>
+                  <button type="button" class="pae-btn" id="paeAiDiscard">Odrzuć wynik</button>
+                </div>
+              </div>
             </section>
             <section class="pae-section">
               <div class="pae-section-title"><h3>Podgląd synchronizacji</h3><span>czasy po przesunięciu</span></div>
@@ -305,7 +332,10 @@
       audioStatus: byId('paeAudioStatus'), import: byId('paeImport'), save: byId('paeSave'),
       offsetValue: byId('paeOffsetValue'), offsetRange: byId('paeOffsetRange'), offsetNumber: byId('paeOffsetNumber'),
       lyricsPreview: byId('paeLyricsPreview'), lyricsStatus: byId('paeLyricsStatus'), exportLrc: byId('paeExportLrc'),
-      aiLanguage: byId('paeAiLanguage'), aiAlign: byId('paeAiAlign'), aiRestore: byId('paeAiRestore'), aiStatus: byId('paeAiStatus')
+      aiLanguage: byId('paeAiLanguage'), aiAlign: byId('paeAiAlign'), aiRestore: byId('paeAiRestore'), aiStatus: byId('paeAiStatus'),
+      aiScope: byId('paeAiScope'), aiRangeStart: byId('paeAiRangeStart'), aiRangeEnd: byId('paeAiRangeEnd'),
+      aiCandidate: byId('paeAiCandidate'), aiPreviewSource: byId('paeAiPreviewSource'), aiPreviewNew: byId('paeAiPreviewNew'), aiAccept: byId('paeAiAccept'), aiDiscard: byId('paeAiDiscard'),
+      offsetFirst: byId('paeOffsetFirst'), versionWarning: byId('paeVersionWarning'), versionWarningText: byId('paeVersionWarningText')
     };
 
     byId('paeClose').addEventListener('click', closeEditor);
@@ -345,6 +375,11 @@
     ui.offsetRange.addEventListener('input', function () { setLyricsOffset(numberValue(ui.offsetRange.value), 'range'); });
     ui.offsetNumber.addEventListener('change', function () { setLyricsOffset(numberValue(ui.offsetNumber.value), 'number'); });
     byId('paeOffsetReset').addEventListener('click', function () { setLyricsOffset(0); });
+    ui.offsetFirst.addEventListener('click', alignFirstWordHere);
+    byId('paeVersionAi').addEventListener('click', function () { ui.aiAlign.scrollIntoView({ block: 'center', behavior: 'smooth' }); ui.aiAlign.focus(); });
+    ui.aiScope.addEventListener('change', updateAiRangeUi);
+    byId('paeAiRangeNowStart').addEventListener('click', function () { ui.aiRangeStart.value = String(round3(mainAudio.currentTime || 0)); });
+    byId('paeAiRangeNowEnd').addEventListener('click', function () { ui.aiRangeEnd.value = String(round3(mainAudio.currentTime || 0)); });
     dim.querySelectorAll('[data-offset-step]').forEach(function (button) {
       button.addEventListener('click', function () {
         const current = player.__lyrics.offset ? player.__lyrics.offset() : 0;
@@ -354,6 +389,10 @@
     ui.exportLrc.addEventListener('click', exportShiftedLrc);
     ui.aiAlign.addEventListener('click', runAiAlignment);
     ui.aiRestore.addEventListener('click', restoreSourceLyrics);
+    ui.aiPreviewSource.addEventListener('click', function () { previewAiCandidate('source', true); });
+    ui.aiPreviewNew.addEventListener('click', function () { previewAiCandidate('new', true); });
+    ui.aiAccept.addEventListener('click', acceptAiCandidate);
+    ui.aiDiscard.addEventListener('click', discardAiCandidate);
     bindWaveEvents();
     return dim;
   }
@@ -476,6 +515,10 @@
     ui.track.title = ui.track.textContent;
     ui.start.value = '0';
     ui.end.value = String(round3(Math.min(duration || 1, 1)));
+    ui.aiScope.value = 'full';
+    ui.aiRangeStart.value = '0'; ui.aiRangeEnd.value = String(round3(Math.min(duration || 30, 30)));
+    ui.aiRangeStart.max = ui.aiRangeEnd.max = String(duration || 0);
+    aiPreviewVariant = '';
     ui.start.max = ui.end.max = String(duration || 0);
     setStatus(ui.audioStatus, '');
     setStatus(ui.lyricsStatus, '');
@@ -497,6 +540,7 @@
 
   function closeEditor() {
     if (!open || saveBusy) return;
+    if (aiCandidate && track && aiCandidate.id === track.id) restoreSavedLyricsView();
     saveSession(false);
     open = false;
     ++decodeToken;
@@ -947,6 +991,89 @@
     };
     setStatus(ui.aiStatus, messages[stage] || messages.prepare, '', true);
   }
+  function currentAiCandidate() { return aiCandidate && track && aiCandidate.id === track.id ? aiCandidate : null; }
+  function updateAiRangeUi() {
+    if (!ui.aiScope) return;
+    const locked = aiBusy || !!currentAiCandidate();
+    const ranged = ui.aiScope.value === 'range';
+    ui.aiScope.disabled = locked;
+    ui.aiRangeStart.disabled = locked || !ranged; ui.aiRangeEnd.disabled = locked || !ranged;
+    byId('paeAiRangeNowStart').disabled = locked || !ranged; byId('paeAiRangeNowEnd').disabled = locked || !ranged;
+  }
+  function updateVersionWarning(data) {
+    if (!ui.versionWarning) return;
+    let warning = '';
+    const audioDuration = Number(duration || (track && track.duration) || 0);
+    if (data && !data.generated && Array.isArray(data.synced) && data.synced.length && audioDuration > 0) {
+      const sourceDuration = Number(data.sourceDuration) || 0;
+      if (sourceDuration > 0 && Math.abs(sourceDuration - audioDuration) > 2) {
+        warning = 'Źródło napisów ma ' + formatTime(sourceDuration, false) + ', a nagranie ' + formatTime(audioDuration, false) + '. Czasy mogą pochodzić z innej wersji, np. studyjnej zamiast teledysku.';
+      } else {
+        const last = data.synced.reduce(function (value, line) { return Math.max(value, Number(line && line.t) || 0); }, 0);
+        if (last > audioDuration + 1) warning = 'Ostatni znacznik napisów wykracza poza nagranie. Te czasy mogą należeć do innej wersji utworu.';
+      }
+    }
+    ui.versionWarning.hidden = !warning;
+    ui.versionWarningText.textContent = warning;
+  }
+  function alignFirstWordHere() {
+    const data = player.__lyrics.data && player.__lyrics.data();
+    const first = data && core.firstLyricsTime(data.synced);
+    if (first == null) { setStatus(ui.lyricsStatus, 'Najpierw znajdź zsynchronizowany tekst.', 'error'); return; }
+    const now = Number(mainAudio.currentTime) || 0;
+    setLyricsOffset(now - first);
+    setStatus(ui.lyricsStatus, 'Ustawiono pierwsze słowo na ' + formatTime(now, true) + '. Nowe przesunięcie: ' + formatOffset(player.__lyrics.offset()) + '.', 'success');
+  }
+  function paintAiCandidateButtons() {
+    if (!ui.aiPreviewSource) return;
+    ui.aiPreviewSource.classList.toggle('active', aiPreviewVariant === 'source');
+    ui.aiPreviewNew.classList.toggle('active', aiPreviewVariant === 'new');
+  }
+  function restoreSavedLyricsView() {
+    const saved = editorLyricsData();
+    if (saved && player.__lyrics.render) player.__lyrics.render(saved);
+    aiPreviewVariant = '';
+    paintAiCandidateButtons();
+    renderLyricsPreview();
+  }
+  function previewAiCandidate(variant, autoplay) {
+    const candidate = currentAiCandidate();
+    if (!candidate) return;
+    aiPreviewVariant = variant === 'source' ? 'source' : 'new';
+    let shown = candidate.before;
+    if (aiPreviewVariant === 'new') {
+      const offset = player.__lyrics.offset ? player.__lyrics.offset() : 0;
+      shown = Object.assign({}, candidate.data, { synced: core.shiftLyricsDetailed(candidate.data.synced, -offset, false) });
+    }
+    if (player.__lyrics.render) player.__lyrics.render(shown);
+    paintAiCandidateButtons();
+    renderLyricsPreview();
+    if (autoplay) {
+      try {
+        mainAudio.currentTime = candidate.previewStart;
+        const promise = mainAudio.play(); if (promise && promise.catch) promise.catch(function () {});
+      } catch (e) {}
+    }
+  }
+  function acceptAiCandidate() {
+    const candidate = currentAiCandidate();
+    if (!candidate || aiBusy) return;
+    try {
+      player.__lyrics.applyFor(candidate.id, candidate.data, { allowSourceWordSync: candidate.sourceWords });
+      aiCandidate = null; aiPreviewVariant = '';
+      setLyricsOffset(0);
+      lyricsLoadedId = candidate.id;
+      updateAiUi(); renderLyricsPreview();
+      toast('Nowe dopasowanie zapisano przy utworze');
+    } catch (error) { setStatus(ui.aiStatus, 'Nie udało się zapisać wyniku: ' + (error.message || error), 'error'); }
+  }
+  function discardAiCandidate() {
+    if (!currentAiCandidate() || aiBusy) return;
+    aiCandidate = null;
+    restoreSavedLyricsView();
+    updateAiUi();
+    setStatus(ui.aiStatus, 'Odrzucono niezapisany wynik. Poprzednie napisy pozostały bez zmian.', 'success');
+  }
   function updateAiUi(keepStatus) {
     if (!ui.aiAlign) return;
     const tools = window.__pulsarDesktopTools;
@@ -955,14 +1082,24 @@
     const sourceWords = !!(data && !data.generated && lyricsHaveWords(data));
     const hasText = lyricsSourceLines(data).length > 0;
     const thisBusy = aiBusy && track && aiBusyId === track.id;
-    ui.aiAlign.disabled = !supported || aiBusy || !hasText;
-    ui.aiAlign.textContent = thisBusy ? 'Przetwarzanie…' : 'Dopasuj tekst do audio';
-    ui.aiLanguage.disabled = aiBusy;
+    const candidate = currentAiCandidate();
+    const pendingOther = !!aiCandidate && !candidate;
+    const offsetLocked = aiBusy || !!candidate;
+    ui.offsetRange.disabled = offsetLocked; ui.offsetNumber.disabled = offsetLocked; ui.offsetFirst.disabled = offsetLocked;
+    byId('paeOffsetReset').disabled = offsetLocked;
+    ui.dim.querySelectorAll('[data-offset-step]').forEach(function (button) { button.disabled = offsetLocked; });
+    ui.aiCandidate.hidden = !candidate;
+    ui.aiAlign.disabled = !supported || aiBusy || !!candidate || pendingOther || !hasText;
+    ui.aiAlign.textContent = thisBusy ? 'Przetwarzanie…' : (candidate ? 'Wynik oczekuje na decyzję' : 'Dopasuj tekst do audio');
+    ui.aiLanguage.disabled = aiBusy || !!candidate;
     ui.aiRestore.hidden = !(data && data.generated);
-    ui.aiRestore.disabled = aiBusy;
+    ui.aiRestore.disabled = aiBusy || !!candidate;
+    updateAiRangeUi(); updateVersionWarning(data); paintAiCandidateButtons();
     if (thisBusy || keepStatus) return;
     if (aiBusy) { setStatus(ui.aiStatus, 'Inny utwór jest teraz analizowany. Poczekaj na zakończenie.', ''); return; }
     if (!supported) { setStatus(ui.aiStatus, 'Lokalne dopasowanie AI jest dostępne w desktopowej wersji Pulsara dla Windows i Linux.', ''); return; }
+    if (candidate) { setStatus(ui.aiStatus, 'Porównaj oba warianty na tym samym fragmencie. Zmiana zostanie zapisana dopiero po kliknięciu „Zapisz nowe dopasowanie”.', 'success'); return; }
+    if (pendingOther) { setStatus(ui.aiStatus, 'Inny utwór ma niezapisany wynik AI. Otwórz go i zapisz albo odrzuć wynik przed nową analizą.', ''); return; }
     if (sourceWords) { setStatus(ui.aiStatus, 'Źródło ma już czasy słów. Jeśli nie pasują do tego nagrania, możesz ręcznie wykonać nowe dopasowanie. Poprzednie napisy zostaną zachowane do przywrócenia.', ''); return; }
     if (data && data.generated) {
       const coverage = Number.isFinite(Number(data.coverage)) ? ' Pokrycie tekstu: ' + Math.round(Number(data.coverage) * 100) + '%.' : '';
@@ -984,12 +1121,18 @@
   }
   async function runAiAlignment() {
     if (aiBusy || !track) return;
+    if (aiCandidate) { setStatus(ui.aiStatus, 'Najpierw zapisz albo odrzuć oczekujący wynik AI.', ''); return; }
     const tools = window.__pulsarDesktopTools;
     const data = editorLyricsData();
     if (!tools || !tools.available || typeof tools.alignLyrics !== 'function') { setStatus(ui.aiStatus, 'Ta funkcja wymaga desktopowej wersji Pulsara.', 'error'); return; }
     const sourceWords = !!(data && !data.generated && lyricsHaveWords(data));
-    const lines = lyricsSourceLines(data);
-    if (!lines.length) { setStatus(ui.aiStatus, 'Brak tekstu do dopasowania.', 'error'); return; }
+    const partial = ui.aiScope.value === 'range';
+    const rangeStart = numberValue(ui.aiRangeStart.value), rangeEnd = numberValue(ui.aiRangeEnd.value);
+    const offset = player.__lyrics.offset ? player.__lyrics.offset() : 0;
+    if (partial && (!(rangeStart >= 0) || !(rangeEnd > rangeStart) || (duration > 0 && rangeEnd > duration))) { setStatus(ui.aiStatus, 'Ustaw poprawny zakres wewnątrz nagrania.', 'error'); return; }
+    if (partial && (!data || !Array.isArray(data.synced))) { setStatus(ui.aiStatus, 'Dopasowanie zakresu wymaga zsynchronizowanych linii. Dla zwykłego tekstu użyj całego utworu.', 'error'); return; }
+    const lines = partial ? core.lyricsTextsInRange(data.synced, rangeStart, rangeEnd, offset) : lyricsSourceLines(data);
+    if (!lines.length) { setStatus(ui.aiStatus, partial ? 'W tym zakresie nie ma linii do dopasowania.' : 'Brak tekstu do dopasowania.', 'error'); return; }
     const jobTrack = track;
     const id = jobTrack.id;
     aiBusy = true; aiBusyId = id; updateAiUi(); aiProgress('check');
@@ -1002,20 +1145,34 @@
       const download = ready
         ? 'Lokalne środowisko AI jest gotowe. Jeśli model base nie był jeszcze pobrany, pierwsza analiza pobierze ok. 150 MB.'
         : 'Przed analizą Pulsar pobierze izolowane środowisko Python (od ok. 2 GB, zależnie od platformy) oraz model base (ok. 150 MB). Wymagany jest Python 3.10+ i dostęp do internetu.';
-      const replacement = sourceWords ? '\n\nTen utwór ma już word-sync. Wynik AI zastąpi go tylko dla tego nagrania, a poprzednie napisy źródłowe zostaną zachowane do przywrócenia.' : '';
-      if (!window.confirm('Eksperymentalne dopasowanie AI\n\n' + download + replacement + '\n\nAnaliza na CPU może potrwać od kilku do kilkudziesięciu minut. Tekst i audio są przetwarzane lokalnie. Kontynuować?')) return;
+      const replacement = sourceWords ? '\n\nTen utwór ma już word-sync. Po porównaniu możesz zastąpić go dla tego nagrania, a poprzednie napisy źródłowe zostaną zachowane do przywrócenia.' : '';
+      const rangeInfo = partial ? '\n\nAnaliza obejmie tylko zakres ' + formatTime(rangeStart, true) + '–' + formatTime(rangeEnd, true) + ' i linie: ' + lines.length + '.' : '';
+      if (!window.confirm('Eksperymentalne dopasowanie AI\n\n' + download + replacement + rangeInfo + '\n\nAnaliza na CPU może potrwać od kilku do kilkudziesięciu minut. Tekst i audio są przetwarzane lokalnie. Kontynuować?')) return;
       aiProgress('prepare');
-      const result = await tools.alignLyrics({
+      const job = {
         inputPath: jobTrack.srcPath || '', inputBlob: jobTrack.file, inputName: jobTrack.file.name,
         lines: lines, language: ui.aiLanguage.value, model: 'base',
         hasSourceWordSync: sourceWords, allowSourceWordSync: sourceWords
-      }, aiProgress);
-      player.__lyrics.applyFor(id, result, { allowSourceWordSync: sourceWords });
+      };
+      if (partial) { job.audioStart = rangeStart; job.audioEnd = rangeEnd; }
+      const result = await tools.alignLyrics(job, aiProgress);
+      let candidateData = result;
+      if (partial) {
+        if (!result.synced.some(function (line) { return line.t >= rangeStart && line.t < rangeEnd; })) throw new Error('AI nie zwróciło czasów wewnątrz wybranego zakresu; poprzednie napisy pozostają bez zmian');
+        const merged = core.mergeLyricsRange(data.synced, result.synced, rangeStart, rangeEnd, offset);
+        candidateData = Object.assign({}, result, { synced: merged, partial: true, alignmentRange: { start: rangeStart, end: rangeEnd } });
+        candidateData.wordSync = merged.some(function (line) { return Array.isArray(line.words) && line.words.length; });
+      }
+      const first = core.firstLyricsTime(candidateData.synced);
+      aiCandidate = {
+        id: id, data: candidateData, before: data, sourceWords: sourceWords,
+        previewStart: partial ? rangeStart : Math.max(0, (first == null ? 0 : first) - 0.75)
+      };
       if (open && track && track.id === id) {
         lyricsLoadedId = id;
-        renderLyricsPreview();
-        toast('Eksperymentalne napisy AI zapisano przy utworze');
-      } else toast('Zakończono analizę AI: ' + (jobTrack.title || jobTrack.file.name));
+        previewAiCandidate('new', false);
+        toast('Wynik AI jest gotowy do porównania — jeszcze niezapisany');
+      } else toast('Analiza zakończona; wynik oczekuje na porównanie: ' + (jobTrack.title || jobTrack.file.name));
     } catch (error) {
       failed = true;
       const message = String(error && error.message || error);
@@ -1096,7 +1253,7 @@
     if (!open || !ui.lyricsPreview) return;
     const data = player.__lyrics.data && player.__lyrics.data();
     ui.lyricsPreview.textContent = '';
-    ui.exportLrc.disabled = !(data && Array.isArray(data.synced) && data.synced.length);
+    ui.exportLrc.disabled = aiBusy || !!currentAiCandidate() || !(data && Array.isArray(data.synced) && data.synced.length);
     if (!data || !Array.isArray(data.synced) || !data.synced.length) {
       const empty = document.createElement('div');
       empty.className = 'pae-empty-cuts';

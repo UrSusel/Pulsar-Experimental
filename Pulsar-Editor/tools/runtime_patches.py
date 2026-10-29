@@ -217,8 +217,10 @@ LYRICSPLUS_FALLBACK = r'''      /* ---- Pulsar editor: Lyrics+ fallback ---- */
           const hit = await netJson(plusUrl, 14000);
           const parsed = parseLyricsPlus(hit);
           if (parsed){
+            const picked = hit && (hit.selectedSongMetadata || hit.processingTime && hit.processingTime.selectedSongMetadata);
             parsed.source = 'lyricsplus';
-            parsed.provider = String(hit && hit.metadata && hit.metadata.source || hit && hit.selectedSongMetadata && hit.selectedSongMetadata.source || '');
+            parsed.provider = String(hit && hit.metadata && hit.metadata.source || picked && picked.source || '');
+            parsed.sourceDuration = Number(picked && picked.duration || hit && hit.metadata && hit.metadata.duration) || 0;
             if (!plusData || (parsed.synced && !plusData.synced)) plusData = parsed;
             if (parsed.wordSync){ plusData = parsed; break; }
           }
@@ -372,16 +374,32 @@ def apply_editor_runtime_patches(html: str) -> str:
         "  function updateLyricsHighlight(force){\n    if (!lyricsOn || !lyricsData || !lyricsData.synced || !lyricsBox) return;\n    const t = (audio.currentTime || 0) - lyricsOffset();",
     )
     html = _replace_named_section(html, "  /* Pulsar editor: word lyrics renderer */", "  function renderLyricsLines(){", "  function refreshLyrics(track){", LYRICS_RENDERER)
+    if "/* Pulsar editor: LRCLIB word sync */" not in html:
+        html = _replace_once(
+            html,
+            "        if (hit.instrumental) return { synced: null, plain: ['(Instrumental)'], source: 'lrclib' };\n        if (hit.syncedLyrics){",
+            "        if (hit.instrumental) return { synced: null, plain: ['(Instrumental)'], source: 'lrclib' };\n"
+            "        /* Pulsar editor: LRCLIB word sync */\n"
+            "        if (hit.hasWordSync && hit.lyricsfile){\n"
+            "          const wordLines = parseLyricsfile(hit.lyricsfile);\n"
+            "          if (wordLines.some(function(line){ return Array.isArray(line.words) && line.words.length; })) return { synced: wordLines, plain: null, source: 'lrclib', wordSync: true };\n"
+            "        }\n"
+            "        if (hit.syncedLyrics){",
+        )
     html = _replace_once(
         html,
-        "        if (hit.instrumental) return { synced: null, plain: ['(Instrumental)'], source: 'lrclib' };\n        if (hit.syncedLyrics){",
-        "        if (hit.instrumental) return { synced: null, plain: ['(Instrumental)'], source: 'lrclib' };\n"
-        "        /* Pulsar editor: LRCLIB word sync */\n"
-        "        if (hit.hasWordSync && hit.lyricsfile){\n"
-        "          const wordLines = parseLyricsfile(hit.lyricsfile);\n"
-        "          if (wordLines.some(function(line){ return Array.isArray(line.words) && line.words.length; })) return { synced: wordLines, plain: null, source: 'lrclib', wordSync: true };\n"
-        "        }\n"
-        "        if (hit.syncedLyrics){",
+        "          if (wordLines.some(function(line){ return Array.isArray(line.words) && line.words.length; })) return { synced: wordLines, plain: null, source: 'lrclib', wordSync: true };",
+        "          if (wordLines.some(function(line){ return Array.isArray(line.words) && line.words.length; })) return { synced: wordLines, plain: null, source: 'lrclib', wordSync: true, sourceDuration: Number(hit.duration) || 0 };",
+    )
+    html = _replace_once(
+        html,
+        "        if (hit.syncedLyrics){ const sv = parseLRC(hit.syncedLyrics); if (sv.length) return { synced: sv, plain: null, source: 'lrclib' }; }",
+        "        if (hit.syncedLyrics){ const sv = parseLRC(hit.syncedLyrics); if (sv.length) return { synced: sv, plain: null, source: 'lrclib', sourceDuration: Number(hit.duration) || 0 }; }",
+    )
+    html = _replace_once(
+        html,
+        "        if (hit.plainLyrics){ const pl = String(hit.plainLyrics).split(/\\r?\\n/).filter(x => x.trim()); if (pl.length) return { synced: null, plain: pl, source: 'lrclib' }; }",
+        "        if (hit.plainLyrics){ const pl = String(hit.plainLyrics).split(/\\r?\\n/).filter(x => x.trim()); if (pl.length) return { synced: null, plain: pl, source: 'lrclib', sourceDuration: Number(hit.duration) || 0 }; }",
     )
     html = _replace_once(
         html,

@@ -50,6 +50,33 @@ test('shiftLyrics nie modyfikuje źródła, opóźnia i przyspiesza tekst', () =
   assert.deepStrictEqual(core.shiftLyrics([{ t: 0.2, txt: 'A' }], -1), [{ t: 0, txt: 'A' }]);
 });
 
+test('częściowe dopasowanie scala tylko wybrany zakres i zachowuje słowa', () => {
+  const source = [
+    { t: 1, txt: 'przed', words: [{ t: 1, txt: 'przed', d: 0.4 }] },
+    { t: 2.5, txt: 'środek', words: [{ t: 2.5, txt: 'środek', d: 0.4 }] },
+    { t: 5, txt: 'po', words: [{ t: 5, txt: 'po', d: 0.4 }] }
+  ];
+  assert.deepStrictEqual(core.lyricsTextsInRange(source, 2, 4, 0), ['środek']);
+  const merged = core.mergeLyricsRange(source, [{ t: 3, txt: 'środek', words: [{ t: 3, txt: 'środek', d: 0.6 }] }], 2, 4, 0);
+  assert.deepStrictEqual(merged.map(line => line.t), [1, 3, 5]);
+  assert.strictEqual(merged[0].words[0].d, 0.4);
+  assert.strictEqual(merged[2].words[0].d, 0.4);
+  assert.strictEqual(source[1].t, 2.5);
+});
+
+test('szczegółowe przesunięcie zachowuje czasy słów, a pierwszy czas wybiera słowo', () => {
+  const source = [{ t: 4, txt: 'B', words: [{ t: 4.2, txt: 'B', d: 0.3 }] }, { t: 1, txt: 'A' }];
+  const shifted = core.shiftLyricsDetailed(source, 0.5);
+  assert.strictEqual(shifted[1].words[0].t, 4.7);
+  assert.strictEqual(shifted[1].words[0].d, 0.3);
+  assert.strictEqual(source[0].words[0].t, 4.2);
+  assert.strictEqual(core.firstLyricsTime(source), 1);
+  assert.strictEqual(core.firstLyricsTime([source[0]]), 4.2);
+  const preview = core.shiftLyricsDetailed([{ t: 1, txt: 'A', words: [{ t: 1.2, txt: 'A' }] }], -1.25, false);
+  assert.strictEqual(preview[0].t, -0.25);
+  assert.strictEqual(preview[0].words[0].t, -0.05);
+});
+
 test('remapLyrics stosuje offset, skraca oś i pomija tekst z wycinka', () => {
   const lines = [{ t: 1, txt: 'przed' }, { t: 2.5, txt: 'w ciszy' }, { t: 4, txt: 'po' }, { t: 6, txt: 'koniec' }];
   const out = core.remapLyrics(lines, [{ start: 2, end: 4 }], 0.5, 8);

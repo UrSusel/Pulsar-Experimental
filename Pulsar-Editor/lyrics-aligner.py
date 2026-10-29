@@ -58,16 +58,24 @@ def validate_request(raw: dict) -> dict:
     model_root = str(raw.get("model_root") or "").strip()
     if not model_root:
         raise AlignmentError("Brak folderu modeli AI")
+    audio_start = raw.get("audio_start", 0)
+    audio_end = raw.get("audio_end")
+    if not _finite(audio_start) or audio_start < 0:
+        raise AlignmentError("Niepoprawny początek zakresu audio")
+    if audio_end is not None and (not _finite(audio_end) or audio_end <= audio_start):
+        raise AlignmentError("Niepoprawny koniec zakresu audio")
     return {
         "audio_path": audio_path,
         "lines": lines,
         "language": language,
         "model": model,
         "model_root": model_root,
+        "audio_start": float(audio_start),
+        "audio_end": float(audio_end) if audio_end is not None else None,
     }
 
 
-def _segment_words(segment: dict) -> list[dict]:
+def _segment_words(segment: dict, time_offset: float = 0) -> list[dict]:
     words = []
     for raw in segment.get("words") or []:
         if not isinstance(raw, dict):
@@ -76,7 +84,7 @@ def _segment_words(segment: dict) -> list[dict]:
         start = raw.get("start")
         if not isinstance(text, str) or not text or not _finite(start) or start < 0:
             continue
-        item = {"t": round(float(start), 3), "txt": text}
+        item = {"t": round(float(start + time_offset), 3), "txt": text}
         end = raw.get("end")
         if _finite(end) and end > start:
             item["d"] = round(float(end - start), 3)
@@ -89,7 +97,7 @@ def _segment_words(segment: dict) -> list[dict]:
     return words
 
 
-def convert_result(result: dict, source_lines: list[str]) -> dict:
+def convert_result(result: dict, source_lines: list[str], time_offset: float = 0) -> dict:
     """Convert Stable-TS output without ever estimating missing timestamps."""
     segments = result.get("segments") if isinstance(result, dict) else None
     if not isinstance(segments, list) or not segments:
@@ -99,9 +107,11 @@ def convert_result(result: dict, source_lines: list[str]) -> dict:
     for index, segment in enumerate(segments):
         if not isinstance(segment, dict):
             continue
-        words = _segment_words(segment)
+        words = _segment_words(segment, time_offset)
         start = segment.get("start")
-        if not _finite(start) or start < 0:
+        if _finite(start) and start >= 0:
+            start = float(start + time_offset)
+        else:
             start = words[0]["t"] if words else None
         if start is None:
             continue
@@ -118,8 +128,8 @@ def convert_result(result: dict, source_lines: list[str]) -> dict:
             continue
         item = {"t": round(float(start), 3), "txt": text}
         end = segment.get("end")
-        if _finite(end) and end > start:
-            item["d"] = round(float(end - start), 3)
+        if _finite(end) and end > start - time_offset:
+            item["d"] = round(float(end - (start - time_offset)), 3)
         if words and _text_key("".join(w["txt"] for w in words)) == _text_key(text):
             item["words"] = words
             for raw in segment.get("words") or []:
@@ -196,9 +206,15 @@ def run_alignment(raw_request: dict) -> dict:
     import stable_whisper  # noqa: PLC0415
     from faster_whisper.audio import decode_audio  # noqa: PLC0415
 
-    audio = decode_audio(request["audio_path"], sampling_rate=16000)
+    decoded = decode_audio(request["audio_path"], sampling_rate=16000)
+    audio_start = request["audio_start"]
+    audio_end = request["audio_end"]
+    first = int(round(audio_start * 16000))
+    last = int(round(audio_end * 16000)) if audio_end is not None else int(getattr(decoded, "size", 0))
+    last = min(int(getattr(decoded, "size", 0)), last)
+    audio = decoded[first:last]
     if getattr(audio, "size", 0) < 16000:
-        raise AlignmentError("Nagranie jest zbyt krótkie do analizy")
+        raise AlignmentError("Wybrany fragment jest zbyt krótki do analizy (minimum 1 s)")
     threads = max(1, min(8, (os.cpu_count() or 2) // 2))
     import torch  # noqa: PLC0415
     torch.set_num_threads(threads)
@@ -213,13 +229,15 @@ def run_alignment(raw_request: dict) -> dict:
     )
     if result is None:
         raise AlignmentError("AI nie potrafiło dopasować tego tekstu")
-    payload = convert_result(result.to_dict(), request["lines"])
+    payload = convert_result(result.to_dict(), request["lines"], time_offset=audio_start)
     payload.update({
         "engine": "stable-ts",
         "backend": "faster-whisper",
         "model": request["model"],
         "language": request["language"],
         "duration": round(float(audio.size) / 16000.0, 3),
+        "audio_start": audio_start,
+        "audio_end": audio_end,
     })
     return payload
 
