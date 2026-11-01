@@ -101,6 +101,7 @@ def build(archive: Path, out_dir: Path, bridge: Path, drive_sync: Path) -> None:
         # Edytor audio jest funkcją desktopową; nie zostawiaj w Androidzie
         # odnośników do zasobów, których ten build celowo nie kopiuje.
         '  <link rel="stylesheet" href="audio-editor.css">\n',
+        '  <script src="i18n.js"></script>\n',
         '  <script src="editor-core.js"></script>\n',
         '  <script src="audio-editor.js"></script>\n',
         '  <link rel="stylesheet" href="extras.css">\n',

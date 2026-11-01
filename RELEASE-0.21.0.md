@@ -11,6 +11,7 @@ Portable desktop music player for Windows and Linux. This release adds applicati
 - **Auto-DJ 2.0** — listening moods, “more like this”, artist/genre diversity, undoable DJ history and a short explanation for each pick.
 - **Safer automatic backups** — scheduled `.pulsarlib` copies, rotation, safety snapshots before restore or major library changes and an additional warning before deleting a track whose only file is inside the library.
 - **AI setup fixes** — repair an incomplete virtual environment without pip and keep PyAV within the range compatible with the pinned Faster-Whisper version.
+- **Complete PL/EN/ES localization for the new features** — editor, AI, Auto-DJ, backups and update checks follow the selected interface language immediately, including dynamic status messages and native error descriptions.
 
 ## Download
 

@@ -35,6 +35,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 - 📻 **Auto-DJ 2.0** — calm/focus/workout/party/discovery moods, “more like this”, artist/genre diversity, undoable history and a short reason for every pick
 - 🔌 **Truly portable** — keep it on any drive, even a USB stick; identical experience on Windows and Linux
 - 🔄 **App update checks** — automatic checks every 12 hours and a manual button compare the installed version with GitHub Releases; Pulsar only shows a download link and never installs an update by itself
+- 🌍 **PL / EN / ES localization** — all newly added editor, AI, Auto-DJ, backup and update UI follows the selected language without a restart
 - 🪟 **Windows integration** — tray icon with playback menu, optional close-to-tray, always-on-top, compact mini mode
 - ⏯️ **Resume where you left off** — last track and position are restored on start
 - 🔁 **Gapless playback** — live albums and DJ mixes flow on without a gap

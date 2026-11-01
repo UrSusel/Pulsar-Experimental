@@ -39,6 +39,7 @@ CONFIG = "neutralino.config.json"
 VERSION_MANIFEST = EXTRAS_DIR / "app-version.json"
 APP_VERSION = json.loads(VERSION_MANIFEST.read_text(encoding="utf-8"))["version"]
 ASSETS = {
+    "resources/i18n.js": EXTRAS_DIR / "i18n.js",
     "resources/app-version.json": VERSION_MANIFEST,
     "resources/app-updates.js": EXTRAS_DIR / "app-updates.js",
     "resources/editor-core.js": EDITOR_DIR / "editor-core.js",
@@ -62,6 +63,7 @@ CSS_TAG = (
     '  <link rel="stylesheet" href="extras.css">\n'
 )
 SCRIPT_TAGS = (
+    '  <script src="i18n.js"></script>\n'
     '  <script src="editor-core.js"></script>\n'
     '  <script src="dj-core.js"></script>\n'
     '  <script src="backup-core.js"></script>\n'
