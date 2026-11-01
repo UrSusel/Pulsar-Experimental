@@ -1,4 +1,4 @@
-# Pulsar Extras — Auto-DJ 2.0 i bezpieczne kopie
+# Pulsar Extras — Auto-DJ 2.0, kopie i aktualizacje
 
 Otwarte rozszerzenia wspólnej paczki desktopowej Windows/Linux. Są dołączane do `resources.neu` przez `Pulsar-Editor/tools/build_desktop_editor.py`; Android usuwa ich znaczniki i zasoby.
 
@@ -35,6 +35,12 @@ Migawka ochronna powstaje przed:
 
 Przy usuwaniu jedynej lokalnej kopii pojawia się osobne ostrzeżenie z nazwami utworów. Jeśli migawka ochronna się nie powiedzie, użytkownik musi świadomie zaakceptować kontynuację. Rotacja sortuje wersje po czasie modyfikacji, a unikalne nazwy zapobiegają nadpisaniu kopii z tej samej sekundy.
 
+## Aktualizacje samego Pulsara
+
+W **Ustawienia → Pobieranie → Pulsar** karta pokazuje zainstalowaną wersję z `app-version.json`. Domyślnie najwyżej raz na 12 godzin aplikacja odpytuje `https://api.github.com/repos/UrSusel/Pulsar-Desktop/releases/latest`; przycisk **Sprawdź aktualizacje** wykonuje kontrolę na żądanie. Tag `vX.Y.Z` lub `X.Y.Z` jest porównywany jako SemVer. Nowsze wydanie pokazuje komunikat i link do GitHuba — **Pulsar nie pobiera ani nie instaluje aktualizacji automatycznie**. Stary, nienumeryczny tag jest zgłaszany jako nieznana wersja, a nie jako potwierdzenie aktualności. Automatyczne sprawdzanie można wyłączyć niezależnie od aktualizacji `yt-dlp`.
+
+Endpoint `/releases/latest` wymaga opublikowanego, stabilnego GitHub Release. Sam tag Git albo draft nie wystarczy; kolejne wydania powinny mieć tagi zgodne z SemVer, np. `v0.21.0`.
+
 ## Natywny mostek
 
 `desktop-bridge.js` wykrywa FFmpeg obok aplikacji i w `PATH`, udostępnia bezpieczne argumenty procesu, zapis blobów w kawałkach 8 MB, pliki tymczasowe, dialogi oraz operacje potrzebne kopiom. Nie uruchamia usługi HTTP i nie korzysta z zewnętrznego backendu.
@@ -46,12 +52,15 @@ Dla ręcznego eksperymentu napisów mostek udostępnia ograniczone `lyricsAiCapa
 - `dj-core.js`, `auto-dj.js` — czysty selektor oraz UI/historia;
 - `backup-core.js`, `library-backup.js` — harmonogram, nazwy, rotacja, UI i strażnicy operacji;
 - `desktop-bridge.js` — Neutralino/FFmpeg/system plików;
+- `app-updates.js`, `app-version.json` — kontrola GitHub Releases i źródło wersji aplikacji;
 - `extras.css` — wspólny wygląd kart;
 - `tools/runtime_patches.py` — idempotentne zaczepy wyboru DJ, backupu, usuwania i analizy fali;
-- `tools/test_extras.js` — testy nastrojów, podobieństwa, różnorodności, historii, harmonogramu i rotacji.
+- `tools/test_extras.js` — testy nastrojów, podobieństwa, różnorodności, historii, harmonogramu i rotacji;
+- `tools/test_app_updates.js` — testy SemVer, odpowiedzi GitHub, błędów i harmonogramu aktualizacji.
 
 ```bash
 node Pulsar-Extras/tools/test_extras.js
+node Pulsar-Extras/tools/test_app_updates.js
 python Pulsar-Editor/tools/build_desktop_editor.py --check
 python Pulsar-Editor/tools/test_desktop_editor.py
 ```

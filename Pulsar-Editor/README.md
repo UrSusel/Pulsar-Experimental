@@ -65,6 +65,7 @@ node Pulsar-Editor/tools/test_editor_core.js
 node Pulsar-Editor/tools/test_lyrics_core.js
 python Pulsar-Editor/tools/test_lyrics_aligner.py
 node Pulsar-Extras/tools/test_extras.js
+node Pulsar-Extras/tools/test_app_updates.js
 python Pulsar-Editor/tools/test_desktop_editor.py
 python Pulsar-Sync/tools/test_desktop_bundle.py
 python Pulsar-Sync/tools/refresh_download_zips.py
@@ -78,6 +79,6 @@ NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/e
 EDITOR_DESKTOP=1 NODE_PATH=<node_modules> node Pulsar-Editor/tools/test_editor_browser.mjs .tmp/editor-test/resources
 ```
 
-E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, stopniowe wypełnianie słowa w zwykłym panelu (kontrola 25/50% i gradientu), fallback liniowy, wybór Lyrics+ po odpowiedzi LRCLIB bez słów, brak osobnej nakładki karaoke, zapis/przywrócenie wyniku AI, kalibrację pierwszego słowa, ostrzeżenie o możliwej innej wersji, porównanie A/B przed zapisem, odrzucenie i scalenie wybranego zakresu, potwierdzone zastąpienie źródłowego word-sync i blokadę bez zgody, Auto-DJ oraz — w wariancie desktopowym — pełny przepływ AI przez mostek, naprawę `venv` bez pip i niezgodnego PyAV, natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka. Analogicznie stub helpera AI sprawdza kontrakt, UI i zapis bez pobierania PyTorch/modelu — nie jest testem trafności alignmentu.
+E2E używa syntetycznego WAV z ciszą i LRC. Sprawdza cięcia, dokładne granice, zoom, zapis/wznowienie sesji, podgląd, WAV, metadane, napisy po restarcie, stopniowe wypełnianie słowa w zwykłym panelu (kontrola 25/50% i gradientu), fallback liniowy, wybór Lyrics+ po odpowiedzi LRCLIB bez słów, brak osobnej nakładki karaoke, zapis/przywrócenie wyniku AI, kalibrację pierwszego słowa, ostrzeżenie o możliwej innej wersji, porównanie A/B przed zapisem, odrzucenie i scalenie wybranego zakresu, potwierdzone zastąpienie źródłowego word-sync i blokadę bez zgody, Auto-DJ, ręczne sprawdzanie wydań Pulsara (nowszy, aktualny i nienumeryczny tag) oraz — w wariancie desktopowym — pełny przepływ AI przez mostek, naprawę `venv` bez pip i niezgodnego PyAV, natywny zapis, FFmpeg, tryb dużego pliku, rotację `.pulsarlib` i ostrzeżenie przed usunięciem jedynej kopii. Stub FFmpeg testuje integrację i argumenty; nie jest testem zgodności samego kodeka. Analogicznie stub helpera AI sprawdza kontrakt, UI i zapis bez pobierania PyTorch/modelu — nie jest testem trafności alignmentu.
 
 Android pomija desktopowe zasoby edytora i rozszerzeń w `Pulsar-Android/tools/build_web_assets.py`. Wspólny parser i renderer napisów są częścią inline `index.html`, więc czasy słów działają także na telefonie bez kopiowania desktopowych assetów.

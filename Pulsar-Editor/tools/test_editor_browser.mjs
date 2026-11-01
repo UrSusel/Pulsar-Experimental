@@ -170,6 +170,8 @@ async function nativeFs(op, argsJson) {
 let browser;
 let outputSize = 0;
 let mockLyricsProviders = false;
+let mockAppRelease = { tag_name: 'v0.21.0', html_url: 'https://github.com/UrSusel/Pulsar-Desktop/releases/tag/v0.21.0' };
+const appUpdateRequests = [];
 const lyricsProviderRequests = [];
 const lrclibLineOnly = {
   id: 1133018, duration: 6, hasWordSync: false,
@@ -199,7 +201,10 @@ try {
   page.on('request', request => {
     const url = request.url();
     if (/^https?:/.test(url) && !url.startsWith(origin)) {
-      if (mockLyricsProviders && (url.startsWith('https://lrclib.net/') || url.startsWith('https://lyricsplus.prjktla.my.id/'))) {
+      if (url === 'https://api.github.com/repos/UrSusel/Pulsar-Desktop/releases/latest') {
+        appUpdateRequests.push(url);
+        request.respond({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(mockAppRelease) }).catch(() => {});
+      } else if (mockLyricsProviders && (url.startsWith('https://lrclib.net/') || url.startsWith('https://lyricsplus.prjktla.my.id/'))) {
         lyricsProviderRequests.push(url);
         const body = url.startsWith('https://lrclib.net/') ? lrclibLineOnly : lyricsPlusWord;
         request.respond({
@@ -218,6 +223,7 @@ try {
       localStorage.setItem('playerNetEnrich', '0');
       localStorage.setItem('playerSkipSilence', '0');
       localStorage.setItem('playerNorm', '0');
+      localStorage.setItem('pulsarAppUpdateCheckedAt', String(Date.now()));
     }
   }, DESKTOP, TMP);
   if (DESKTOP) await page.exposeFunction('__nfs', nativeFs);
@@ -628,6 +634,39 @@ try {
   check('API bez potwierdzenia nadal chroni źródłowy word-sync', /potwierdzenia/.test(aiSourceOverride.guard), aiSourceOverride.guard);
   check('ręczne dopasowanie może zastąpić źródłowy word-sync i zachowuje kopię', !aiSourceOverride.error && aiSourceOverride.applied && aiSourceOverride.applied.source === 'ai' && aiSourceOverride.applied.previousLyrics && aiSourceOverride.applied.previousLyrics.source === 'lyricsplus', aiSourceOverride);
   check('przywrócenie odzyskuje źródłowy word-sync po ręcznym zastąpieniu', aiSourceOverride.restored && aiSourceOverride.restored.source === 'lyricsplus' && aiSourceOverride.restored.wordSync === true && aiSourceOverride.restored.synced[0].words.length === 3, aiSourceOverride.restored);
+
+  check('manifest i karta pokazują zainstalowaną wersję 0.21.0', await poll(() => page.evaluate(() => {
+    const version = document.getElementById('pupdateVersion');
+    return !!window.PulsarUpdates && !!version && version.textContent.startsWith('0.21.0') && document.getElementById('pupdateAuto').checked;
+  })));
+  mockAppRelease = { tag_name: 'v0.22.0', html_url: 'https://github.com/UrSusel/Pulsar-Desktop/releases/tag/v0.22.0' };
+  await page.evaluate(() => { document.getElementById('settingsMenu').hidden = false; document.getElementById('pupdateCheck').click(); });
+  check('ręczne sprawdzenie pokazuje nowszy release i bezpieczny link', await poll(() => page.evaluate(() => {
+    const result = PulsarUpdates.state(), link = document.getElementById('pupdateDownload');
+    return result && result.updateAvailable && result.latest === '0.22.0' && !link.hidden && link.href === 'https://github.com/UrSusel/Pulsar-Desktop/releases/tag/v0.22.0' && link.target === '_blank' && link.rel.includes('noopener') && /0\.22\.0/.test(document.getElementById('pupdateStatus').textContent);
+  })));
+  if (DESKTOP) {
+    check('desktop otwiera release przez natywny system, nie wewnętrzny webview', await page.evaluate(() => {
+      const link = document.getElementById('pupdateDownload');
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+      link.dispatchEvent(event);
+      return event.defaultPrevented;
+    }));
+  }
+  mockAppRelease = { tag_name: 'v0.21.0', html_url: 'https://github.com/UrSusel/Pulsar-Desktop/releases/tag/v0.21.0' };
+  await page.evaluate(() => document.getElementById('pupdateCheck').click());
+  check('release równy zainstalowanej wersji nie oferuje pobierania', await poll(() => page.evaluate(() => {
+    const result = PulsarUpdates.state();
+    return result && !result.error && !result.updateAvailable && result.latest === '0.21.0' && document.getElementById('pupdateDownload').hidden && /najnowszą wersję/.test(document.getElementById('pupdateStatus').textContent);
+  })));
+  mockAppRelease = { tag_name: 'Linux', name: 'Release 0.20.12', html_url: 'https://github.com/UrSusel/Pulsar-Desktop/releases/tag/Linux' };
+  await page.evaluate(() => document.getElementById('pupdateCheck').click());
+  check('nienumeryczny tag release jest zgłaszany jako nieznana wersja', await poll(() => page.evaluate(() => {
+    const result = PulsarUpdates.state();
+    return result && result.error === 'invalid-tag' && !result.updateAvailable && document.getElementById('pupdateDownload').hidden && /nie ma tagu wersji/.test(document.getElementById('pupdateStatus').textContent);
+  })));
+  check('UI odpytuje wyłącznie endpoint latest właściwego repozytorium', appUpdateRequests.length === 3 && appUpdateRequests.every(url => url === 'https://api.github.com/repos/UrSusel/Pulsar-Desktop/releases/latest'), appUpdateRequests);
+  await page.evaluate(() => { document.getElementById('settingsMenu').hidden = true; });
 
   if (DESKTOP) {
     const bridgeGuard = await page.evaluate(async () => {

@@ -53,6 +53,10 @@ The same **Lyrics** tab can manually align existing lyrics to the local audio at
 
 AI files live in `$XDG_CACHE_HOME/pulsar/lyrics-ai` or `~/.cache/pulsar/lyrics-ai`, not in the app folder. The result is marked experimental and saved with the track; **Restore source lyrics** brings back the saved source even offline. Singing over a full mix can still align imperfectly, so check the result before relying on it.
 
+## Application updates
+
+**Settings → Downloads → Pulsar** shows the installed version and checks the published releases at `UrSusel/Pulsar-Desktop`. Checks run at most once every 12 hours by default, or on demand with **Check for updates**. A newer stable release is shown with a download link; Pulsar never downloads or installs an application update automatically. You can disable the automatic checks independently of `yt-dlp` updates.
+
 ## Auto-DJ and automatic backups
 
 **Settings → Playback → Auto-DJ 2.0** provides moods, “more like this”, artist/genre diversity, a reason for the next pick and undoable DJ history.

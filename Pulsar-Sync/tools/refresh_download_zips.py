@@ -3,9 +3,9 @@
 
 Paczki w repo to to, co ludzie ściągają z GitHuba, więc muszą mieć tę samą
 warstwę synchronizacji, co foldery Pulsar-Linux/ i Pulsar-Windows/. Skrypt
-podmienia w archiwum tylko pliki, które się zmieniły (`resources.neu`, a na
-Linuksie także README.md), zostawiając wszystkie pozostałe wpisy — łącznie z
-prawami dostępu i datami — bez zmian.
+podmienia w archiwum tylko pliki, które się zmieniły (`resources.neu`, stronę
+`index.html` w paczce Windows, a na Linuksie także README.md), zostawiając
+wszystkie pozostałe wpisy — łącznie z prawami dostępu i datami — bez zmian.
 
   python Pulsar-Sync/tools/refresh_download_zips.py           # odśwież
   python Pulsar-Sync/tools/refresh_download_zips.py --check   # tylko sprawdź
@@ -28,6 +28,7 @@ TARGETS = {
     },
     "Pulsar-Desktop.zip": {
         "resources.neu": REPO / "Pulsar-Windows" / "resources.neu",
+        "index.html": REPO / "index.html",
     },
 }
 

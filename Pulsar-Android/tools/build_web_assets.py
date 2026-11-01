@@ -107,6 +107,7 @@ def build(archive: Path, out_dir: Path, bridge: Path, drive_sync: Path) -> None:
         '  <script src="dj-core.js"></script>\n',
         '  <script src="backup-core.js"></script>\n',
         '  <script src="desktop-bridge.js"></script>\n',
+        '  <script src="app-updates.js"></script>\n',
         '  <script src="auto-dj.js"></script>\n',
         '  <script src="library-backup.js"></script>\n',
     ):

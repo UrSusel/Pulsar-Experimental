@@ -2,7 +2,7 @@
 
 A free, **portable** music player for **Windows and Linux** with a pulsar-nebula soul: search YouTube, save full tracks **with cover art and tags embedded**, sing along with synced lyrics, and watch audio-reactive visualizers. No installer, no command line — one folder that just runs.
 
-![version](https://img.shields.io/badge/version-0.20.12-4de3ff) ![platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20%C2%B7%20Linux%20x64-a06bff) ![size](https://img.shields.io/badge/size-%7E20%20MB%20(Win)%20%2F%20%7E7%20MB%20(Linux)-ff5fd0)
+![version](https://img.shields.io/badge/version-0.21.0-4de3ff) ![platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20%C2%B7%20Linux%20x64-a06bff) ![size](https://img.shields.io/badge/size-%7E20%20MB%20(Win)%20%2F%20%7E7%20MB%20(Linux)-ff5fd0)
 
 ## ⬇️ Download
 
@@ -34,6 +34,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 - ⏱️ **Sleep timer & stats** — gentle fade-out, favourites, play counts, smart sorting
 - 📻 **Auto-DJ 2.0** — calm/focus/workout/party/discovery moods, “more like this”, artist/genre diversity, undoable history and a short reason for every pick
 - 🔌 **Truly portable** — keep it on any drive, even a USB stick; identical experience on Windows and Linux
+- 🔄 **App update checks** — automatic checks every 12 hours and a manual button compare the installed version with GitHub Releases; Pulsar only shows a download link and never installs an update by itself
 - 🪟 **Windows integration** — tray icon with playback menu, optional close-to-tray, always-on-top, compact mini mode
 - ⏯️ **Resume where you left off** — last track and position are restored on start
 - 🔁 **Gapless playback** — live albums and DJ mixes flow on without a gap
@@ -72,7 +73,7 @@ Pulsar-Windows/     the runnable Windows build   (pulsar.exe · resources.neu ·
 Pulsar-Linux/       the runnable Linux build     (pulsar · resources.neu · yt-dlp · README.md)
 Pulsar-Sync/        shared cloud library layer  (engine, adapters, build + tests)
 Pulsar-Editor/      desktop audio/LRC editor    (UI, audio engine, build + tests)
-Pulsar-Extras/      Auto-DJ 2.0, safe backups  (native bridge, UI + tests)
+Pulsar-Extras/      Auto-DJ, backups, updates  (native bridge, UI + tests)
 index.html          the project / download page  (served via GitHub Pages)
 Pulsar-Desktop.zip  packaged Windows release
 Pulsar-Linux.zip    packaged Linux release

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
+import re
 import shutil
 import sys
 import tempfile
@@ -33,7 +35,12 @@ extras_runtime_patched = _EXTRAS_PATCHES.extras_runtime_patched
 import neu  # noqa: E402
 
 INDEX = "resources/index.html"
+CONFIG = "neutralino.config.json"
+VERSION_MANIFEST = EXTRAS_DIR / "app-version.json"
+APP_VERSION = json.loads(VERSION_MANIFEST.read_text(encoding="utf-8"))["version"]
 ASSETS = {
+    "resources/app-version.json": VERSION_MANIFEST,
+    "resources/app-updates.js": EXTRAS_DIR / "app-updates.js",
     "resources/editor-core.js": EDITOR_DIR / "editor-core.js",
     "resources/audio-editor.js": EDITOR_DIR / "audio-editor.js",
     "resources/audio-editor.css": EDITOR_DIR / "audio-editor.css",
@@ -59,6 +66,7 @@ SCRIPT_TAGS = (
     '  <script src="dj-core.js"></script>\n'
     '  <script src="backup-core.js"></script>\n'
     '  <script src="desktop-bridge.js"></script>\n'
+    '  <script src="app-updates.js"></script>\n'
     '  <script src="audio-editor.js"></script>\n'
     '  <script src="auto-dj.js"></script>\n'
     '  <script src="library-backup.js"></script>\n'
@@ -87,7 +95,17 @@ def patch_asset_tags(html: str) -> str:
 
 def expected_index(original: bytes) -> bytes:
     html = original.decode("utf-8")
+    html = re.sub(r"Build \d+\.\d+\.\d+", f"Build {APP_VERSION}", html)
     return patch_asset_tags(apply_extras_runtime_patches(apply_editor_runtime_patches(html))).encode("utf-8")
+
+
+def expected_config(original: bytes) -> bytes:
+    config = json.loads(original)
+    config["version"] = APP_VERSION
+    window = config.setdefault("modes", {}).setdefault("window", {})
+    window["title"] = f"Pulsar — Build {APP_VERSION}"
+    # Ten format jest identyczny ze źródłowym configiem, więc build jest idempotentny.
+    return json.dumps(config, indent=2).encode("utf-8")
 
 
 def run(platform: str, archive: Path, check_only: bool) -> bool:
@@ -102,16 +120,17 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
         work = Path(tmp) / "src"
         data, header, base = neu.read_archive(str(archive))
         files = {rel: neu.file_bytes(data, base, entry) for rel, entry in neu.iter_files(header)}
-        if INDEX not in files:
-            raise ValueError("w archiwum brak resources/index.html")
+        if INDEX not in files or CONFIG not in files:
+            raise ValueError("w archiwum brak resources/index.html lub neutralino.config.json")
         for rel, blob in files.items():
             target = work / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(blob)
 
         patched = expected_index(files[INDEX])
+        patched_config = expected_config(files[CONFIG])
         sources_match = all(files.get(rel) == source.read_bytes() for rel, source in ASSETS.items())
-        ready = (files[INDEX] == patched and sources_match
+        ready = (files[INDEX] == patched and files[CONFIG] == patched_config and sources_match
                  and not any(rel in files for rel in LEGACY_ASSETS)
                  and editor_runtime_patched(patched.decode("utf-8"))
                  and extras_runtime_patched(patched.decode("utf-8")))
@@ -123,6 +142,7 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
             return True
 
         (work / INDEX).write_bytes(patched)
+        (work / CONFIG).write_bytes(patched_config)
         for rel in LEGACY_ASSETS:
             (work / rel).unlink(missing_ok=True)
         for rel, source in ASSETS.items():
@@ -135,7 +155,7 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
         after_data, after_header, after_base = neu.read_archive(str(rebuilt))
         after = {rel: neu.file_bytes(after_data, after_base, entry)
                  for rel, entry in neu.iter_files(after_header)}
-        allowed = {INDEX, *ASSETS.keys()}
+        allowed = {INDEX, CONFIG, *ASSETS.keys()}
         for rel, blob in files.items():
             if rel in LEGACY_ASSETS:
                 if rel in after:
@@ -145,6 +165,8 @@ def run(platform: str, archive: Path, check_only: bool) -> bool:
                 raise ValueError(f"plik {rel} zmienił się przy przebudowie")
         if after.get(INDEX) != patched:
             raise ValueError("index.html w archiwum różni się od oczekiwanego")
+        if after.get(CONFIG) != patched_config:
+            raise ValueError("neutralino.config.json różni się od oczekiwanego")
         for rel, source in ASSETS.items():
             if after.get(rel) != source.read_bytes():
                 raise ValueError(f"zasób {rel} nie zgadza się ze źródłem")
