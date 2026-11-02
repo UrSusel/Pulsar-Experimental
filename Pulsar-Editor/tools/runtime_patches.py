@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Idempotentne zaczepy edytora w zamkniętym runtime index.html."""
+"""Idempotentne zaczepy edytora w czytelnym runtime index.html."""
 from __future__ import annotations
 
 import re

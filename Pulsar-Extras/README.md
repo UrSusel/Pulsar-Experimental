@@ -1,6 +1,6 @@
 # Pulsar Extras — Auto-DJ 2.0, kopie i aktualizacje
 
-Otwarte rozszerzenia wspólnej paczki desktopowej Windows/Linux. Są dołączane do `resources.neu` przez `Pulsar-Editor/tools/build_desktop_editor.py`; Android usuwa ich znaczniki i zasoby.
+Rozszerzenia na licencji Apache-2.0 dla wspólnej paczki desktopowej Windows/Linux. Są dołączane do `resources.neu` przez `Pulsar-Editor/tools/build_desktop_editor.py`; Android usuwa ich znaczniki i zasoby.
 
 ## Auto-DJ 2.0
 

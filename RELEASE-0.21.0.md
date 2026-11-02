@@ -4,6 +4,7 @@ Portable desktop music player for Windows and Linux. This release adds applicati
 
 ## Highlights
 
+- **Open source under Apache-2.0** — the complete readable core and extension sources are included in `Pulsar-Experimental`, with a deterministic desktop source build and third-party license notices in both downloadable archives.
 - **Pulsar update checks** — the installed version is compared with the latest stable GitHub Release automatically (at most once every 12 hours) or manually in **Settings → Downloads → Pulsar**. A newer release shows a download link. Pulsar never downloads or installs an application update by itself.
 - **Word-synced lyrics in the regular lyrics panel** — enhanced LRC/LRCLIB word timing and the Lyrics+ fallback gradually fill the current word over its real duration. There is no separate karaoke overlay and no moving progress line. Standard line highlighting remains when word timing is unavailable.
 - **Experimental local AI alignment** — manually align existing lyrics to the actual recording on Windows/Linux. Includes candidate review, A/B comparison, selected-range alignment, first-word offset calibration and an explicit, restorable replacement of source word timing for music-video/studio-version mismatches. Audio and text are processed locally after the optional Python/model setup.

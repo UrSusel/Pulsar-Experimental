@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Idempotentne zaczepy Auto-DJ i bezpiecznych kopii w zamkniętym runtime."""
+"""Idempotentne zaczepy Auto-DJ i bezpiecznych kopii w runtime Pulsara."""
 from __future__ import annotations
 
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Prepare Capacitor web assets from the packed Pulsar runtime.
 
-The checked-in app remains closed-source: only the existing resources.neu
-runtime archive is read. Extracted HTML/JS is generated into ignored www/ and
-is never meant to be committed.
+The readable application sources live in Pulsar-Core and the extension modules.
+This adapter reads the built resources.neu runtime and generates platform-specific
+HTML/JS into the ignored www/ directory; generated www/ is not committed.
 """
 from __future__ import annotations
 

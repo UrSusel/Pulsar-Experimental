@@ -53,7 +53,7 @@ Sesja w `localStorage` zawiera tylko zakresy, ustawienia i zoom — nigdy dane a
 - `lyrics-aligner.py` — osobny helper forced alignmentu z leniwymi importami AI, walidacją żądania i konwerterem wyniku bez sztucznych czasów;
 - `audio-editor.js` / `audio-editor.css` — panel, zoom, granice, sesje, podgląd, eksport i ręczny eksperyment AI;
 - `tools/runtime_patches.py` — idempotentne zaczepy runtime edytora;
-- `tools/build_desktop_editor.py` — wspólny build Windows/Linux dla edytora i `Pulsar-Extras`;
+- `tools/build_desktop_editor.py` — wspólny build Windows/Linux dla rdzenia, synchronizacji, edytora i `Pulsar-Extras`, także w trybie `--from-source`;
 - `tools/test_editor_core.js`, `test_lyrics_core.js`, `test_lyrics_aligner.py`, `test_desktop_editor.py`, `test_editor_browser.mjs` — testy logiki, parserów, konwersji AI, paczek i E2E.
 
 Auto-DJ 2.0, automatyczne kopie i natywny mostek są opisane w [`Pulsar-Extras/README.md`](../Pulsar-Extras/README.md).
@@ -61,6 +61,9 @@ Auto-DJ 2.0, automatyczne kopie i natywny mostek są opisane w [`Pulsar-Extras/R
 ## Build i testy
 
 ```bash
+# Pełny build z czytelnego rdzenia i wszystkich modułów:
+python Pulsar-Editor/tools/build_desktop_editor.py --from-source
+# Albo aktualizacja istniejących archiwów podczas pracy przyrostowej:
 python Pulsar-Editor/tools/build_desktop_editor.py
 python Pulsar-Editor/tools/build_desktop_editor.py --check
 node Pulsar-Editor/tools/test_editor_core.js
