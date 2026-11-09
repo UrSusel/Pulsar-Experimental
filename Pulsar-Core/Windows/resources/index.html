@@ -1330,7 +1330,6 @@
       <button class="icon-btn" data-ic="stroke" id="autoDjBtn" title="Auto-DJ — następny utwór dobierany wg tempa i energii" aria-label="Auto-DJ"><svg viewBox="0 0 24 24"><circle cx="7" cy="14" r="4"/><circle cx="17" cy="10" r="4"/><path d="M8.2 10.4A4 4 0 0 1 11 6.05M15.8 13.6A4 4 0 0 1 13 17.95" opacity=".55"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="skipSilenceBtn" title="Pomijaj ciszę — jak w teledyskach: tnie intro, martwe przerwy i długie outro" aria-label="Pomijaj ciszę"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="lyricsBtn" title="Tekst utworu (karaoke)" aria-label="Tekst utworu"><svg viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3.5"/><path d="M8.5 21.5h7"/></svg></button>
-      <button class="icon-btn" data-ic="stroke" id="lyricsImportBtn" title="Importuj napisy do bieżącego utworu" aria-label="Importuj napisy"><svg viewBox="0 0 24 24"><path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="queueBtn" title="Na następce — kolejka odtwarzania" aria-label="Kolejka odtwarzania"><svg viewBox="0 0 24 24"><path d="M4 6h12M4 11h12M4 16h6"/><path d="M16 13l5 2.5L16 18z"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="ambientStyleBtn" title="Styl wizualizacji 3D" aria-label="Zmień styl wizualizacji 3D"><svg viewBox="0 0 24 24"><path d="M12 3l1.7 5.1a2 2 0 0 0 1.2 1.2L20 11l-5.1 1.7a2 2 0 0 0-1.2 1.2L12 19l-1.7-5.1a2 2 0 0 0-1.2-1.2L4 11l5.1-1.7a2 2 0 0 0 1.2-1.2z"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="pipBtn" title="Mini-player (Picture-in-Picture)" aria-label="Mini-player"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="7" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>
@@ -1340,7 +1339,6 @@
       </button>
       <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
       <input type="file" id="albumCoverInput" accept="image/*" hidden>
-      <input type="file" id="lyricsImportInput" accept=".lrc,.txt,text/plain" hidden>
     </div>
   </div>
 
@@ -7770,61 +7768,11 @@
     if (html !== undefined) lyricsBox.innerHTML = html;
     if (document.body.classList) document.body.classList.toggle('lyrics-side', !!lyricsOn);
   }
-  function appendLyricsTools(){
-    if (!lyricsBox) return;
-    const tools = document.createElement('div'); tools.className = 'lyrics-tools';
-    const importBtn = document.createElement('button'); importBtn.type = 'button'; importBtn.className = 'lyrics-tool-btn'; importBtn.textContent = t('Importuj napisy');
-    importBtn.disabled = currentIndex < 0 || !tracks[currentIndex];
-    importBtn.addEventListener('click', openLyricsImportPicker);
-    tools.appendChild(importBtn);
-    const restoreBtn = document.createElement('button'); restoreBtn.type = 'button'; restoreBtn.className = 'lyrics-tool-btn'; restoreBtn.textContent = t('Przywróć znalezione napisy');
-    restoreBtn.hidden = !(lyricsData && lyricsData.source === 'import');
-    restoreBtn.addEventListener('click', restoreTrackLyrics);
-    tools.appendChild(restoreBtn);
-    lyricsBox.appendChild(tools);
-  }
   function renderLyricsState(msg){
     lyricsSetBox('');
-    appendLyricsTools();
     const empty = document.createElement('div'); empty.className = 'lyrics-empty'; empty.textContent = msg;
     lyricsBox.appendChild(empty);
   }
-  async function importTrackLyrics(file){
-    const track = tracks[currentIndex];
-    if (!track || !file) return;
-    let text;
-    try { text = (await file.text()).replace(/^\uFEFF/, ''); } catch(e){ showToast(t('Nie udało się odczytać pliku z napisami')); return; }
-    const synced = parseLRC(text);
-    const plain = synced.length ? null : String(text || '').split(/\r?\n/).map(function(line){ return line.replace(/^\s*\[[^\]]+\]\s*/, '').trim(); }).filter(Boolean);
-    if (!synced.length && !plain.length){ showToast(t('Plik nie zawiera tekstu')); return; }
-    const data = { synced: synced.length ? synced : null, plain: synced.length ? null : plain, source: 'import' };
-    lyricsCache.set(track.id, data);
-    try { localStorage.setItem('playerLyrics:' + track.id, JSON.stringify(data)); } catch(e){}
-    if (tracks[currentIndex] !== track) return;
-    lyricsData = data; lyricsCurIdx = -1;
-    renderLyricsLines();
-    showToast(t('Zaimportowano napisy: ') + file.name);
-  }
-  function restoreTrackLyrics(){
-    const track = tracks[currentIndex];
-    if (!track || !lyricsData || lyricsData.source !== 'import') return;
-    lyricsCache.delete(track.id);
-    try { localStorage.removeItem('playerLyrics:' + track.id); } catch(e){}
-    lyricsData = null; lyricsCurIdx = -1;
-    fetchLyrics(track).then(function(data){ if (data) showToast(t('Przywrócono napisy online')); });
-  }
-  const lyricsImportInputEl = document.getElementById('lyricsImportInput');
-  function openLyricsImportPicker(){
-    if (currentIndex < 0 || !tracks[currentIndex]){ showToast(t('Wybierz najpierw utwór')); return; }
-    if (lyricsImportInputEl){ lyricsImportInputEl.value = ''; lyricsImportInputEl.click(); }
-  }
-  const lyricsImportBtnEl = document.getElementById('lyricsImportBtn');
-  if (lyricsImportBtnEl) lyricsImportBtnEl.addEventListener('click', openLyricsImportPicker);
-  if (lyricsImportInputEl) lyricsImportInputEl.addEventListener('change', function(){
-
-    const file = lyricsImportInputEl.files && lyricsImportInputEl.files[0];
-    if (file) importTrackLyrics(file);
-  });
   document.addEventListener('pulsar:lang', function(){ if (lyricsOn && lyricsBox) renderLyricsLines(); });
   function cleanLyricsTitle(t){
     let x = String(t || '');
@@ -7923,7 +7871,6 @@
     if (document.body.classList) document.body.classList.toggle('lyrics-side', !!lyricsOn);
     lyricsBox.innerHTML = '';
     lyricsCurIdx = -1;
-    appendLyricsTools();
     if (!lyricsData){ const empty = document.createElement('div'); empty.className = 'lyrics-empty'; empty.textContent = t('Brak tekstu'); lyricsBox.appendChild(empty); return; }
     if (lyricsData.synced){
       lyricsData.synced.forEach(function(l, i){

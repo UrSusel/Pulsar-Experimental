@@ -14,6 +14,7 @@ const entries = Object.entries(i18n.dictionary);
 check('każdy polski klucz ma angielskie i hiszpańskie tłumaczenie', entries.length > 300 && entries.every(([, value]) => value.en && value.es), entries.length);
 check('polski pozostaje językiem źródłowym', i18n.t('Sprawdź aktualizacje', 'pl') === 'Sprawdź aktualizacje');
 check('angielski i hiszpański tłumaczą statyczne etykiety', i18n.t('Sprawdź aktualizacje', 'en') === 'Check for updates' && i18n.t('Sprawdź aktualizacje', 'es') === 'Buscar actualizaciones');
+check('nowa zakładka importu ma tłumaczenia PL/EN/ES', i18n.t('Import napisów', 'pl') === 'Import napisów' && i18n.t('Import napisów', 'en') === 'Import lyrics' && i18n.t('Import napisów', 'es') === 'Importar letra');
 check('komunikat łączony tłumaczy prefiks i błąd natywny', i18n.message('Dopasowanie nie powiodło się: Plik audio nie istnieje', 'en') === 'Alignment failed: Audio file does not exist' && i18n.message('Dopasowanie nie powiodło się: Plik audio nie istnieje', 'es') === 'La sincronización falló: El archivo de audio no existe');
 check('wyjaśnienie Auto-DJ tłumaczy fragmenty bez zmiany BPM', i18n.message('Spokojnie · 140 BPM · spokojniejsze brzmienie', 'en') === 'Calm · 140 BPM · calmer sound');
 
