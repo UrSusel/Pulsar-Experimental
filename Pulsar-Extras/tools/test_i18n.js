@@ -36,6 +36,27 @@ for (const file of files) {
 }
 check('wszystkie odwołania tr() mają wpisy EN i ES', missing.length === 0, missing);
 
+// Główny runtime ma osobne słowniki, ale korzysta też ze słownika Extras.
+const corePath = path.join(__dirname, '..', '..', 'Pulsar-Core', 'Windows', 'resources', 'index.html');
+const coreSource = fs.readFileSync(corePath, 'utf8');
+const coreKeys = new Set(Object.keys(i18n.dictionary));
+for (const name of ['I18N_DICT', 'I18N_STATIC']) {
+  const block = new RegExp('var ' + name + ' = \\{([\\s\\S]*?)\\n  \\};').exec(coreSource);
+  if (!block) { missing.push('Nie znaleziono słownika ' + name); continue; }
+  for (const match of block[1].matchAll(/^\s*('(?:\\.|[^'\\])*')\s*:/gm)) {
+    try { coreKeys.add(Function('return ' + match[1])()); } catch (error) {}
+  }
+}
+const untranslated = [];
+const coreCallPattern = /\bt\(\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*\)/g;
+for (const match of coreSource.matchAll(coreCallPattern)) {
+  try {
+    const key = Function('return ' + match[1])();
+    if (!coreKeys.has(key)) untranslated.push(key);
+  } catch (error) {}
+}
+check('wszystkie stałe etykiety t() głównego runtime są przetłumaczone', untranslated.length === 0, untranslated);
+
 if (failures) {
   console.error('\n' + failures + ' testów tłumaczeń nie zaliczonych');
   process.exit(1);

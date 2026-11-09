@@ -1805,6 +1805,15 @@
     'Konwersja do MP3 niedostępna': { en: 'MP3 conversion unavailable', es: 'Conversión a MP3 no disponible' },
     'Szukam tekstu…': { en: 'Looking for lyrics…', es: 'Buscando la letra…' },
     'Brak tekstu dla tego utworu': { en: 'No lyrics for this track', es: 'Sin letra para esta canción' },
+    'Nie udało się odtworzyć pliku': { en: 'Could not play the file', es: 'No se pudo reproducir el archivo' },
+    'Brak tekstu': { en: 'No lyrics loaded', es: 'No hay letra cargada' },
+    'Importuj napisy': { en: 'Import lyrics', es: 'Importar letra' },
+    'Przywróć znalezione napisy': { en: 'Restore found lyrics', es: 'Restaurar letra encontrada' },
+    'Wybierz najpierw utwór': { en: 'Choose a track first', es: 'Elige una canción primero' },
+    'Nie udało się odczytać pliku z napisami': { en: 'Could not read the lyrics file', es: 'No se pudo leer el archivo de letra' },
+    'Plik nie zawiera tekstu': { en: 'The file contains no lyrics', es: 'El archivo no contiene letra' },
+    'Zaimportowano napisy: ': { en: 'Imported lyrics: ', es: 'Letra importada: ' },
+    'Przywrócono napisy online': { en: 'Restored online lyrics', es: 'Se restauró la letra en línea' },
     'Nie znaleziono plików audio w wybranym folderze.': { en: 'No audio files found in the chosen folder.', es: 'No se encontraron archivos de audio en la carpeta elegida.' },
     'Najpierw dodaj utwory do biblioteki.': { en: 'Add tracks to the library first.', es: 'Primero añade canciones a la biblioteca.' },
     'Nowy album': { en: 'New album', es: 'Nuevo álbum' },
@@ -6168,7 +6177,8 @@
   if (soundBtn) soundBtn.addEventListener('click', function(e){ e.stopPropagation(); ensureAudioContext(); openSoundModal(); });
 
   async function ensureTrackMeta(track){
-    if (track.resolved) return;
+    const mayContainMp4Art = /\.(m4a|m4b|mp4)$/i.test(String(track && track.file && track.file.name || ''));
+    if (track.resolved && (track.coverBlob || track.matchedImg || track.mp4CoverScanned || !mayContainMp4Art)) return;
     const index = tracks.indexOf(track);
     try {
       const id3 = await extractID3(track.file);
@@ -6176,9 +6186,14 @@
         if (id3.title) track.title = id3.title;
         if (id3.artist) track.artist = id3.artist;
         if (id3.picture && id3.picture.bytes && id3.picture.bytes.length > 50){
-          track.coverUrl = URL.createObjectURL(new Blob([id3.picture.bytes], { type: id3.picture.mime || 'image/jpeg' }));
           track.coverBlob = new Blob([id3.picture.bytes], { type: id3.picture.mime || 'image/jpeg' });
+          track.coverUrl = URL.createObjectURL(track.coverBlob);
         }
+      }
+      if (!track.coverUrl && window.PulsarTags && typeof window.PulsarTags.extractMp4Cover === 'function'){
+        const embeddedCover = await window.PulsarTags.extractMp4Cover(track.file);
+        if (embeddedCover){ track.coverBlob = embeddedCover; track.coverUrl = URL.createObjectURL(embeddedCover); }
+        if (/\.(m4a|m4b|mp4)$/i.test(String(track.file && track.file.name || ''))) track.mp4CoverScanned = true;
       }
     } catch(e){}
     if (!track.coverUrl) track.coverUrl = track.matchedImg ? URL.createObjectURL(track.matchedImg) : DEFAULT_COVER;
@@ -7730,10 +7745,59 @@
     if (html !== undefined) lyricsBox.innerHTML = html;
     if (document.body.classList) document.body.classList.toggle('lyrics-side', !!lyricsOn);
   }
-  function renderLyricsState(msg){
-    lyricsSetBox('<div class="lyrics-empty"></div>');
-    if (lyricsBox && lyricsBox.firstChild) lyricsBox.firstChild.textContent = msg;
+  function appendLyricsTools(){
+    if (!lyricsBox) return;
+    const tools = document.createElement('div'); tools.className = 'lyrics-tools';
+    const importBtn = document.createElement('button'); importBtn.type = 'button'; importBtn.className = 'lyrics-tool-btn'; importBtn.textContent = t('Importuj napisy');
+    importBtn.disabled = currentIndex < 0 || !tracks[currentIndex];
+    importBtn.addEventListener('click', function(){
+      if (currentIndex < 0 || !tracks[currentIndex]){ showToast(t('Wybierz najpierw utwór')); return; }
+      const input = document.getElementById('lyricsImportInput');
+      if (input){ input.value = ''; input.click(); }
+    });
+    tools.appendChild(importBtn);
+    const restoreBtn = document.createElement('button'); restoreBtn.type = 'button'; restoreBtn.className = 'lyrics-tool-btn'; restoreBtn.textContent = t('Przywróć znalezione napisy');
+    restoreBtn.hidden = !(lyricsData && lyricsData.source === 'import');
+    restoreBtn.addEventListener('click', restoreTrackLyrics);
+    tools.appendChild(restoreBtn);
+    lyricsBox.appendChild(tools);
   }
+  function renderLyricsState(msg){
+    lyricsSetBox('');
+    appendLyricsTools();
+    const empty = document.createElement('div'); empty.className = 'lyrics-empty'; empty.textContent = msg;
+    lyricsBox.appendChild(empty);
+  }
+  async function importTrackLyrics(file){
+    const track = tracks[currentIndex];
+    if (!track || !file) return;
+    let text;
+    try { text = (await file.text()).replace(/^\uFEFF/, ''); } catch(e){ showToast(t('Nie udało się odczytać pliku z napisami')); return; }
+    const synced = parseLRC(text);
+    const plain = synced.length ? null : String(text || '').split(/\r?\n/).map(function(line){ return line.replace(/^\s*\[[^\]]+\]\s*/, '').trim(); }).filter(Boolean);
+    if (!synced.length && !plain.length){ showToast(t('Plik nie zawiera tekstu')); return; }
+    const data = { synced: synced.length ? synced : null, plain: synced.length ? null : plain, source: 'import' };
+    lyricsCache.set(track.id, data);
+    try { localStorage.setItem('playerLyrics:' + track.id, JSON.stringify(data)); } catch(e){}
+    if (tracks[currentIndex] !== track) return;
+    lyricsData = data; lyricsCurIdx = -1;
+    renderLyricsLines();
+    showToast(t('Zaimportowano napisy: ') + file.name);
+  }
+  function restoreTrackLyrics(){
+    const track = tracks[currentIndex];
+    if (!track || !lyricsData || lyricsData.source !== 'import') return;
+    lyricsCache.delete(track.id);
+    try { localStorage.removeItem('playerLyrics:' + track.id); } catch(e){}
+    lyricsData = null; lyricsCurIdx = -1;
+    fetchLyrics(track).then(function(data){ if (data) showToast(t('Przywrócono napisy online')); });
+  }
+  const lyricsImportInputEl = document.getElementById('lyricsImportInput');
+  if (lyricsImportInputEl) lyricsImportInputEl.addEventListener('change', function(){
+    const file = lyricsImportInputEl.files && lyricsImportInputEl.files[0];
+    if (file) importTrackLyrics(file);
+  });
+  document.addEventListener('pulsar:lang', function(){ if (lyricsOn && lyricsBox) renderLyricsLines(); });
   function cleanLyricsTitle(t){
     let x = String(t || '');
     x = x.replace(/[\(\[\{][^\)\]\}]*(official|video|lyric[s]?|audio|mv|m\/v|hd|4k|remaster[e d]*|visualizer|explicit|subs?|color coded|performance|teledysk|wersja|clean)[^\)\]\}]*[\)\]\}]/gi, ' ');
@@ -7776,6 +7840,7 @@
       renderLyricsLines();
       return lyricsData;
     }
+    lyricsData = null;
     renderLyricsState(t('Szukam tekstu…'));
     let data = null;
     try {
@@ -7830,7 +7895,8 @@
     if (document.body.classList) document.body.classList.toggle('lyrics-side', !!lyricsOn);
     lyricsBox.innerHTML = '';
     lyricsCurIdx = -1;
-    if (!lyricsData){ lyricsBox.innerHTML = '<div class="lyrics-empty">Brak tekstu</div>'; return; }
+    appendLyricsTools();
+    if (!lyricsData){ const empty = document.createElement('div'); empty.className = 'lyrics-empty'; empty.textContent = t('Brak tekstu'); lyricsBox.appendChild(empty); return; }
     if (lyricsData.synced){
       lyricsData.synced.forEach(function(l, i){
         const d = document.createElement('div');
