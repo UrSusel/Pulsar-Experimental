@@ -1330,6 +1330,7 @@
       <button class="icon-btn" data-ic="stroke" id="autoDjBtn" title="Auto-DJ — następny utwór dobierany wg tempa i energii" aria-label="Auto-DJ"><svg viewBox="0 0 24 24"><circle cx="7" cy="14" r="4"/><circle cx="17" cy="10" r="4"/><path d="M8.2 10.4A4 4 0 0 1 11 6.05M15.8 13.6A4 4 0 0 1 13 17.95" opacity=".55"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="skipSilenceBtn" title="Pomijaj ciszę — jak w teledyskach: tnie intro, martwe przerwy i długie outro" aria-label="Pomijaj ciszę"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="lyricsBtn" title="Tekst utworu (karaoke)" aria-label="Tekst utworu"><svg viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3.5"/><path d="M8.5 21.5h7"/></svg></button>
+      <button class="icon-btn" data-ic="stroke" id="lyricsImportBtn" title="Importuj napisy do bieżącego utworu" aria-label="Importuj napisy"><svg viewBox="0 0 24 24"><path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="queueBtn" title="Na następce — kolejka odtwarzania" aria-label="Kolejka odtwarzania"><svg viewBox="0 0 24 24"><path d="M4 6h12M4 11h12M4 16h6"/><path d="M16 13l5 2.5L16 18z"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="ambientStyleBtn" title="Styl wizualizacji 3D" aria-label="Zmień styl wizualizacji 3D"><svg viewBox="0 0 24 24"><path d="M12 3l1.7 5.1a2 2 0 0 0 1.2 1.2L20 11l-5.1 1.7a2 2 0 0 0-1.2 1.2L12 19l-1.7-5.1a2 2 0 0 0-1.2-1.2L4 11l5.1-1.7a2 2 0 0 0 1.2-1.2z"/></svg></button>
       <button class="icon-btn" data-ic="stroke" id="pipBtn" title="Mini-player (Picture-in-Picture)" aria-label="Mini-player"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="7" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>
@@ -1527,7 +1528,7 @@
       </div>
       <div class="sm-pane" data-pane="net">
         <h2 class="sm-pane-title">Pobieranie</h2>
-        <div class="sm-card"><h3 class="sm-cap">Zapis utworów z sieci</h3><button type="button" class="sm-btn" id="smNetFolderBtn" title="Gdzie zapisują się utwory pobrane z sieci (podfolder = źródło)">Folder zapisu z sieci</button><button type="button" class="sm-btn" id="smNetMoveBtn" title="Zmienia folder już pobranych utworów na wybrany powyżej">Przenieś pobrane</button><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Zapisuj MP3 na dysku (mostek)</span><span class="sm-desc">Kopia każdego pobranego utworu w prawdziwym folderze</span></div><label class="switch"><input type="checkbox" id="smNetDiskToggle"><span class="slider"></span></label></div><button type="button" class="sm-btn" id="smNetDiskBtn" title="Prawdziwy folder na dysku, do którego mostek zapisuje pobrane MP3">Folder na dysku</button></div>
+        <div class="sm-card"><h3 class="sm-cap">Zapis utworów z sieci</h3><button type="button" class="sm-btn" id="smNetFolderBtn" title="Zmienia folder w bibliotece Pulsara, nie zapisuje plików na dysku">Folder w bibliotece dla pobrań</button><button type="button" class="sm-btn" id="smNetMoveBtn" title="Zmienia folder już pobranych utworów na wybrany powyżej">Przenieś pobrane</button><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Zapisz pobrany plik na dysku</span><span class="sm-desc">Dodatkowa kopia pliku pobranego z YouTube w wybranym folderze</span></div><label class="switch"><input type="checkbox" id="smNetDiskToggle"><span class="slider"></span></label></div><button type="button" class="sm-btn" id="smNetDiskBtn" title="Folder na dysku, do którego zapisywana jest kopia pobranego pliku">Folder na dysku</button></div>
         <div class="sm-card sm-desktop-only"><h3 class="sm-cap">yt-dlp</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Automatyczne aktualizacje yt-dlp</span><span class="sm-desc">Raz na dobę sprawdza nowe wydanie; przy błędzie pobierania próbuje aktualizacji</span></div><label class="switch"><input type="checkbox" id="smYtdlpAuto" checked><span class="slider"></span></label></div><button type="button" class="sm-btn" id="smYtdlpBtn" title="Pobiera najnowszą wersję yt-dlp — naprawia pobieranie, gdy YouTube coś zmieni">Aktualizuj yt-dlp</button></div>
       </div>
       <div class="sm-pane sm-desktop-only" data-pane="win">
@@ -1647,6 +1648,12 @@
     'Kolory i światło tła reagują na dźwięk': { en: 'Background colours and light react to the sound', es: 'Los colores y la luz del fondo reaccionan al sonido' },
     'Koniec utworu': { en: 'End of track', es: 'Fin de la canción' },
     'Kopia każdego pobranego utworu w prawdziwym folderze': { en: 'A copy of every downloaded track in a real folder', es: 'Una copia de cada canción descargada en una carpeta real' },
+    'Folder w bibliotece dla pobrań': { en: 'Library folder for downloads', es: 'Carpeta de biblioteca para descargas' },
+    'Zmienia folder w bibliotece Pulsara, nie zapisuje plików na dysku': { en: 'Changes the folder inside Pulsar’s library; it does not save files to disk', es: 'Cambia la carpeta dentro de la biblioteca de Pulsar; no guarda archivos en el disco' },
+    'Zapisz pobrany plik na dysku': { en: 'Save downloaded file to disk', es: 'Guardar el archivo descargado en el disco' },
+    'Dodatkowa kopia pliku pobranego z YouTube w wybranym folderze': { en: 'An extra copy of the YouTube download in the chosen folder', es: 'Una copia adicional de la descarga de YouTube en la carpeta elegida' },
+    'Folder na dysku, do którego zapisywana jest kopia pobranego pliku': { en: 'Disk folder where a copy of the downloaded file is saved', es: 'Carpeta de disco donde se guarda una copia del archivo descargado' },
+    'np. /home/nazwa/Muzyka/YouTube': { en: 'e.g. /home/username/Music/YouTube', es: 'p. ej. /home/usuario/Música/YouTube' },
     'Kopia zapasowa': { en: 'Backup', es: 'Copia de seguridad' },
     'Oba kanały grają to samo — przydatne z jedną słuchawką': { en: 'Both channels play the same — handy with one earbud', es: 'Ambos canales suenan igual — útil con un solo auricular' },
     'Okno': { en: 'Window', es: 'Ventana' },
@@ -1813,6 +1820,7 @@
     'Nie udało się odtworzyć pliku': { en: 'Could not play the file', es: 'No se pudo reproducir el archivo' },
     'Brak tekstu': { en: 'No lyrics loaded', es: 'No hay letra cargada' },
     'Importuj napisy': { en: 'Import lyrics', es: 'Importar letra' },
+    'Importuj napisy do bieżącego utworu': { en: 'Import lyrics for the current track', es: 'Importar letra para la canción actual' },
     'Przywróć znalezione napisy': { en: 'Restore found lyrics', es: 'Restaurar letra encontrada' },
     'Wybierz najpierw utwór': { en: 'Choose a track first', es: 'Elige una canción primero' },
     'Nie udało się odczytać pliku z napisami': { en: 'Could not read the lyrics file', es: 'No se pudo leer el archivo de letra' },
@@ -1824,6 +1832,8 @@
     'Nowy album': { en: 'New album', es: 'Nuevo álbum' },
     'Zmień nazwę albumu': { en: 'Rename album', es: 'Renombrar álbum' },
     'Folder na dysku dla pobranych MP3': { en: 'Disk folder for downloaded MP3s', es: 'Carpeta en disco para los MP3 descargados' },
+    'Folder na dysku dla pobranych utworów': { en: 'Disk folder for downloaded tracks', es: 'Carpeta en disco para las canciones descargadas' },
+    'Mostek zapisu na dysk jest niedostępny': { en: 'Disk-writing bridge is unavailable', es: 'El puente de escritura en disco no está disponible' },
     'Folder zapisu z sieci': { en: 'Web download folder', es: 'Carpeta de descargas de la red' },
     'np. Sieć albo Muzyka/Pobrane (podfolder źródła dodany automatycznie)': { en: 'e.g. Web or Music/Downloads (source subfolder added automatically)', es: 'p. ej. Red o Música/Descargas (subcarpeta de fuente añadida automáticamente)' },
     'Usunąć album „': { en: 'Delete album “', es: '¿Eliminar el álbum «' },
@@ -2284,7 +2294,7 @@
       var db = document.getElementById('smNetDiskBtn');
       if (db && typeof netDiskDir === 'function') db.textContent = t('Folder na dysku') + ': ' + (netDiskDir() || 'Sieć');
       var nf = document.getElementById('smNetFolderBtn');
-      if (nf && typeof netBaseFolder === 'function') nf.textContent = t('Folder zapisu z sieci') + ': ' + netBaseFolder();
+      if (nf && typeof netBaseFolder === 'function') nf.textContent = t('Folder w bibliotece dla pobrań') + ': ' + netBaseFolder();
     } catch(e){}
   }
   function setLang(v){
@@ -5428,16 +5438,17 @@
   });
   if (netBadge) netBadge.addEventListener('click', e => { if (e.target.closest('.net-badge-x')) netStopPreview(); });
 
+  function cleanDiskDir(v){ return String(v || '').trim().replace(/^['"]|['"]$/g, ''); }
   function netDiskDir(){
-    try { return (localStorage.getItem('playerNetDiskDir') || '').trim(); } catch(e){ return ''; }
+    try { return cleanDiskDir(localStorage.getItem('playerNetDiskDir') || ''); } catch(e){ return ''; }
   }
   function setNetDiskDir(v){
-    v = String(v || '').trim();
+    v = cleanDiskDir(v);
     try { if (v) localStorage.setItem('playerNetDiskDir', v); else localStorage.removeItem('playerNetDiskDir'); } catch(e){}
     return v;
   }
   async function probeDiskDir(dir){
-    const d = await netJson(BRIDGE_BASE + '/savedir?dir=' + encodeURIComponent(String(dir || '').trim().replace(/^"+|"+$/g, '')), 15000);
+    const d = await netJson(BRIDGE_BASE + '/savedir?dir=' + encodeURIComponent(cleanDiskDir(dir)), 15000);
     return d && d.ok ? { ok: true } : { ok: false, error: (d && d.error) || '' };
   }
   function migrateNetFolder(){
@@ -5462,7 +5473,7 @@
     if (!v) v = 'Sieć';
     try { localStorage.setItem('playerNetFolder', v); } catch(e){}
     const btn = document.getElementById('smNetFolderBtn');
-    if (btn) btn.textContent = t('Folder zapisu z sieci') + ': ' + v;
+    if (btn) btn.textContent = t('Folder w bibliotece dla pobrań') + ': ' + v;
     return v;
   }
   async function netImport(i, btnEl){
@@ -5493,7 +5504,15 @@
     if (!blob || !blob.size){ if (btnEl){ btnEl.disabled = false; btnEl.textContent = r.isFull ? t('Zapisz') : t('Dodaj'); } netSetHint(t('Pobieranie nie powiodło się.')); return; }
       const streamPath = String(streamUrl || '').split('?')[0].split('#')[0];
       const streamExt = (streamPath.match(/\.([a-z0-9]{2,5})$/i) || [])[1] || ytExt;
-      let ext = r.provider === 'itunes' ? 'm4a' : (streamExt || (r.provider === 'commons' ? 'ogg' : 'mp3'));
+      const mime = String(blob.type || '').split(';')[0].trim().toLowerCase();
+      const mimeExt = /audio\/(mpeg|mp3)/.test(mime) ? 'mp3'
+        : /audio\/(mp4|x-m4a)/.test(mime) ? 'm4a'
+        : /audio\/webm/.test(mime) ? 'webm'
+        : /audio\/(ogg|opus)/.test(mime) ? 'ogg'
+        : /audio\/flac/.test(mime) ? 'flac'
+        : /audio\/(wav|x-wav)/.test(mime) ? 'wav'
+        : /audio\/aac/.test(mime) ? 'aac' : '';
+      let ext = r.provider === 'itunes' ? 'm4a' : (mimeExt || streamExt || (r.provider === 'commons' ? 'ogg' : 'mp3'));
     // Okładka najpierw — dostarczana do metadanych MP3
     let coverBlob = null;
     let coverArt = r.art;
@@ -5526,19 +5545,20 @@
     renderLibrary();
     showToast(t('Dodano do biblioteki: ') + r.title + (converted ? ' (MP3)' : (r.isFull ? '' : t(' (30-sekundowy podgląd)'))));
     if (btnEl){ btnEl.textContent = converted ? '✓ MP3' : t('✓ Dodano'); btnEl.disabled = false; }
-    // Zapis MP3 na prawdziwy dysk (jeśli włączony i mostek ma ffmpeg) — toast po dodaniu, żeby był widoczny
+    // Zapisz tę samą pobraną kopię — nie uruchamiaj yt-dlp drugi raz ani nie pobieraj innego formatu.
     if (netDiskDir() && r.provider === 'youtube' && (r.ytId || r.id)){
-      if (!ytBridgeOk){ try { await ytBridgePing(true); } catch(e){} }
-      if (!ytBridgeOk){
-        showToast(t('Mostek nie działa — zapis na dysku pominięty'));
-      } else {
-        try {
-          const sd = await netJson(BRIDGE_BASE + '/mp3save?id=' + encodeURIComponent(r.ytId || r.id) + '&dir=' + encodeURIComponent(netDiskDir()), 300000);
-          if (sd && sd.ok && sd.file) showToast(t('💾 Zapisano na dysku: ') + sd.file);
-          else if (sd && sd.error) showToast(t('Dysk: ') + sd.error);
-        } catch(e){ showToast(t('Dysk: ') + ((e && e.message) || t('błąd zapisu'))); }
-      }
+      try {
+        const fsBridge = window.__pulsarFs;
+        if (!fsBridge || typeof fsBridge.writeBinary !== 'function') throw new Error(t('Mostek zapisu na dysk jest niedostępny'));
+        const dir = netDiskDir();
+        const windowsPath = /^[a-z]:[\\/]/i.test(dir) || dir.indexOf('\\') >= 0;
+        const sep = windowsPath ? '\\' : '/';
+        const target = dir.replace(/[\\/]+$/, '') + sep + safeName + '.' + ext;
+        await fsBridge.writeBinary(target, await blobBytes(finalBlob));
+        showToast(t('💾 Zapisano na dysku: ') + target.split(/[\\/]/).pop());
+      } catch(e){ showToast(t('Dysk: ') + ((e && e.message) || t('błąd zapisu'))); }
     }
+
   }
 
   /* ---- Uzupełnianie okładek/metadanych lokalnej biblioteki ----
@@ -7154,8 +7174,8 @@
   }
   function openDiskDirModal(){
     openModal({
-      title: t('Folder na dysku dla pobranych MP3'),
-      input: t('np. C:\\Users\\ursus\\Music\\Z YouTube — mostek zapisze tam pliki'),
+      title: t('Folder na dysku dla pobranych utworów'),
+      input: /linux/i.test(String(navigator.platform || '')) ? t('np. /home/nazwa/Muzyka/YouTube') : t('np. C:\\Users\\ursus\\Music\\Z YouTube — mostek zapisze tam pliki'),
       value: netDiskDir(),
       onOk: function(v){
         v = String(v || '').trim();
@@ -7181,11 +7201,11 @@
   (function initNetFolderUi(){
     const btn = document.getElementById('smNetFolderBtn');
     if (!btn) return;
-    btn.textContent = t('Folder zapisu z sieci') + ': ' + netBaseFolder();
+    btn.textContent = t('Folder w bibliotece dla pobrań') + ': ' + netBaseFolder();
     btn.addEventListener('click', function(){
       if (settingsMenu) settingsMenu.hidden = true;
       openModal({
-        title: t('Folder zapisu z sieci'),
+        title: t('Folder w bibliotece dla pobrań'),
         input: t('np. Sieć albo Muzyka/Pobrane (podfolder źródła dodany automatycznie)'),
         value: netBaseFolder(),
         onOk: function(v){
@@ -7755,11 +7775,7 @@
     const tools = document.createElement('div'); tools.className = 'lyrics-tools';
     const importBtn = document.createElement('button'); importBtn.type = 'button'; importBtn.className = 'lyrics-tool-btn'; importBtn.textContent = t('Importuj napisy');
     importBtn.disabled = currentIndex < 0 || !tracks[currentIndex];
-    importBtn.addEventListener('click', function(){
-      if (currentIndex < 0 || !tracks[currentIndex]){ showToast(t('Wybierz najpierw utwór')); return; }
-      const input = document.getElementById('lyricsImportInput');
-      if (input){ input.value = ''; input.click(); }
-    });
+    importBtn.addEventListener('click', openLyricsImportPicker);
     tools.appendChild(importBtn);
     const restoreBtn = document.createElement('button'); restoreBtn.type = 'button'; restoreBtn.className = 'lyrics-tool-btn'; restoreBtn.textContent = t('Przywróć znalezione napisy');
     restoreBtn.hidden = !(lyricsData && lyricsData.source === 'import');
@@ -7798,7 +7814,14 @@
     fetchLyrics(track).then(function(data){ if (data) showToast(t('Przywrócono napisy online')); });
   }
   const lyricsImportInputEl = document.getElementById('lyricsImportInput');
+  function openLyricsImportPicker(){
+    if (currentIndex < 0 || !tracks[currentIndex]){ showToast(t('Wybierz najpierw utwór')); return; }
+    if (lyricsImportInputEl){ lyricsImportInputEl.value = ''; lyricsImportInputEl.click(); }
+  }
+  const lyricsImportBtnEl = document.getElementById('lyricsImportBtn');
+  if (lyricsImportBtnEl) lyricsImportBtnEl.addEventListener('click', openLyricsImportPicker);
   if (lyricsImportInputEl) lyricsImportInputEl.addEventListener('change', function(){
+
     const file = lyricsImportInputEl.files && lyricsImportInputEl.files[0];
     if (file) importTrackLyrics(file);
   });
