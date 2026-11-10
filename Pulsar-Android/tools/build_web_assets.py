@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Prepare Capacitor web assets from the packed Pulsar runtime.
 
-The checked-in app remains closed-source: only the existing resources.neu
-runtime archive is read. Extracted HTML/JS is generated into ignored www/ and
-is never meant to be committed.
+The readable application sources live in Pulsar-Core and the extension modules.
+This adapter reads the built resources.neu runtime and generates platform-specific
+HTML/JS into the ignored www/ directory; generated www/ is not committed.
 """
 from __future__ import annotations
 
@@ -98,6 +98,19 @@ def build(archive: Path, out_dir: Path, bridge: Path, drive_sync: Path) -> None:
     for desktop_only in (
         '  <script src="cloud-sync.js"></script>\n',
         '  <script src="drive-sync.js"></script>\n',
+        # Edytor audio jest funkcją desktopową; nie zostawiaj w Androidzie
+        # odnośników do zasobów, których ten build celowo nie kopiuje.
+        '  <link rel="stylesheet" href="audio-editor.css">\n',
+        '  <script src="i18n.js"></script>\n',
+        '  <script src="editor-core.js"></script>\n',
+        '  <script src="audio-editor.js"></script>\n',
+        '  <link rel="stylesheet" href="extras.css">\n',
+        '  <script src="dj-core.js"></script>\n',
+        '  <script src="backup-core.js"></script>\n',
+        '  <script src="desktop-bridge.js"></script>\n',
+        '  <script src="app-updates.js"></script>\n',
+        '  <script src="auto-dj.js"></script>\n',
+        '  <script src="library-backup.js"></script>\n',
     ):
         html = html.replace(desktop_only, "")
     replacements = [
