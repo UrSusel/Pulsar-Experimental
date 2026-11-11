@@ -3296,7 +3296,6 @@
   let videoPlayer = null, videoModeActive = false, videoModeReady = false, videoModeHasPlayed = false, videoModeDuration = 0, videoModePlaying = false, videoModePosition = 0, videoModeCuts = [], videoModeCutPendingUntil = 0, videoModeWasPlaying = false, videoModeLyricsWasOn = false, videoModeToken = 0, videoLookupToken = 0, currentVideoId = '';
   const videoIdCache = new Map();
   const videoCandidateCache = new Map();
-  const videoCandidateDetailsCache = new Map();
   let videoModeTriedIds = new Set(), videoPlayerGeneration = 0;
   let youtubeApiPromise = null;
   let albums = [];               // albumy trzymane w store 'playlists' (kompatybilność ze starszymi zapisami)
@@ -6075,81 +6074,33 @@
     });
     if(typeof miniSync==='function')miniSync(true);
   }
-  function videoNormalizeText(value){
-    return String(value||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase()
-      .replace(/\bprovided to youtube by\b/g,' ')
-      .replace(/\b(?:official\s+)?(?:music\s+)?video\b/g,' ')
-      .replace(/\b(?:official\s+)?audio\b/g,' ')
-      .replace(/\b(?:official|lyrics?|lyric video|visualizer|remastered|remaster|hd|uhd|4k)\b/g,' ')
-      .replace(/[^\p{L}\p{N}]+/gu,' ').trim();
-  }
   function videoTextSimilarity(a,b){
-    const stop=new Set(['the','a','an','and','or','of','to','in','on','for','official','video','audio','lyrics','lyric','music','teledysk','tekst','version','topic','vevo']);
-    const rawA=videoNormalizeText(a).split(/\s+/).filter(Boolean),rawB=videoNormalizeText(b).split(/\s+/).filter(Boolean);
-    const x=rawA.filter(function(w){return w.length>1&&!stop.has(w);}),y=rawB.filter(function(w){return w.length>1&&!stop.has(w);});
-    const aa=Array.from(new Set(x.length?x:rawA)),bb=Array.from(new Set(y.length?y:rawB));
-    if(!aa.length||!bb.length)return 0;
-    const shared=aa.filter(function(w){return bb.indexOf(w)!==-1;}).length;
-    const precision=shared/bb.length,recall=shared/aa.length;
-    let score=precision+recall?2*precision*recall/(precision+recall):0;
-    const phraseA=' '+aa.join(' ')+' ',phraseB=' '+bb.join(' ')+' ';
-    if(aa.length>1&&phraseB.indexOf(phraseA)>=0)score=Math.max(score,.92);
-    if(bb.length>1&&phraseA.indexOf(phraseB)>=0)score=Math.max(score,.92);
-    return score;
-  }
-  function videoCandidateTitleScore(trackTitle,videoTitle){
-    const text=String(videoTitle||'');
-    const parts=text.split(/\s+[-–—|:]\s+/).map(function(s){return s.trim();}).filter(Boolean);
-    return [text].concat(parts).reduce(function(best,part){return Math.max(best,videoTextSimilarity(trackTitle,part));},0);
-  }
-  function videoCandidateArtistScore(artist,hit){
-    const variants=[String(hit&&hit.artist||'').replace(/\s*-\s*(?:Topic|VEVO)\s*$/i,'')];
-    const title=String(hit&&hit.title||'');
-    variants.push(title);
-    title.split(/\s+[-–—|:]\s+/).forEach(function(part){variants.push(part);});
-    return variants.reduce(function(best,part){return Math.max(best,videoTextSimilarity(artist,part));},0);
-  }
-  function videoCandidateDurationPenalty(track,hit){
-    const trackMs=Number(track&&(track.durMs||track.durationMs)||0);
-    const videoMs=Number(hit&&(hit.durMs||hit.durationMs)||0);
-    if(!(trackMs>0&&videoMs>0))return 0;
-    const delta=Math.abs(trackMs-videoMs)/1000;
-    const allowance=Math.max(18,trackMs/1000*.18);
-    return Math.min(.16,Math.max(0,(delta-allowance)/Math.max(30,trackMs/1000*.45)*.16));
-  }
-  function videoCandidateTypePenalty(track,hit){
-    const query=' '+videoNormalizeText(String(track&&track.title||'')+' '+String(track&&track.artist||''))+' ';
-    const title=' '+videoNormalizeText(String(hit&&hit.title||'')+' '+String(hit&&hit.artist||''))+' ';
-    let penalty=0;
-    [['cover',.5],['karaoke',.5],['instrumental',.35],['reaction',.55],['nightcore',.4],['slowed',.22],['sped up',.22],['remix',.18],['live',.14]].forEach(function(rule){
-      const token=' '+rule[0]+' ';
-      if(title.indexOf(token)>=0&&query.indexOf(token)<0)penalty+=rule[1];
-    });
-    return Math.min(.55,penalty);
+    const clean=function(v){return String(v||'').toLowerCase().replace(/\([^)]*(official|video|audio|lyrics?|teledysk|remaster|4k|hd)[^)]*\)/gi,' ').replace(/[^\p{L}\p{N}]+/gu,' ').trim();};
+    const x=clean(a),y=clean(b);
+    if(!x||!y)return 0;
+    if(x===y||x.includes(y)||y.includes(x))return 1;
+    const stop=new Set(['the','a','an','and','or','official','video','audio','lyrics','lyric','music','teledysk','tekst','remastered','version']);
+    const aa=x.split(/\s+/).filter(function(w){return w.length>1&&!stop.has(w);});
+    const bb=new Set(y.split(/\s+/).filter(function(w){return w.length>1&&!stop.has(w);}));
+    if(!aa.length||!bb.size)return 0;
+    return aa.filter(function(w){return bb.has(w);}).length/Math.max(aa.length,bb.size);
   }
   function videoTrackKey(track){return String(track&&(track.id||track.ytId||track.title)||'');}
   function rankVideoCandidates(track,results){
-    const artist=String(track&&track.artist||'').trim();
-    const artistKnown=!!artist&&!/^(unknown|unknown artist|youtube|nieznany wykonawca|nieznany artysta)$/i.test(artist);
+    const artistKnown=track&&track.artist&&!/^(unknown|unknown artist|youtube)$/i.test(track.artist);
     const byId=new Map();
     (Array.isArray(results)?results:[]).forEach(function(hit){
       if(!hit)return;
       const id=String(hit.ytId||hit.id||'');
       if(!id)return;
-      const titleScore=videoCandidateTitleScore(track.title,hit.title);
-      if(titleScore<.48)return;
-      const artistScore=artistKnown?videoCandidateArtistScore(artist,hit):.5;
-      let score=artistKnown?titleScore*.72+artistScore*.28:titleScore;
-      if(artistKnown&&artistScore<.25)score-=.12;
-      score-=videoCandidateDurationPenalty(track,hit);
-      score-=videoCandidateTypePenalty(track,hit);
-      score=Math.max(0,Math.min(1,score));
-      if(score<.54)return;
-      const candidate={id:id,score:score,title:String(hit.title||''),artist:String(hit.artist||''),durMs:Number(hit.durMs||0)};
+      const titleScore=videoTextSimilarity(track.title,hit.title);
+      const artistScore=artistKnown?videoTextSimilarity(track.artist,hit.artist):.5;
+      const score=artistKnown?titleScore*.78+artistScore*.22:titleScore;
+      if(score<.52)return;
       const previous=byId.get(id);
-      if(!previous||score>previous.score)byId.set(id,candidate);
+      if(!previous||score>previous.score)byId.set(id,{id:id,score:score});
     });
-    return Array.from(byId.values()).sort(function(a,b){return b.score-a.score;});
+    return Array.from(byId.values()).sort(function(a,b){return b.score-a.score;}).map(function(item){return item.id;});
   }
   async function discoverVideoForTrack(track){
     const token=++videoLookupToken;
@@ -6157,30 +6108,18 @@
     const current=videoTrack();
     if(!track||!key||!current||videoTrackKey(current)!==key){syncVideoButtons('');return;}
     const direct=directYoutubeId(track);
-    if(direct){videoCandidateCache.set(key,[direct]);videoCandidateDetailsCache.set(key,[{id:direct,score:1,title:String(track.title||''),artist:String(track.artist||''),durMs:Number(track.durMs||0)}]);videoIdCache.set(key,direct);syncVideoButtons(direct);return;}
+    if(direct){videoCandidateCache.set(key,[direct]);videoIdCache.set(key,direct);syncVideoButtons(direct);return;}
     if(videoIdCache.has(key)){syncVideoButtons(videoIdCache.get(key));return;}
     syncVideoButtons('');
     if(!netEnabled||!track.title)return;
-    const artist=String(track.artist||'').trim();
-    const artistKnown=!!artist&&!/^(unknown|unknown artist|youtube|yt|nieznany wykonawca|nieznany artysta)$/i.test(artist);
-    const query=[artistKnown?artist:'',track.title].filter(Boolean).join(' ');
+    const query=[track.artist,track.title].filter(Boolean).join(' ');
     try{
-      let results=await netYoutube(query,12);
+      const results=await netYoutube(query,8);
       if(token!==videoLookupToken)return;
-      let ranked=rankVideoCandidates(track,results);
-      if(!ranked.length||ranked.length<2||ranked[0].score<.84||!artistKnown){
-        try{
-          const more=await netYoutube(query+' official music video',16);
-          if(token!==videoLookupToken)return;
-          results=results.concat(more||[]);
-          ranked=rankVideoCandidates(track,results);
-        }catch(e){}
-      }
       const stillCurrent=videoTrack();
       if(!stillCurrent||videoTrackKey(stillCurrent)!==key)return;
-      const candidates=ranked.map(function(candidate){return candidate.id;});
+      const candidates=rankVideoCandidates(track,results);
       videoCandidateCache.set(key,candidates);
-      videoCandidateDetailsCache.set(key,ranked);
       const id=candidates[0]||'';
       videoIdCache.set(key,id);
       syncVideoButtons(id);
@@ -6201,13 +6140,9 @@
       try{
         const results=await netYoutube(queries[i],20);
         const extra=rankVideoCandidates(track,results);
-        const details=videoCandidateDetailsCache.get(key)||[];
         const seen=new Set(candidates);
-        extra.forEach(function(candidate){
-          if(!seen.has(candidate.id)){seen.add(candidate.id);candidates.push(candidate.id);details.push(candidate);}
-        });
+        extra.forEach(function(id){if(!seen.has(id)){seen.add(id);candidates.push(id);}});
         videoCandidateCache.set(key,candidates);
-        videoCandidateDetailsCache.set(key,details);
         next=candidates.find(function(id){return id&&!videoModeTriedIds.has(id);});
         if(next){videoModeTriedIds.add(next);return next;}
       }catch(e){}
@@ -6357,39 +6292,10 @@
     }
     showToast(t('Nie udało się załadować teledysku YouTube.')+(Number.isFinite(code)?' (YouTube '+code+')':''));
   }
-  function promptVideoCandidate(track){
-    const key=videoTrackKey(track),details=(videoCandidateDetailsCache.get(key)||[]).slice(0,6);
-    if(!details.length)return false;
-    const best=details[0],runner=details[1]||{score:0};
-    const artist=String(track.artist||'').trim(),artistKnown=!!artist&&!/^(unknown|unknown artist|youtube|yt|nieznany wykonawca|nieznany artysta)$/i.test(artist);
-    if(artistKnown&&best.score>=.84&&(details.length===1||best.score-runner.score>=.14))return false;
-    const select=document.createElement('select');
-    select.style.width='100%';select.style.padding='10px';select.style.marginTop='10px';
-    details.forEach(function(candidate){
-      const option=document.createElement('option');option.value=candidate.id;
-      option.textContent=(candidate.title||candidate.id)+(candidate.artist?' — '+candidate.artist:'');
-      select.appendChild(option);
-    });
-    openModal({title:t('Wybierz właściwy teledysk'),okText:t('Odtwórz'),buildBody:function(body){
-      const message=document.createElement('p');
-      message.textContent=details.length>1?t('Znalazłem kilka podobnych wyników. Wybierz film pasujący do utworu.'):t('Sprawdź, czy ten wynik pasuje do utworu.');
-      body.appendChild(message);body.appendChild(select);
-    },onOk:function(){
-      const chosen=details.find(function(candidate){return candidate.id===select.value;});
-      if(!chosen)return false;
-      const ordered=[chosen].concat(details.filter(function(candidate){return candidate.id!==chosen.id;}));
-      videoCandidateDetailsCache.set(key,ordered);
-      videoCandidateCache.set(key,ordered.map(function(candidate){return candidate.id;}));
-      videoIdCache.set(key,chosen.id);syncVideoButtons(chosen.id);
-      startVideoMode(true);
-    }});
-    return true;
-  }
-  async function startVideoMode(skipCandidateChoice){
+  async function startVideoMode(){
     if(videoModeActive){stopVideoMode(true);return;}
     const track=videoTrack(),id=currentVideoId||directYoutubeId(track);
     if(!track||!id){showToast(t('Dla tego utworu nie znaleziono teledysku.'));return;}
-    if(!skipCandidateChoice&&promptVideoCandidate(track))return;
     videoModeToken++;
     const token=videoModeToken;
     videoModePosition=Math.max(0,audio.currentTime||0);
