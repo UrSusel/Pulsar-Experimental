@@ -4,6 +4,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 for (const platform of ['Linux', 'Windows']) {
   const html = fs.readFileSync(path.join(__dirname, '..', platform, 'resources', 'index.html'), 'utf8');
@@ -11,20 +12,17 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /id="mvVideoBtn"/, `${platform}: mini player exposes the video shortcut`);
   assert.match(html, /async function discoverVideoForTrack\(/, `${platform}: local tracks can resolve a matching YouTube video`);
   assert.match(html, /directYoutubeId\(track\)/, `${platform}: known YouTube source IDs are reused`);
-  assert.match(html, /const results=await netYoutube\(query,8\)/, `${platform}: unknown local tracks search YouTube`);
+  assert.match(html, /let results=await netYoutube\(query,12\)/, `${platform}: local tracks search YouTube for multiple matches`);
   assert.ok(html.includes('b.hidden=!available'), `${platform}: the video button is hidden when no match exists`);
   assert.match(html, /new YT\.Player\('videoPlayerMount'/, `${platform}: video mode uses the YouTube player as the media source`);
   assert.match(html, /playerVars\.widget_referrer=location\.href/, `${platform}: embedded player receives the desktop webview referrer`);
-  assert.match(html, /function rankVideoCandidates\([\s\S]*?videoCandidateCache\.set\(key,candidates\)/, `${platform}: matching alternatives are retained for embed-restricted videos`);
-  assert.match(html, /if\(code===101\|\|code===150\)[\s\S]*?nextVideoCandidate\(track,id\)/, `${platform}: YouTube embed restrictions trigger an alternate-video retry`);
-  assert.match(html, /async function nextVideoCandidate\([\s\S]*?netYoutube\(queries\[i\],20\)/, `${platform}: retry searches additional matching YouTube videos`);
+  assert.match(html, /function videoTextSimilarity\([\s\S]*?const precision=shared\/bb\.length,recall=shared\/aa\.length/, `${platform}: matching uses balanced title-token similarity`);
+  assert.match(html, /function videoCandidateTypePenalty\([\s\S]*?karaoke[\s\S]*?remix/, `${platform}: covers, karaoke and alternate versions are down-ranked`);
+  assert.match(html, /function promptVideoCandidate\([\s\S]*?Wybierz właściwy teledysk/, `${platform}: ambiguous matches ask the user to choose`);
+  assert.match(html, /artistKnown&&best\.score>=\.84&&\(details\.length===1\|\|best\.score-runner\.score>=\.14\)/, `${platform}: strong, distinct matches can start automatically`);
+  assert.match(html, /if\(code===101\|\|code===150\)[\s\S]*?nextVideoCandidate\(track,id\)/, `${platform}: YouTube embed restrictions trigger alternate-video retries`);
   assert.match(html, /function openVideoOnYoutube\([\s\S]*?Neutralino\.os\.open\(url\)/, `${platform}: blocked embeds can still open in YouTube's own player`);
   assert.match(html, /okText:t\('Otwórz w YouTube'\)/, `${platform}: the non-embeddable-video fallback is actionable`);
-  assert.match(html, /YouTube IFrame Player error',code,'video',id,'origin',location\.origin/, `${platform}: player errors expose their code and origin for diagnosis`);
-  assert.match(html, /function rankVideoCandidates\([\s\S]*?videoCandidateCache\.set\(key,candidates\)/, `${platform}: matching alternatives are retained for embed-restricted videos`);
-  assert.match(html, /if\(code===101\|\|code===150\)[\s\S]*?nextVideoCandidate\(track,id\)/, `${platform}: YouTube embed restrictions trigger an alternate-video retry`);
-  assert.match(html, /async function nextVideoCandidate\([\s\S]*?netYoutube\(queries\[i\],20\)/, `${platform}: retry searches additional matching YouTube videos`);
-  assert.match(html, /YouTube '\+code/, `${platform}: the reported YouTube error code is visible to users`);
   assert.match(html, /id="videoStagePlay"/, `${platform}: video-mode playback remains controllable in fullscreen`);
   assert.match(html, /videoModePosition=Math\.max\(0,audio\.currentTime\|\|0\)/, `${platform}: entering video mode keeps the current edit/seek position`);
   assert.match(html, /function userVideoCuts\(track\)[\s\S]*?PulsarAudioEditor[\s\S]*?pulsarEditorSession:/, `${platform}: saved audio-editor cuts are loaded for video playback`);
@@ -34,8 +32,20 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /videoModePosition=pos;audio\.currentTime=pos/, `${platform}: leaving video mode returns audio to the video position`);
   assert.match(html, /stopVideoMode\(true\)/, `${platform}: the toggle returns to audio playback`);
   assert.match(html, /body\.fullscreen-mode\.video-mode \.video-stage[\s\S]*?body\.fullscreen-mode\.video-mode \.lyrics-box/, `${platform}: fullscreen lays video and lyrics side by side`);
-  assert.match(html, /video-backdrop img[\s\S]*?filter:blur\(34px\)/, `${platform}: video artwork is blurred behind the stage to blend screen edges`);
-  assert.match(html, /body\.video-mode \.ambient-bg-container[\s\S]*?opacity:0 !important/, `${platform}: video mode owns its backdrop instead of mixing visualizer backgrounds`);
   assert.match(html, /videoModeActive\?videoModePlaying:!audio\.paused/, `${platform}: player UI follows whichever media source is active`);
-  console.log(`${platform}: YouTube music-video mode checks passed`);
+
+  const start = html.indexOf('  function videoNormalizeText(value)');
+  const end = html.indexOf('  async function discoverVideoForTrack(track)', start);
+  assert.ok(start >= 0 && end > start, `${platform}: candidate ranker is available for unit checks`);
+  const context = {};
+  vm.runInNewContext(html.slice(start, end) + '\nthis.rankVideoCandidates=rankVideoCandidates;this.videoTextSimilarity=videoTextSimilarity;', context);
+  assert.ok(context.videoTextSimilarity('One', 'One Direction') < 0.8, `${platform}: a short substring is not treated as an exact match`);
+  const ranked = context.rankVideoCandidates({ title: 'Song Name', artist: 'Artist A', durMs: 180000 }, [
+    { id: 'wrong-cover', title: 'Song Name Cover', artist: 'Random Singer', durMs: 180000 },
+    { id: 'right', title: 'Artist A - Song Name (Official Music Video)', artist: 'Artist A - Topic', durMs: 181000 },
+    { id: 'wrong-title', title: 'Different Song', artist: 'Artist A', durMs: 180000 }
+  ]);
+  assert.equal(ranked[0] && ranked[0].id, 'right', `${platform}: title, artist and duration favor the correct music video`);
+  assert.ok(!ranked.some(candidate => candidate.id === 'wrong-cover'), `${platform}: a cover by a different artist is discarded`);
+  console.log(`${platform}: YouTube music-video matching checks passed`);
 }
