@@ -6273,9 +6273,22 @@
       if(token===videoModeToken&&generation===videoPlayerGeneration&&videoModeActive){console.error('[Pulsar video] YouTube IFrame API/player setup failed',e);showToast(t('Nie udało się załadować teledysku YouTube.'));stopVideoMode(videoModeWasPlaying);}
     }
   }
+  function openVideoOnYoutube(id){
+    const url='https://www.youtube.com/watch?v='+encodeURIComponent(String(id||''));
+    try{if(window.Neutralino&&Neutralino.os&&Neutralino.os.open)return Neutralino.os.open(url);}catch(e){}
+    try{window.open(url,'_blank','noopener,noreferrer');}catch(e){}
+  }
   function showVideoPlayerError(code,id){
-    showToast(t('Nie udało się załadować teledysku YouTube.')+(Number.isFinite(code)?' (YouTube '+code+')':''));
     stopVideoMode(videoModeWasPlaying);
+    if(code===101||code===150){
+      openModal({title:t('Tego filmu nie można osadzić'),okText:t('Otwórz w YouTube'),buildBody:function(body){
+        const message=document.createElement('p');
+        message.textContent=t('YouTube blokuje odtwarzanie tego filmu w osadzonym playerze. Możesz otworzyć go bezpośrednio w YouTube.');
+        body.appendChild(message);
+      },onOk:function(){openVideoOnYoutube(id);}});
+      return;
+    }
+    showToast(t('Nie udało się załadować teledysku YouTube.')+(Number.isFinite(code)?' (YouTube '+code+')':''));
   }
   async function startVideoMode(){
     if(videoModeActive){stopVideoMode(true);return;}

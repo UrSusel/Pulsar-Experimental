@@ -18,6 +18,8 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /function rankVideoCandidates\([\s\S]*?videoCandidateCache\.set\(key,candidates\)/, `${platform}: matching alternatives are retained for embed-restricted videos`);
   assert.match(html, /if\(code===101\|\|code===150\)[\s\S]*?nextVideoCandidate\(track,id\)/, `${platform}: YouTube embed restrictions trigger an alternate-video retry`);
   assert.match(html, /async function nextVideoCandidate\([\s\S]*?netYoutube\(queries\[i\],20\)/, `${platform}: retry searches additional matching YouTube videos`);
+  assert.match(html, /function openVideoOnYoutube\([\s\S]*?Neutralino\.os\.open\(url\)/, `${platform}: blocked embeds can still open in YouTube's own player`);
+  assert.match(html, /okText:t\('Otwórz w YouTube'\)/, `${platform}: the non-embeddable-video fallback is actionable`);
   assert.match(html, /YouTube IFrame Player error',code,'video',id,'origin',location\.origin/, `${platform}: player errors expose their code and origin for diagnosis`);
   assert.match(html, /function rankVideoCandidates\([\s\S]*?videoCandidateCache\.set\(key,candidates\)/, `${platform}: matching alternatives are retained for embed-restricted videos`);
   assert.match(html, /if\(code===101\|\|code===150\)[\s\S]*?nextVideoCandidate\(track,id\)/, `${platform}: YouTube embed restrictions trigger an alternate-video retry`);
