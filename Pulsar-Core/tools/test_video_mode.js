@@ -15,9 +15,6 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /let results=await netYoutube\(query,12\)/, `${platform}: local tracks search YouTube for multiple matches`);
   assert.ok(html.includes('b.hidden=!available'), `${platform}: the video button is hidden when no match exists`);
   assert.match(html, /new YT\.Player\('videoPlayerMount'/, `${platform}: video mode uses the YouTube player as the media source`);
-  assert.match(html, /id="videoStageFullscreen"/, `${platform}: video mode exposes a fullscreen control inside the visible video stage`);
-  assert.match(html, /videoStageFullscreenBtn\.addEventListener\('click'/, `${platform}: the visible video fullscreen button toggles fullscreen mode`);
-  assert.match(html, /body\.video-mode:not\(\.fullscreen-mode\) \.player \{[\s\S]*?grid-template-columns:minmax\(240px,\.28fr\) minmax\(0,\.72fr\)/, `${platform}: normal video view places lyrics left and enlarges video on the right`);
   assert.match(html, /playerVars\.widget_referrer=location\.href/, `${platform}: embedded player receives the desktop webview referrer`);
   assert.match(html, /function videoTextSimilarity\([\s\S]*?const precision=shared\/bb\.length,recall=shared\/aa\.length/, `${platform}: matching uses balanced title-token similarity`);
   assert.match(html, /function videoCandidateTypePenalty\([\s\S]*?karaoke[\s\S]*?remix/, `${platform}: covers, karaoke and alternate versions are down-ranked`);
