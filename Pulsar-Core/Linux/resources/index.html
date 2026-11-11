@@ -29,7 +29,11 @@
   }
 
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-  html, body { height:100%; overflow:hidden; }
+  html, body { width:100%; height:100%; margin:0; overflow:hidden; }
+  html { background:var(--bg); }
+  html:fullscreen, html:-webkit-full-screen { width:100vw; height:100vh; min-height:100vh; overflow:hidden; background:#050505 !important; }
+  html:fullscreen::backdrop, html:-webkit-full-screen::backdrop { background:#050505; }
+  html:fullscreen body, html:-webkit-full-screen body { position:fixed; inset:0; width:100vw; height:100vh; min-height:100vh; margin:0; overflow:hidden; background:#050505 !important; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -390,6 +394,7 @@
   body.video-mode:not(.fullscreen-mode) .center-seek-row { grid-column:2; grid-row:2; width:100%; margin:12px 0 0; opacity:1; transform:none; pointer-events:auto; }
   body.video-mode:not(.fullscreen-mode) .track-title { grid-column:2; grid-row:3; width:100%; max-width:none; margin:10px 0 0; text-align:right; }
   body.video-mode:not(.fullscreen-mode) .track-artist { grid-column:2; grid-row:4; width:100%; max-width:none; margin:2px 0 0; justify-content:flex-end; }
+  body.fullscreen-mode.video-mode { width:100vw; height:100vh; min-height:100vh; margin:0; overflow:hidden; background:#050505 !important; }
   body.fullscreen-mode.video-mode .cover-wrap { display:none; }
   body.fullscreen-mode.video-mode .video-stage { position:fixed; z-index:6; right:3vw; top:44%; transform:translateY(-50%); width:min(56vw,1000px); margin:0; }
   body.fullscreen-mode.video-mode .lyrics-box, body.fullscreen-mode.video-mode.lyrics-side .lyrics-box { position:fixed; z-index:6; left:3vw; top:50%; transform:translateY(-50%); width:min(38vw,680px); max-height:82vh; margin:0; padding:14px 10px; }
