@@ -3317,6 +3317,7 @@
       await dbPut('tracks', {
         id: track.id, name: track.file.name, type: track.file.type, folder: track.folder,
         title: track.title, artist: track.artist, blob: track.file, coverBlob: track.coverBlob || null,
+        coverSource: track.coverSource || '',
         fav: !!track.fav, plays: track.plays || 0, lastPlay: track.lastPlay || 0,
         srcPath: track.srcPath || '', // ścieżka oryginału na dysku — edytor tagów może go zaktualizować
         // Android: tożsamość sieciowa i metadane, których synchronizacja używa jako klucza
@@ -3341,7 +3342,7 @@
       tracks = storedTracks.map(item => ({
         id: item.id, file: new File([item.blob], item.name, { type: item.type || 'audio/mpeg' }),
         folder: item.folder || '', title: item.title, artist: item.artist,
-        matchedImg: null, coverBlob: item.coverBlob || null, coverUrl: null, resolved: true,
+        matchedImg: null, coverBlob: item.coverBlob || null, coverUrl: null, coverSource: item.coverSource || (item.coverBlob ? 'legacy' : ''), resolved: true,
         fav: !!item.fav, plays: item.plays || 0, lastPlay: item.lastPlay || 0, srcPath: item.srcPath || '',
         netId: item.netId || '', album: item.album || '', year: item.year || '', genre: item.genre || '',
         netLink: item.netLink || '', durMs: Math.round(Number(item.durMs || 0) || 0)
@@ -3787,7 +3788,7 @@
       const matchedImg = imgMap.get(baseKey) || null;
       const fallback = parseNameFallback(f.name);
       const folder = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : 'Muzyka';
-      return { id: makeId(), file: f, folder: folder, title: fallback.title, artist: fallback.artist, matchedImg: matchedImg, coverBlob: matchedImg, coverUrl: null, resolved: false, lrcFile: lrcMap.get(baseKey) || null, srcPath: f.__srcPath || '' };
+      return { id: makeId(), file: f, folder: folder, title: fallback.title, artist: fallback.artist, matchedImg: matchedImg, coverBlob: matchedImg, coverUrl: null, coverSource: matchedImg ? 'matched' : '', resolved: false, lrcFile: lrcMap.get(baseKey) || null, srcPath: f.__srcPath || '' };
     });
 
     // Zawsze DOKŁADAMY do biblioteki — nigdy jej nie podmieniamy. Utwór, który już jest (ta sama nazwa pliku i rozmiar,
@@ -3955,10 +3956,12 @@
   function currentAlbum(){ return activeAlbumId ? albumById(activeAlbumId) : null; }
   function currentAlbumName(){ const a = currentAlbum(); return a ? a.name : ''; }
   function coverUrlOf(t){
-    if (t.coverUrl) return t.coverUrl;
-    if (t.coverBlob) return URL.createObjectURL(t.coverBlob);
-    if (t.matchedImg) return URL.createObjectURL(t.matchedImg);
-    return DEFAULT_COVER;
+    if (!t) return DEFAULT_COVER;
+    const blob=t.coverBlob||t.matchedImg||null;
+    if (blob && (!t.coverUrl || t.coverUrl===DEFAULT_COVER)){
+      try { t.coverUrl=URL.createObjectURL(blob); } catch(e){}
+    }
+    return t.coverUrl||DEFAULT_COVER;
   }
 
   /* ---------- Kolejka odtwarzania (album lub cała biblioteka + losowo/powtarzanie) ---------- */
@@ -4626,7 +4629,7 @@
       const audioBlob = new Blob([await item.blob.arrayBuffer()], { type: item.type || 'audio/mpeg' });
       const cover = item.coverBlob ? new Blob([await item.coverBlob.arrayBuffer()], { type: item.coverBlob.type || 'image/jpeg' }) : null;
       const tr = { id: item.id || makeId(), file: new File([audioBlob], item.name || 'utwor', { type: item.type || 'audio/mpeg' }),
-        folder: item.folder || '', title: item.title || item.name, artist: item.artist || '', matchedImg: null, coverBlob: cover, coverUrl: null, resolved: true,
+        folder: item.folder || '', title: item.title || item.name, artist: item.artist || '', matchedImg: null, coverBlob: cover, coverUrl: null, coverSource: item.coverSource || (cover ? 'legacy' : ''), resolved: true,
         fav: !!item.fav, plays: item.plays || 0, lastPlay: item.lastPlay || 0, srcPath: '' };
       Object.keys(item).forEach(function(k){ if (/^(net|yt)/.test(k) && !(k in tr)) tr[k] = item[k]; }); // pola źródeł sieciowych
       tracks.push(tr); byId.set(tr.id, tr); remap[r.id] = tr.id;
@@ -6737,11 +6740,11 @@
       track.audioTagsScanned = true;
       if (mayContainMp4Metadata) track.mp4TagsScanned = true; // zachowanie zgodności ze starszymi rekordami
     } catch(e){}
-    if (embeddedCover && (forceFileScan || !track.coverBlob || track.coverSource !== 'manual')){
+    if (embeddedCover && (!track.coverBlob || (track.coverSource !== 'manual' && track.coverSource !== 'legacy'))){
       track.coverBlob = embeddedCover; track.coverSource = 'embedded';
       track.coverUrl = URL.createObjectURL(embeddedCover);
     }
-    if (!track.coverUrl) track.coverUrl = track.matchedImg ? URL.createObjectURL(track.matchedImg) : DEFAULT_COVER;
+    if (!track.coverUrl) track.coverUrl = (track.coverBlob || track.matchedImg) ? URL.createObjectURL(track.coverBlob || track.matchedImg) : DEFAULT_COVER;
     track.resolved = true;
     await persistTrack(track);
     if (embeddedCover && embeddedCover !== originalCover && index > -1 && !options.deferAlbumRefresh) await refreshAlbumCoversForTrack(track.id);
