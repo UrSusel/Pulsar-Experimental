@@ -15,7 +15,13 @@ for (const platform of ['Linux', 'Windows']) {
   assert.ok(html.includes('b.hidden=!available'), `${platform}: the video button is hidden when no match exists`);
   assert.match(html, /new YT\.Player\('videoPlayerMount'/, `${platform}: video mode uses the YouTube player as the media source`);
   assert.match(html, /playerVars\.widget_referrer=location\.href/, `${platform}: embedded player receives the desktop webview referrer`);
+  assert.match(html, /function rankVideoCandidates\([\s\S]*?videoCandidateCache\.set\(key,candidates\)/, `${platform}: matching alternatives are retained for embed-restricted videos`);
+  assert.match(html, /if\(code===101\|\|code===150\)[\s\S]*?nextVideoCandidate\(track,id\)/, `${platform}: YouTube embed restrictions trigger an alternate-video retry`);
+  assert.match(html, /async function nextVideoCandidate\([\s\S]*?netYoutube\(queries\[i\],20\)/, `${platform}: retry searches additional matching YouTube videos`);
   assert.match(html, /YouTube IFrame Player error',code,'video',id,'origin',location\.origin/, `${platform}: player errors expose their code and origin for diagnosis`);
+  assert.match(html, /function rankVideoCandidates\([\s\S]*?videoCandidateCache\.set\(key,candidates\)/, `${platform}: matching alternatives are retained for embed-restricted videos`);
+  assert.match(html, /if\(code===101\|\|code===150\)[\s\S]*?nextVideoCandidate\(track,id\)/, `${platform}: YouTube embed restrictions trigger an alternate-video retry`);
+  assert.match(html, /async function nextVideoCandidate\([\s\S]*?netYoutube\(queries\[i\],20\)/, `${platform}: retry searches additional matching YouTube videos`);
   assert.match(html, /YouTube '\+code/, `${platform}: the reported YouTube error code is visible to users`);
   assert.match(html, /id="videoStagePlay"/, `${platform}: video-mode playback remains controllable in fullscreen`);
   assert.match(html, /videoModePosition=Math\.max\(0,audio\.currentTime\|\|0\)/, `${platform}: entering video mode keeps the current edit/seek position`);
