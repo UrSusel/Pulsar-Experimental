@@ -489,6 +489,35 @@
   .lib-tool { flex:1; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.05); color:var(--text-muted); font:inherit; font-size:12px; padding:8px 6px; border-radius:6px; cursor:pointer; white-space:nowrap; }
   .lib-tool:hover { color:#fff; background:rgba(255,255,255,.12); }
   .lib-tool.on { color:var(--accent); border-color:var(--accent); background:rgba(255,255,255,.08); }
+  .recommendations-view { flex:1 1 auto; min-height:0; overflow-y:auto; padding:0 4px 22px; }
+  .recommendations-view[hidden] { display:none; }
+  .recommendations-head { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:8px 2px 14px; border-bottom:1px solid rgba(255,255,255,.07); margin-bottom:10px; }
+  .recommendations-kicker { color:rgba(189,210,240,.45); font-size:9px; font-weight:800; letter-spacing:.16em; }
+  .recommendations-head h3 { margin:3px 0 4px; font-size:19px; letter-spacing:-.025em; }
+  .recommendations-head p,.recommendations-status { margin:0; color:var(--text-muted); font-size:11px; line-height:1.5; }
+  .recommendations-status { min-height:24px; padding:4px 2px 9px; }
+  .recommendations-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:11px; }
+  .recommendation-card { overflow:hidden; display:flex; flex-direction:column; min-width:0; border:1px solid rgba(181,203,232,.12); border-radius:13px; background:linear-gradient(150deg,rgba(255,255,255,.055),rgba(255,255,255,.018)); transition:transform .16s,border-color .16s,background .16s; }
+  .recommendation-card:hover { transform:translateY(-2px); border-color:rgba(138,196,228,.35); background:rgba(255,255,255,.075); }
+  .recommendation-art { width:100%; aspect-ratio:16/9; object-fit:cover; background:radial-gradient(circle at 25% 30%,rgba(79,200,204,.25),transparent 45%),linear-gradient(140deg,#182538,#1e172b); }
+  .recommendation-meta { padding:9px 10px 5px; min-width:0; }
+  .recommendation-title { font-size:12px; font-weight:700; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .recommendation-artist { margin-top:4px; color:var(--text-muted); font-size:10.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .recommendation-badge { display:inline-flex; align-items:center; gap:5px; margin:0 10px 8px; color:rgba(163,214,228,.72); font-size:9px; letter-spacing:.035em; }
+  .recommendation-badge::before { content:""; width:5px; height:5px; border-radius:50%; background:#74d5cf; box-shadow:0 0 8px rgba(116,213,207,.6); }
+  .recommendation-open { margin:0 9px 9px; padding:7px 9px; border:1px solid rgba(255,255,255,.14); border-radius:8px; color:#fff; background:rgba(255,255,255,.055); text-decoration:none; text-align:center; font-size:10.5px; transition:background .15s,border-color .15s; }
+  .recommendation-open:hover { background:rgba(var(--accent-rgb),.18); border-color:var(--accent); }
+  .poster-modal { position:fixed; inset:0; z-index:110; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(3,6,12,.82); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
+  .poster-modal[hidden] { display:none; }
+  .poster-dialog { width:min(760px,96vw); max-height:94vh; overflow:auto; padding:18px; border:1px solid rgba(201,219,244,.15); border-radius:20px; background:linear-gradient(145deg,rgba(27,34,47,.98),rgba(12,16,25,.99)); box-shadow:0 30px 100px rgba(0,0,0,.65); }
+  .poster-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:12px; }
+  .poster-kicker { color:rgba(181,205,234,.45); font-size:9px; font-weight:800; letter-spacing:.17em; }
+  .poster-dialog-head h2 { margin:3px 0 2px; font-size:19px; }
+  .poster-dialog-head p,.poster-note { margin:0; color:rgba(255,255,255,.48); font-size:10.5px; line-height:1.5; }
+  .poster-preview-wrap { display:flex; justify-content:center; max-height:66vh; overflow:hidden; border-radius:12px; background:#090d14; }
+  .poster-preview-wrap img { display:block; max-width:100%; max-height:66vh; object-fit:contain; box-shadow:0 8px 30px rgba(0,0,0,.38); }
+  .poster-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:13px; }
+  .poster-note { margin-top:9px; text-align:right; }
 
   /* Siatka albumów */
   .album-grid-wrap { flex:1; overflow-y:auto; padding:2px 4px 8px; }
@@ -1064,6 +1093,7 @@
   .net-chip { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: rgba(255,255,255,.7); border-radius: 999px; padding: 5px 11px; font-size: 11.5px; cursor: pointer; font-family: inherit; transition: .14s; }
   .net-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(var(--accent-rgb), .12); }
   .net-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  @media(max-width:520px) { .recommendations-grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; } .recommendations-head { align-items:flex-start; } .poster-dialog { padding:13px; } .poster-preview-wrap,.poster-preview-wrap img { max-height:58vh; } .poster-actions { justify-content:stretch; } .poster-actions button { flex:1; } }
   .net-grid:empty { min-height: 80px; }
   .net-card { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.09); border-radius: 14px; padding: 9px; display: flex; flex-direction: column; gap: 8px; transition: transform .16s, background .16s; position: relative; }
   .net-card:hover { background: rgba(255,255,255,.08); transform: translateY(-2px); }
@@ -1418,6 +1448,7 @@
         <button class="lib-tab active" data-view="tracks" type="button">Utwory</button>
         <button class="lib-tab" data-view="albums" type="button">Albumy</button>
         <button class="lib-tab" data-view="net" type="button">Sieć</button>
+        <button class="lib-tab" data-view="recommendations" type="button">Dla Ciebie</button>
       </div>
       <button class="icon-btn" id="closeLibraryBtn" aria-label="Zamknij bibliotekę">
         <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1495,6 +1526,12 @@
       <p class="empty-list-hint" id="netFootHint">YouTube: wklej link w pole wyszukiwania albo szukaj frazą. Podgląd i „Zapisz” (MP3) wymagają lokalnego mostka yt-dlp — status w górnym pasku („● yt-dlp”). Linki do playlist wklej w to samo pole. iTunes i Deezer udostępniają 30-sekundowe podglądy. Audius, Internet Archive i Wikimedia Commons mogą udostępniać pełne pliki.</p>
     </div>
 
+    <div class="recommendations-view" id="recommendationsView" hidden>
+      <div class="recommendations-head"><div><div class="recommendations-kicker">PULSAR · YOUTUBE</div><h3 id="recommendationsTitle">Dla Ciebie</h3><p id="recommendationsIntro">Polecenia na podstawie odsłuchu. Nic nie zostanie pobrane automatycznie.</p></div><button class="lib-tool" id="recommendationsRefreshBtn" type="button">Odśwież</button></div>
+      <p class="recommendations-status" id="recommendationsStatus" aria-live="polite"></p>
+      <div class="recommendations-grid" id="recommendationsGrid"></div>
+    </div>
+
     <div class="album-detail" id="albumDetail" hidden>
       <div class="album-detail-header">
         <div class="album-detail-cover-wrap">
@@ -1509,6 +1546,7 @@
             <button class="primary-btn" id="albumPlayBtn" type="button"><svg viewBox="0 0 24 24" width="12" height="12"><polygon points="7,5 19,12 7,19" fill="currentColor"/></svg> Słuchaj</button>
             <button class="ghost-btn" id="albumShuffleBtn" type="button" title="Odtwórz losowo"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg> Losowo</button>
             <button class="ghost-btn" id="albumAddSongsBtn" type="button"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Utwory</button>
+            <button class="ghost-btn" id="albumPosterBtn" type="button">Plakat</button>
             <button class="ghost-btn" id="albumRenameBtn" type="button" title="Zmień nazwę" aria-label="Zmień nazwę albumu"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
             <button class="ghost-btn danger" id="albumDeleteBtn" type="button" title="Usuń album" aria-label="Usuń album"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
           </div>
@@ -1549,6 +1587,14 @@
     </div>
   </section>
 
+  <div class="poster-modal" id="posterModal" hidden aria-hidden="true">
+    <div class="poster-dialog" role="dialog" aria-modal="true" aria-labelledby="posterModalTitle">
+      <div class="poster-dialog-head"><div><div class="poster-kicker">PULSAR · PROCEDURAL ART</div><h2 id="posterModalTitle">Plakat albumu</h2><p id="posterModalMeta"></p></div><button class="icon-btn" id="posterCloseBtn" type="button" aria-label="Zamknij">×</button></div>
+      <div class="poster-preview-wrap"><img id="posterPreview" alt="Wygenerowany plakat albumu"></div>
+      <div class="poster-actions"><button class="ghost-btn" id="posterUseCoverBtn" type="button">Ustaw jako okładkę</button><button class="primary-btn" id="posterDownloadBtn" type="button">Zapisz PNG</button></div>
+      <p class="poster-note">Grafika powstaje lokalnie z okładek i metadanych. Nic nie jest wysyłane ani generowane przez AI.</p>
+    </div>
+  </div>
   <div class="modal-dim" id="modalDim" hidden>
     <div class="modal" id="modalShell" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h3 id="modalTitle"></h3>
@@ -1612,6 +1658,7 @@
         <h2 class="sm-pane-title">Biblioteka</h2>
         <div class="sm-card sm-desktop-only"><h3 class="sm-cap">Obserwowany folder</h3><div class="sm-row"><div class="sm-txt"><span class="sm-desc sm-desc-top">Nowe pliki audio z tego folderu (i podfolderów) same trafią do biblioteki</span><span class="sm-lab sm-path" id="smWatchPath">nie wybrano</span></div><button type="button" class="sm-mini" id="smWatchOff" hidden>Wyłącz</button></div><button type="button" class="sm-btn" id="smWatchBtn" title="Nowe pliki audio z tego folderu (i podfolderów) same trafią do biblioteki">Wybierz folder…</button></div>
         <div class="sm-card"><h3 class="sm-cap">Okładki albumów</h3><div class="sm-row"><div class="sm-txt"><span class="sm-desc">Ponownie odczyta osadzone okładki z obsługiwanych formatów audio, a brakujące wyszuka w iTunes, Deezerze, MusicBrainz i na YouTube.</span></div></div><button type="button" class="sm-btn" id="smReloadAlbumCoversBtn" title="Ponownie wczytaj okładki z plików i źródeł online">Wczytaj okładki ponownie</button></div>
+        <div class="sm-card"><h3 class="sm-cap">Rekomendacje YouTube</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Polecaj muzykę na podstawie odsłuchu</span><span class="sm-desc">Domyślnie wyłączone. Po włączeniu Pulsar zapisuje od teraz osobną historię rekomendacji lokalnie; wcześniejsze odsłuchy nie są w niej uwzględniane. Historia służy do szukania muzyki na YouTube. Wyniki nie są pobierane — pojawiają się w widoku „Dla Ciebie”.</span></div><label class="switch"><input type="checkbox" id="smRecommendationsToggle"><span class="slider"></span></label></div><div class="sm-desc" id="recommendationsPrivacyNote">Historia i polecenia pozostają na tym urządzeniu; zapytania wyszukiwania trafiają do skonfigurowanego źródła YouTube. Odświeżanie co 12 godzin.</div><button type="button" class="sm-btn" id="smRecommendationsClearBtn">Usuń zebrane dane rekomendacji</button></div>
         <div class="sm-card"><h3 class="sm-cap">Kopia zapasowa</h3><div class="sm-row"><div class="sm-txt"><span class="sm-desc sm-desc-top">Jeden plik .pulsarlib: utwory, okładki, albumy, ulubione, statystyki i ustawienia</span></div></div><div class="sm-btn-row"><button type="button" class="sm-btn" id="smBackupBtn" title="Jeden plik .pulsarlib: utwory, okładki, albumy, ulubione, statystyki i ustawienia">Kopia biblioteki…</button><button type="button" class="sm-btn" id="smRestoreBtn" title="Wczytuje plik .pulsarlib — dokłada brakujące utwory i albumy">Przywróć z kopii…</button></div><input type="file" id="backupFileInput" accept=".pulsarlib" hidden></div>
         <div class="sm-card sm-reset-card"><h3 class="sm-cap">Reset fabryczny</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Wyczyść dane Pulsara</span><span class="sm-desc">Usunie lokalną bibliotekę, ustawienia i historię. Oryginalne pliki audio oraz kopie zapasowe pozostaną na dysku.</span></div></div><button type="button" class="sm-btn sm-btn-danger" id="smFactoryResetBtn" title="Resetuj Pulsara i usuń lokalne dane">Resetuj Pulsara…</button></div>
         <div class="sm-card"><h3 class="sm-cap">Eksport</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Kolejka jako playlista M3U</span><span class="sm-desc">Do otwarcia w innych odtwarzaczach</span></div><button type="button" class="sm-act" id="smM3uBtn">Eksportuj kolejkę (M3U)</button></div></div>
@@ -2422,7 +2469,40 @@
     'Tekst utworu': { en: 'Lyrics', es: 'Letra' },
     'Anuluj': { en: 'Cancel', es: 'Cancelar' },
     'Zamknij': { en: 'Close', es: 'Cerrar' },
-    'Zamknij modal': { en: 'Close dialog', es: 'Cerrar diálogo' }
+    'Zamknij modal': { en: 'Close dialog', es: 'Cerrar diálogo' },
+    'Rekomendacje YouTube': { en: 'YouTube recommendations', es: 'Recomendaciones de YouTube' },
+    'Polecaj muzykę na podstawie odsłuchu': { en: 'Recommend music from listening', es: 'Recomendar música según la escucha' },
+    'Domyślnie wyłączone. Po włączeniu Pulsar zapisuje od teraz osobną historię rekomendacji lokalnie; wcześniejsze odsłuchy nie są w niej uwzględniane. Historia służy do szukania muzyki na YouTube. Wyniki nie są pobierane — pojawiają się w widoku „Dla Ciebie”.': { en: 'Off by default. When enabled, Pulsar starts a separate local recommendation history; earlier plays are not included. It uses this history to search YouTube. Results are not downloaded; they appear in the For You view.', es: 'Desactivado de forma predeterminada. Al activarlo, Pulsar inicia un historial local separado para recomendaciones; no incluye reproducciones anteriores. Lo usa para buscar música en YouTube. Los resultados no se descargan; aparecen en la vista Para ti.' },
+    'Historia i polecenia pozostają na tym urządzeniu; zapytania wyszukiwania trafiają do skonfigurowanego źródła YouTube. Odświeżanie co 12 godzin.': { en: 'History and recommendations stay on this device; search terms are sent to the configured YouTube search source. Refreshes every 12 hours.', es: 'El historial y las recomendaciones permanecen en este dispositivo; los términos de búsqueda se envían a la fuente de YouTube configurada. Se actualiza cada 12 horas.' },
+    'Usuń zebrane dane rekomendacji': { en: 'Delete recommendation data', es: 'Eliminar datos de recomendaciones' },
+    'Dla Ciebie': { en: 'For You', es: 'Para ti' },
+    'Polecenia na podstawie odsłuchu. Nic nie zostanie pobrane automatycznie.': { en: 'Suggestions based on listening. Nothing is downloaded automatically.', es: 'Sugerencias según lo que escuchas. No se descarga nada automáticamente.' },
+    'Odśwież': { en: 'Refresh', es: 'Actualizar' },
+    'Włącz rekomendacje w Ustawieniach → Biblioteka. Historia nie jest obecnie zbierana.': { en: 'Enable recommendations in Settings → Library. Listening history is not being collected.', es: 'Activa las recomendaciones en Ajustes → Biblioteca. No se está recopilando el historial.' },
+    'Słuchaj dalej — po kilku odtworzeniach Pulsar przygotuje polecenia. Zaczynamy liczyć dopiero od włączenia tej opcji.': { en: 'Keep listening — Pulsar will prepare suggestions after a few plays. Collection starts only after you enable this option.', es: 'Sigue escuchando: Pulsar preparará sugerencias después de algunas reproducciones. La recopilación empieza solo al activar esta opción.' },
+    'Szukam niepobranej muzyki na YouTube…': { en: 'Finding music on YouTube that is not in your library…', es: 'Buscando música de YouTube que no está en tu biblioteca…' },
+    'Ostatnia aktualizacja:': { en: 'Last updated:', es: 'Última actualización:' },
+    'odświeżanie co 12 godzin': { en: 'refreshes every 12 hours', es: 'se actualiza cada 12 horas' },
+    'Brak zapisanych rekomendacji. Naciśnij Odśwież, aby spróbować ponownie.': { en: 'No saved recommendations. Press Refresh to try again.', es: 'No hay recomendaciones guardadas. Pulsa Actualizar para intentarlo de nuevo.' },
+    'Niepobrane · YouTube': { en: 'Not downloaded · YouTube', es: 'No descargado · YouTube' },
+    'Otwórz w YouTube': { en: 'Open on YouTube', es: 'Abrir en YouTube' },
+    'Brak nowych rekomendacji. Spróbuj odświeżyć później.': { en: 'No new recommendations. Try refreshing later.', es: 'No hay recomendaciones nuevas. Inténtalo más tarde.' },
+    'utworów': { en: 'tracks', es: 'pistas' },
+    'Utwór z YouTube': { en: 'YouTube track', es: 'Pista de YouTube' },
+    'Plakat': { en: 'Poster', es: 'Póster' },
+    'Plakat albumu': { en: 'Album poster', es: 'Póster del álbum' },
+    'grafika proceduralna': { en: 'procedural artwork', es: 'arte procedural' },
+    'Ustaw jako okładkę': { en: 'Set as cover', es: 'Usar como portada' },
+    'Zapisz PNG': { en: 'Save PNG', es: 'Guardar PNG' },
+    'Grafika powstaje lokalnie z okładek i metadanych. Nic nie jest wysyłane ani generowane przez AI.': { en: 'Artwork is generated locally from covers and metadata. Nothing is uploaded or AI-generated.', es: 'La imagen se genera localmente a partir de portadas y metadatos. No se sube ni se genera con IA.' },
+    'Nie udało się wygenerować plakatu': { en: 'Could not generate the poster', es: 'No se pudo generar el póster' },
+    'Plakat ustawiono jako okładkę': { en: 'Poster set as the cover', es: 'Póster establecido como portada' },
+    'Dane rekomendacji usunięte.': { en: 'Recommendation data deleted.', es: 'Datos de recomendaciones eliminados.' },
+    'Dane rekomendacji usunięte': { en: 'Recommendation data deleted', es: 'Datos de recomendaciones eliminados' },
+    'Rekomendacje włączone — historia zaczyna się od teraz.': { en: 'Recommendations enabled — history starts now.', es: 'Recomendaciones activadas: el historial empieza ahora.' },
+    'Rekomendacje wyłączone — historia nie jest dalej zbierana.': { en: 'Recommendations disabled — history collection has stopped.', es: 'Recomendaciones desactivadas: se detuvo la recopilación del historial.' },
+    'TEMPO / BARWA / RYTM': { en: 'TEMPO / COLOUR / RHYTHM', es: 'TEMPO / COLOR / RITMO' },
+    'UTWORÓW': { en: 'TRACKS', es: 'PISTAS' }
   };
   var I18N_LANG_NAMES = { pl: 'Polski', en: 'English', es: 'Español' };
   var __tr = t; // alias — użyteczny w zakresie z lokalnym „t” (utwór)
@@ -2625,6 +2705,7 @@
   const albumPlayBtn = document.getElementById('albumPlayBtn');
   const albumShuffleBtn = document.getElementById('albumShuffleBtn');
   const albumAddSongsBtn = document.getElementById('albumAddSongsBtn');
+  const albumPosterBtn = document.getElementById('albumPosterBtn');
   const albumRenameBtn = document.getElementById('albumRenameBtn');
   const albumDeleteBtn = document.getElementById('albumDeleteBtn');
   const albumTrackList = document.getElementById('albumTrackList');
@@ -3132,12 +3213,34 @@
 
   let tracks = [];
   let albums = [];               // albumy trzymane w store 'playlists' (kompatybilność ze starszymi zapisami)
+  let recommendationsEnabled = false;
+  let recommendationHistory = [];
+  let recommendationCache = { updatedAt: 0, items: [] };
+  let recommendationLastTrackId = null;
+  try {
+    recommendationsEnabled = localStorage.getItem('pulsarRecommendationsEnabled') === '1';
+    recommendationHistory = JSON.parse(localStorage.getItem('pulsarRecommendationHistoryV1') || '[]');
+    if (!Array.isArray(recommendationHistory)) recommendationHistory = [];
+    recommendationCache = JSON.parse(localStorage.getItem('pulsarRecommendationCacheV1') || '{"updatedAt":0,"items":[]}');
+    if (!recommendationCache || !Array.isArray(recommendationCache.items)) recommendationCache = { updatedAt: 0, items: [] };
+  } catch(e){ recommendationHistory = []; recommendationCache = { updatedAt: 0, items: [] }; }
+  function persistRecommendationHistory(){
+    try { localStorage.setItem('pulsarRecommendationHistoryV1', JSON.stringify(recommendationHistory.slice(-300))); } catch(e){}
+  }
+  function recordRecommendationListen(track){
+    if (!recommendationsEnabled || !track || !track.id || recommendationLastTrackId === track.id) return;
+    recommendationLastTrackId = track.id;
+    recommendationHistory.push({ id:String(track.id), title:String(track.title||'').slice(0,180), artist:String(track.artist||'').slice(0,120), genre:String(track.genre||'').slice(0,80), at:Date.now() });
+    if (recommendationHistory.length > 300) recommendationHistory = recommendationHistory.slice(-300);
+    persistRecommendationHistory();
+    if (recommendationHistory.length >= 3 && !(recommendationCache && recommendationCache.updatedAt)) setTimeout(function(){ refreshRecommendations(true); }, 1200);
+  }
   let activeAlbumId = null;      // album, z którego aktualnie leci kolejka (null = cała biblioteka)
   let queue = [];                // aktualna kolejka odtwarzania (indeksy tablicy tracks)
   let currentIndex = -1;
   let repeatMode = 0;            // 0 – wyłączone, 1 – powtarzaj cały album/listę, 2 – powtarzaj jeden utwór
   let shuffleOn = false;
-  let libraryView = (function(){ try { var v = localStorage.getItem('playerLibView'); return (v === 'albums' || v === 'net' || v === 'tracks') ? v : 'tracks'; } catch(e){ return 'tracks'; } })();    // zapamiętywana zakładka
+  let libraryView = (function(){ try { var v = localStorage.getItem('playerLibView'); return (v === 'albums' || v === 'net' || v === 'recommendations' || v === 'tracks') ? v : 'tracks'; } catch(e){ return 'tracks'; } })();    // zapamiętywana zakładka
   function setLibView(v){ libraryView = v; try { localStorage.setItem('playerLibView', v); } catch(e){} }
   let openAlbumId = null;        // podgląd szczegółów albumu
   let selectionMode = false;     // zaznaczanie wielu utworów
@@ -3905,14 +4008,17 @@
     libraryHeading.textContent = openAlbumId ? t('Album') : t('Biblioteka');
     const showTracks = !openAlbumId && libraryView === 'tracks';
     const showAlbums = !openAlbumId && libraryView === 'albums';
+    const showRecommendations = !openAlbumId && libraryView === 'recommendations';
     trackListEl.hidden = !showTracks;
     albumGridWrap.hidden = !showAlbums;
+    const recommendationsViewEl = document.getElementById('recommendationsView');
+    if (recommendationsViewEl) recommendationsViewEl.hidden = !showRecommendations;
     const libSubEl = document.getElementById('libSubhead');
     if (libSubEl) libSubEl.hidden = !showTracks || !tracks.length;
     const netViewEl = document.getElementById('netView');
     if (netViewEl) netViewEl.hidden = Boolean(openAlbumId) || libraryView !== 'net';
     albumDetail.hidden = !openAlbumId;
-    libraryToolbar.hidden = Boolean(openAlbumId) || libraryView === 'net';
+    libraryToolbar.hidden = Boolean(openAlbumId) || libraryView === 'net' || showRecommendations;
     addingHint.hidden = !addingToAlbumId;
     selectToggleBtn.classList.toggle('on', selectionMode);
     selectToggleBtn.textContent = selectionMode ? t('Anuluj zaznaczanie') : t('Zaznacz utwory');
@@ -3925,6 +4031,7 @@
     updateDedupeBtn();
     if (showTracks) renderTracksView();
     if (showAlbums) renderAlbumGrid();
+    if (showRecommendations) renderRecommendationsView();
     if (openAlbumId) renderAlbumDetail();
     updateSelectionBar();
   }
@@ -4145,6 +4252,7 @@
     const actRename = document.getElementById('albumRenameBtn');
     const actDelete = document.getElementById('albumDeleteBtn');
     const actAdd = document.getElementById('albumAddSongsBtn');
+    if (albumPosterBtn) albumPosterBtn.hidden = isLiked;
     if (actRename) actRename.hidden = isLiked;
     if (actDelete) actDelete.hidden = isLiked;
     if (actAdd) actAdd.hidden = isLiked;
@@ -4406,7 +4514,7 @@
    * Pomijamy cache analizy (odtworzy się sam).
    */
   const BACKUP_MAGIC = 'PULSARLIB';
-  const BACKUP_SKIP_KEYS = /^(pulsarWatch|pulsarYtdlpCheck|pulsarMiniGeo|pulsarNormalGeo|pulsarMini$|pulsarTrayHint)/;
+  const BACKUP_SKIP_KEYS = /^(pulsarWatch|pulsarYtdlpCheck|pulsarMiniGeo|pulsarNormalGeo|pulsarMini$|pulsarTrayHint|pulsarRecommendations|pulsarRecommendation)/;
   function backupSettings(){
     const out = {};
     try {
@@ -5293,6 +5401,89 @@
     }
     return [];
   }
+  const RECOMMENDATIONS_TTL = 12 * 60 * 60 * 1000;
+  let recommendationsBusy = false, recommendationsTimer = 0;
+  function recommendationQueries(){
+    const recent=recommendationHistory.slice(-90),artistWeights=Object.create(null),genreWeights=Object.create(null);
+    recent.forEach((entry,i)=>{
+      const weight=.55+i/recent.length;
+      const artist=String(entry.artist||'').trim(),genre=String(entry.genre||'').trim();
+      if(artist&&!/^(youtube|unknown|nieznany wykonawca)$/i.test(artist))artistWeights[artist]=(artistWeights[artist]||0)+weight;
+      if(genre)genreWeights[genre]=(genreWeights[genre]||0)+weight;
+    });
+    const top=(map,n)=>Object.keys(map).sort((a,b)=>map[b]-map[a]).slice(0,n);
+    const artists=top(artistWeights,3),genres=top(genreWeights,2),queries=[];
+    if(artists[0]&&genres[0])queries.push(artists[0]+' '+genres[0]+' music');
+    if(artists[0])queries.push(artists[0]+' similar artists music');
+    if(artists[1]&&artists[1]!==artists[0])queries.push(artists[1]+' songs');
+    if(genres[0]&&queries.length<3)queries.push(genres[0]+' new music');
+    return Array.from(new Set(queries.map(x=>x.trim()).filter(Boolean))).slice(0,3);
+  }
+  function renderRecommendationsView(){
+    const grid=document.getElementById('recommendationsGrid'),status=document.getElementById('recommendationsStatus');
+    if(!grid||!status)return;grid.textContent='';
+    if(!recommendationsEnabled){status.textContent=t('Włącz rekomendacje w Ustawieniach → Biblioteka. Historia nie jest obecnie zbierana.');return;}
+    if(recommendationHistory.length<3){status.textContent=t('Słuchaj dalej — po kilku odtworzeniach Pulsar przygotuje polecenia. Zaczynamy liczyć dopiero od włączenia tej opcji.');return;}
+    if(recommendationsBusy){status.textContent=t('Szukam niepobranej muzyki na YouTube…');}
+    else if(recommendationCache.updatedAt){
+      const locale=CUR_LANG==='pl'?'pl-PL':(CUR_LANG==='es'?'es-ES':'en-US');
+      status.textContent=t('Ostatnia aktualizacja:')+' '+new Date(recommendationCache.updatedAt).toLocaleString(locale)+' · '+t('odświeżanie co 12 godzin');
+    }else status.textContent=t('Brak zapisanych rekomendacji. Naciśnij Odśwież, aby spróbować ponownie.');
+    (recommendationCache.items||[]).forEach(item=>{
+      const card=document.createElement('article');card.className='recommendation-card';
+      const img=document.createElement('img');img.className='recommendation-art';img.alt='';img.loading='lazy';img.src=item.art||ytThumbUrl(item.id);
+      img.onerror=function(){img.removeAttribute('src');};
+      const meta=document.createElement('div');meta.className='recommendation-meta';
+      const title=document.createElement('div');title.className='recommendation-title';title.textContent=item.title||t('Utwór z YouTube');
+      const artist=document.createElement('div');artist.className='recommendation-artist';artist.textContent=item.artist||'YouTube';
+      meta.appendChild(title);meta.appendChild(artist);card.appendChild(img);card.appendChild(meta);
+      const badge=document.createElement('div');badge.className='recommendation-badge';badge.textContent=t('Niepobrane · YouTube');card.appendChild(badge);
+      const link=document.createElement('a');link.className='recommendation-open';link.href='https://www.youtube.com/watch?v='+encodeURIComponent(item.id);link.target='_blank';link.rel='noopener noreferrer';link.textContent=t('Otwórz w YouTube');card.appendChild(link);grid.appendChild(card);
+    });
+    if(!recommendationCache.items.length&&!recommendationsBusy){const empty=document.createElement('p');empty.className='empty-list-hint';empty.textContent=t('Brak nowych rekomendacji. Spróbuj odświeżyć później.');grid.appendChild(empty);}
+  }
+  async function refreshRecommendations(force){
+    if(!recommendationsEnabled){renderRecommendationsView();return []};
+    if(recommendationHistory.length<3){renderRecommendationsView();return [];}
+    if(recommendationsBusy)return recommendationCache.items||[];
+    if(!force&&recommendationCache.updatedAt&&Date.now()-recommendationCache.updatedAt<RECOMMENDATIONS_TTL){renderRecommendationsView();return recommendationCache.items||[];}
+    if(!netEnabled){recommendationsBusy=false;renderRecommendationsView();return [];}
+    const queries=recommendationQueries();if(!queries.length){renderRecommendationsView();return [];}
+    recommendationsBusy=true;renderRecommendationsView();
+    try{
+      const batches=await Promise.all(queries.map(q=>netYoutube(q,10).catch(()=>[]))),seen=new Set(),libraryKeys=new Set();
+      tracks.forEach(tr=>{libraryKeys.add(normTitle(tr.title)+'|'+normTitle(tr.artist));if(tr.netId)libraryKeys.add(String(tr.netId));});
+      const historyKeys=new Set(recommendationHistory.slice(-120).map(x=>normTitle(x.title)+'|'+normTitle(x.artist)));
+      const items=[];
+      batches.flat().forEach(r=>{
+        if(!r||!r.id)return;const id=String(r.id),key=normTitle(r.title)+'|'+normTitle(r.artist);
+        if(seen.has(id)||libraryKeys.has('youtube:'+id)||libraryKeys.has(key)||historyKeys.has(key))return;
+        seen.add(id);items.push({id:id,title:String(r.title||'').slice(0,180),artist:String(r.artist||'YouTube').slice(0,120),art:String(r.art||ytThumbUrl(id)),link:String(r.link||('https://www.youtube.com/watch?v='+id)),durMs:Number(r.durMs||0)});
+      });
+      recommendationCache={updatedAt:Date.now(),items:items.slice(0,36)};
+      try{localStorage.setItem('pulsarRecommendationCacheV1',JSON.stringify(recommendationCache));}catch(e){}
+      return recommendationCache.items;
+    }catch(e){
+      recommendationCache={updatedAt:Date.now(),items:recommendationCache.items||[]};
+      try{localStorage.setItem('pulsarRecommendationCacheV1',JSON.stringify(recommendationCache));}catch(e2){}
+      return recommendationCache.items;
+    }
+    finally{recommendationsBusy=false;renderRecommendationsView();scheduleRecommendationRefresh();}
+  }
+  function scheduleRecommendationRefresh(){
+    if(recommendationsTimer)clearTimeout(recommendationsTimer);recommendationsTimer=0;
+    if(!recommendationsEnabled)return;
+    const enough=recommendationHistory.length>=3,now=Date.now();
+    const due=Number(recommendationCache.updatedAt||0)?Number(recommendationCache.updatedAt)+RECOMMENDATIONS_TTL:(enough?now+2500:now+60*60*1000);
+    const wait=Math.max(1200,due-now);
+    recommendationsTimer=setTimeout(function(){
+      if(!recommendationsEnabled)return;
+      if(recommendationHistory.length>=3&&(!recommendationCache.updatedAt||Date.now()-recommendationCache.updatedAt>=RECOMMENDATIONS_TTL))refreshRecommendations(true);
+      else scheduleRecommendationRefresh();
+    },wait);
+  }
+  scheduleRecommendationRefresh();
+
   const YT_FAIL_HINT = t('Nie udało się pobrać audio z YouTube — publiczne API (Piped/Cobalt) są dziś blokowane lub wymagają kapczy. Najpewniej działa lokalny mostek yt-dlp: ');
   function ytDlpCmd(ytUrl){ return 'yt-dlp -x --audio-format mp3 --embed-thumbnail --add-metadata "' + ytUrl + '"'; }
   async function netYtStream(ytId){
@@ -7088,6 +7279,7 @@
     const track = tracks[idx];
     if (autoDjOn && repeatMode !== 2){ djNotePlayed(); djHistory.push(currentIndex); }
     currentIndex = idx;
+    recordRecommendationListen(track);
     if (!queue.length || queue.indexOf(currentIndex) === -1) rebuildQueue();
     updateTitleArtist(txArtist(track.artist), track.title);
     setCover(coverUrlOf(track));
@@ -7430,6 +7622,25 @@
     }
     smShowPane(smCurrentPane());
   }
+  const recommendationsToggleEl=document.getElementById('smRecommendationsToggle');
+  if(recommendationsToggleEl){
+    recommendationsToggleEl.checked=recommendationsEnabled;
+    recommendationsToggleEl.addEventListener('change',function(){
+      recommendationsEnabled=!!recommendationsToggleEl.checked;
+      try{localStorage.setItem('pulsarRecommendationsEnabled',recommendationsEnabled?'1':'0');}catch(e){}
+      if(recommendationsEnabled){recommendationLastTrackId=null;if(!audio.paused&&currentIndex>-1)recordRecommendationListen(tracks[currentIndex]);scheduleRecommendationRefresh();if(recommendationHistory.length>=3)refreshRecommendations(true);showToast(t('Rekomendacje włączone — historia zaczyna się od teraz.'));}
+      else{if(recommendationsTimer)clearTimeout(recommendationsTimer);recommendationsTimer=0;showToast(t('Rekomendacje wyłączone — historia nie jest dalej zbierana.'));}
+      renderRecommendationsView();
+    });
+  }
+  const recommendationsClearBtn=document.getElementById('smRecommendationsClearBtn');
+  if(recommendationsClearBtn)recommendationsClearBtn.addEventListener('click',function(){
+    recommendationHistory=[];recommendationCache={updatedAt:0,items:[]};recommendationLastTrackId=null;
+    try{localStorage.removeItem('pulsarRecommendationHistoryV1');localStorage.removeItem('pulsarRecommendationCacheV1');}catch(e){}
+    renderRecommendationsView();showToast(t('Dane rekomendacji usunięte.'));
+  });
+  const recommendationsRefreshBtn=document.getElementById('recommendationsRefreshBtn');
+  if(recommendationsRefreshBtn)recommendationsRefreshBtn.addEventListener('click',function(){refreshRecommendations(true);});
   function fmtPan(v){
     v = Math.round(v * 100);
     if (v === 0) return t('środek');
@@ -7714,6 +7925,7 @@
   }
 
   audio.addEventListener('play', () => {
+    if (currentIndex > -1) recordRecommendationListen(tracks[currentIndex]);
     if (audioNet && !audioNet.paused) netStopPreview();
     setPlayIcon(true); resetHideTimer();
     document.body.classList.add('playing');
@@ -7846,6 +8058,117 @@
     images.forEach(u => { if (created.indexOf(u) > -1) { try { URL.revokeObjectURL(u); } catch(e){} } });
     return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
   }
+
+  function posterHash(value){
+    let h=2166136261;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;
+  }
+  function posterRgbHex(r,g,b){return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+  async function posterPalette(album){
+    const blobs=[];
+    if(album&&album.coverBlob)blobs.push(album.coverBlob);
+    (album&&album.trackIds||[]).slice(0,8).forEach(id=>{const tr=tracks.find(x=>x.id===id);if(tr&&(tr.coverBlob||tr.matchedImg))blobs.push(tr.coverBlob||tr.matchedImg);});
+    const buckets=Object.create(null);
+    for(const blob of blobs.slice(0,5)){
+      if(!blob||!blob.size)continue;
+      const url=URL.createObjectURL(blob);
+      try{
+        const image=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=url;});
+        const sample=document.createElement('canvas');sample.width=32;sample.height=32;
+        const c=sample.getContext('2d',{willReadFrequently:true});c.drawImage(image,0,0,32,32);
+        const pixels=c.getImageData(0,0,32,32).data;
+        for(let i=0;i<pixels.length;i+=16){
+          const r=pixels[i],g=pixels[i+1],b=pixels[i+2],max=Math.max(r,g,b),min=Math.min(r,g,b),sat=max?((max-min)/max):0;
+          if(max<38||max>247||sat<.18)continue;
+          const key=[r>>5,g>>5,b>>5].join(':'),bucket=buckets[key]||(buckets[key]={r:0,g:0,b:0,n:0,score:0});
+          bucket.r+=r;bucket.g+=g;bucket.b+=b;bucket.n++;bucket.score+=sat;
+        }
+      }catch(e){}finally{try{URL.revokeObjectURL(url);}catch(e){}}
+    }
+    const found=Object.keys(buckets).map(k=>buckets[k]).sort((a,b)=>b.n*(1+b.score/b.n)-a.n*(1+a.score/a.n)).slice(0,5).map(x=>posterRgbHex(x.r/x.n,x.g/x.n,x.b/x.n));
+    if(found.length>=3)return found;
+    const fallback=['#50c6c4','#a58be8','#e8a56e'];
+    while(found.length<3)found.push(fallback[found.length]);
+    return found;
+  }
+  async function makeAlbumPoster(album){
+    const ids=(album.trackIds||[]).filter(id=>tracks.some(tr=>tr.id===id));
+    const items=ids.map(id=>tracks.find(tr=>tr.id===id)).filter(Boolean);
+    if(!items.some(tr=>{const a=analysisCache.get(tr.id);return a&&a.bpm>0;})){
+      items.slice(0,6).forEach(tr=>scheduleAnalysis(tr,true));
+      const until=Date.now()+1800;
+      while(Date.now()<until&&!items.some(tr=>{const a=analysisCache.get(tr.id);return a&&a.bpm>0;}))await new Promise(resolve=>setTimeout(resolve,120));
+    }
+    const palette=await posterPalette(album),canvas=document.createElement('canvas');canvas.width=900;canvas.height=1350;
+    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Canvas unavailable');
+    const seed=posterHash((album.name||'Pulsar')+'|'+ids.join('|')),rand=n=>{const v=Math.sin(seed+n*78.233)*43758.5453;return v-Math.floor(v);};
+    const bg=ctx.createLinearGradient(0,0,900,1350);bg.addColorStop(0,'#0b1320');bg.addColorStop(.54,'#10131e');bg.addColorStop(1,'#080d15');ctx.fillStyle=bg;ctx.fillRect(0,0,900,1350);
+    for(let i=0;i<3;i++){const glow=ctx.createRadialGradient(140+i*300,260+i*210,0,140+i*300,260+i*210,600);glow.addColorStop(0,palette[i]+'44');glow.addColorStop(1,'#00000000');ctx.fillStyle=glow;ctx.fillRect(0,0,900,1100);}
+    const years=items.map(x=>String(x.year||'').match(/\b(?:19|20)\d{2}\b/)||[]).map(x=>x[0]).filter(Boolean);
+    const year=years.sort((a,b)=>years.filter(x=>x===b).length-years.filter(x=>x===a).length)[0]||'';
+    const recs=items.map(x=>analysisCache.get(x.id)).filter(x=>x&&x.bpm>0),tempos=recs.map(x=>x.bpm);
+    const bpm=tempos.length?Math.round(tempos.reduce((a,b)=>a+b,0)/tempos.length):Math.round(84+rand(7)*56);
+    const energy=recs.length?Math.max(.15,Math.min(.95,recs.reduce((sum,x)=>sum+(x.rms||.2),0)/recs.length*2.4)):.5;
+    const rhythmCount=Math.max(18,Math.min(52,Math.round(bpm/2.6))),cx=450,cy=610;
+    ctx.save();ctx.translate(cx,cy);
+    for(let ring=0;ring<5;ring++){
+      ctx.beginPath();ctx.arc(0,0,135+ring*54,0,Math.PI*2);ctx.strokeStyle=palette[ring%palette.length]+'30';ctx.lineWidth=ring===0?1.4:.8;ctx.stroke();
+    }
+    for(let i=0;i<rhythmCount;i++){
+      const a=(Math.PI*2*i/rhythmCount)-Math.PI/2,accent=.24+rand(i+21)*.76*energy;
+      const inner=122+accent*38,outer=196+accent*188;
+      ctx.beginPath();ctx.moveTo(Math.cos(a)*inner,Math.sin(a)*inner);ctx.lineTo(Math.cos(a)*outer,Math.sin(a)*outer);
+      ctx.strokeStyle=palette[i%palette.length]+(energy>.72?'bc':'72');ctx.lineWidth=1+energy*3.2;ctx.lineCap='round';ctx.stroke();
+      if(i%Math.max(3,Math.round(rhythmCount/12))===0){ctx.beginPath();ctx.arc(Math.cos(a)*outer,Math.sin(a)*outer,2+energy*2,0,Math.PI*2);ctx.fillStyle=palette[(i+1)%palette.length];ctx.fill();}
+    }
+    for(let i=0;i<90;i++){const a=rand(i+91)*Math.PI*2,r=300+rand(i+191)*145;ctx.beginPath();ctx.arc(Math.cos(a)*r,Math.sin(a)*r,.7+rand(i+291)*1.8,0,Math.PI*2);ctx.fillStyle='rgba(225,236,250,'+(.1+rand(i+391)*.32)+')';ctx.fill();}
+    ctx.restore();
+    ctx.strokeStyle='rgba(226,236,248,.22)';ctx.lineWidth=1;ctx.strokeRect(42,42,816,1266);
+    ctx.fillStyle='rgba(235,242,250,.64)';ctx.font='700 16px system-ui,sans-serif';ctx.textAlign='left';ctx.fillText('P U L S A R   /   ALBUM STUDY',68,91);
+    ctx.textAlign='right';ctx.fillStyle='rgba(235,242,250,.58)';ctx.fillText(year||'SOUND EDITION',832,91);
+    const title=String(album.name||t('Bez tytułu')).trim(),artist=items.map(x=>x.artist).find(Boolean)||'';
+    const wrap=(text,maxChars)=>{const words=String(text).split(/\s+/),lines=[];let line='';words.forEach(w=>{if(line&&(line+' '+w).length>maxChars){lines.push(line);line=w;}else line+=(line?' ':'')+w;});if(line)lines.push(line);return lines.slice(0,3);};
+    const titleLines=wrap(title,title.length>25?19:25);ctx.textAlign='left';ctx.fillStyle='#f4f1e9';ctx.font='700 68px Georgia,serif';
+    const maxLine=Math.max.apply(null,titleLines.map(line=>ctx.measureText(line).width||line.length*34));
+    const titleSize=Math.max(38,Math.min(68,68*760/Math.max(1,maxLine)));
+    ctx.font='700 '+titleSize+'px Georgia,serif';titleLines.forEach((line,i)=>ctx.fillText(line,68,1030+i*titleSize*1.12));
+    ctx.fillStyle='rgba(235,240,248,.68)';ctx.font='500 25px system-ui,sans-serif';ctx.fillText(artist,70,1260);
+    ctx.textAlign='right';ctx.fillStyle=palette[0];ctx.font='700 18px ui-monospace,monospace';ctx.fillText(bpm+' BPM',830,1256);
+    ctx.textAlign='left';ctx.fillStyle='rgba(235,240,248,.42)';ctx.font='600 11px system-ui,sans-serif';ctx.fillText(items.length+' '+t('UTWORÓW').toUpperCase()+'  ·  '+t('TEMPO / BARWA / RYTM'),70,1284);
+    for(let i=0;i<3;i++){ctx.fillStyle=palette[i];ctx.fillRect(68+i*22,1300,14,3);}
+    return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Poster export failed')),'image/png'));
+  }
+  let posterAlbumId=null,posterBlob=null,posterPreviewUrl=null;
+  const posterModalEl=document.getElementById('posterModal'),posterPreviewEl=document.getElementById('posterPreview');
+  async function openAlbumPoster(album){
+    if(!album||album.id===LIKED_ID)return;
+    posterAlbumId=album.id;posterBlob=null;
+    const title=document.getElementById('posterModalTitle'),meta=document.getElementById('posterModalMeta');
+    title.textContent=t('Plakat albumu')+' · '+album.name;
+    const ids=album.trackIds||[],years=ids.map(id=>tracks.find(x=>x.id===id)).filter(Boolean).map(x=>x.year).filter(Boolean);
+    meta.textContent=ids.length+' '+t('utworów')+(years.length?' · '+years[0]:'')+' · '+t('grafika proceduralna');
+    posterModalEl.hidden=false;posterModalEl.setAttribute('aria-hidden','false');posterPreviewEl.alt=t('Plakat albumu')+' '+album.name;
+    document.getElementById('posterCloseBtn').focus();
+    document.getElementById('posterUseCoverBtn').disabled=true;document.getElementById('posterDownloadBtn').disabled=true;
+    try{
+      posterBlob=await makeAlbumPoster(album);
+      if(posterAlbumId!==album.id)return;
+      if(posterPreviewUrl)URL.revokeObjectURL(posterPreviewUrl);
+      posterPreviewUrl=URL.createObjectURL(posterBlob);posterPreviewEl.src=posterPreviewUrl;
+      document.getElementById('posterUseCoverBtn').disabled=false;document.getElementById('posterDownloadBtn').disabled=false;
+    }catch(e){closeAlbumPoster();showToast(t('Nie udało się wygenerować plakatu'));}
+  }
+  function closeAlbumPoster(){posterModalEl.hidden=true;posterModalEl.setAttribute('aria-hidden','true');if(posterPreviewUrl){URL.revokeObjectURL(posterPreviewUrl);posterPreviewUrl=null;}posterPreviewEl.removeAttribute('src');posterBlob=null;posterAlbumId=null;}
+  document.getElementById('posterCloseBtn').addEventListener('click',closeAlbumPoster);
+  posterModalEl.addEventListener('click',e=>{if(e.target===posterModalEl)closeAlbumPoster();});
+  posterModalEl.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeAlbumPoster();albumPosterBtn.focus();}});
+  document.getElementById('posterUseCoverBtn').addEventListener('click',async()=>{
+    const album=albumById(posterAlbumId);if(!album||!posterBlob)return;
+    album.coverBlob=posterBlob;album.customCover=true;await persistAlbum(album);renderLibrary();closeAlbumPoster();showToast(t('Plakat ustawiono jako okładkę'));
+  });
+  document.getElementById('posterDownloadBtn').addEventListener('click',()=>{
+    if(!posterBlob)return;const album=albumById(posterAlbumId);const slug=String(album&&album.name||'album').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'album';
+    const url=URL.createObjectURL(posterBlob),a=document.createElement('a');a.href=url;a.download=slug+'-pulsar-poster.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  });
 
   const albumCoverRefreshVersions = new WeakMap();
   async function refreshAlbumCover(album, clearIfEmpty){
@@ -8040,6 +8363,7 @@
     openAlbumId = null;
     renderLibrary();
     if (btn.dataset.view === 'net'){ renderNetGenres(); renderNetBrowseState(); }
+    if (btn.dataset.view === 'recommendations') refreshRecommendations(false);
   });
   selectToggleBtn.addEventListener('click', () => {
     if (addingToAlbumId){ finishAddingToAlbum(false); return; }
@@ -8069,6 +8393,7 @@
   albumPlayBtn.addEventListener('click', () => { const a = albumById(openAlbumId); if (a) playAlbumFrom(a, false); });
   albumShuffleBtn.addEventListener('click', () => { const a = albumById(openAlbumId); if (a) playAlbumFrom(a, true); });
   albumAddSongsBtn.addEventListener('click', () => { if (openAlbumId) startAddingToAlbum(openAlbumId); });
+  albumPosterBtn.addEventListener('click', () => openAlbumPoster(albumById(openAlbumId)));
   albumRenameBtn.addEventListener('click', () => openRenameAlbumModal(albumById(openAlbumId)));
   albumDeleteBtn.addEventListener('click', () => deleteAlbum(albumById(openAlbumId)));
   albumCoverEditBtn.addEventListener('click', () => albumCoverInput.click());
@@ -8100,7 +8425,7 @@
           var cont = openAlbumId ? document.getElementById('albumDetail')
             : (libraryView === 'tracks' ? trackListEl
             : (libraryView === 'albums' ? document.getElementById('albumGrid')
-            : document.getElementById('netView')));
+            : (libraryView === 'recommendations' ? document.getElementById('recommendationsGrid') : document.getElementById('netView'))));
           if (cont) animSwap(cont, 'view-anim');
         }
       } catch(e){}
