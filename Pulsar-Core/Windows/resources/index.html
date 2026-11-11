@@ -6201,7 +6201,11 @@
       const YT=await loadYoutubeIframeApi();
       if(token!==videoModeToken||!videoModeActive)return;
       const playerVars={autoplay:0,controls:0,disablekb:1,fs:0,playsinline:1,rel:0,modestbranding:1,iv_load_policy:3,start:Math.floor(videoModePosition),enablejsapi:1};
-      if(/^https?:$/.test(location.protocol))playerVars.origin=location.origin;
+      if(/^https?:$/.test(location.protocol)){
+        playerVars.origin=location.origin;
+        // Desktop webviews need an explicit embedder URL for YouTube's player identity checks.
+        playerVars.widget_referrer=location.href;
+      }
       videoPlayer=new YT.Player('videoPlayerMount',{width:'100%',height:'100%',videoId:id,playerVars:playerVars,events:{
         onReady:function(event){
           if(token!==videoModeToken||!videoModeActive)return;
@@ -6226,10 +6230,16 @@
             else if(activeOnlineSession&&activeOnlineSession.items&&activeOnlineSession.items.length>1)nextTrack(true);
           }
         },
-        onError:function(){if(token!==videoModeToken||!videoModeActive)return;showToast(t('Nie udało się załadować teledysku YouTube.'));stopVideoMode(videoModeWasPlaying);},
+        onError:function(event){
+          if(token!==videoModeToken||!videoModeActive)return;
+          const code=event&&Number(event.data);
+          console.error('[Pulsar video] YouTube IFrame Player error',code,'video',id,'origin',location.origin);
+          showToast(t('Nie udało się załadować teledysku YouTube.')+(Number.isFinite(code)?' (YouTube '+code+')':''));
+          stopVideoMode(videoModeWasPlaying);
+        },
         onAutoplayBlocked:function(){if(token!==videoModeToken||!videoModeActive)return;const w=document.getElementById('videoWait');if(w)w.hidden=true;const b=document.getElementById('videoPlayUnlock');if(b)b.hidden=false;}
       }});
-    }catch(e){if(token===videoModeToken&&videoModeActive){showToast(t('Nie udało się załadować teledysku YouTube.'));stopVideoMode(videoModeWasPlaying);}}
+    }catch(e){if(token===videoModeToken&&videoModeActive){console.error('[Pulsar video] YouTube IFrame API/player setup failed',e);showToast(t('Nie udało się załadować teledysku YouTube.'));stopVideoMode(videoModeWasPlaying);}}
   }
   function seekPlaybackTo(position){
     const time=Math.max(0,Number(position)||0);
