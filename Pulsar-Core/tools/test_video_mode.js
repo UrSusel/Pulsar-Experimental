@@ -35,9 +35,9 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /videoModePosition=pos;audio\.currentTime=pos/, `${platform}: leaving video mode returns audio to the video position`);
   assert.match(html, /stopVideoMode\(true\)/, `${platform}: the toggle returns to audio playback`);
   assert.match(html, /body\.fullscreen-mode\.video-mode \.video-stage[\s\S]*?body\.fullscreen-mode\.video-mode \.lyrics-box/, `${platform}: fullscreen lays video and lyrics side by side`);
-  assert.match(html, /html:fullscreen, html:-webkit-full-screen \{ width:100vw; height:100vh; min-height:100vh; overflow:hidden; background:var\(--bg\); \}/, `${platform}: fullscreen root fills the viewport without replacing the ambient background`);
-  assert.match(html, /html:fullscreen::backdrop, html:-webkit-full-screen::backdrop \{ background:var\(--bg\); \}/, `${platform}: fullscreen backdrop preserves the theme background`);
-  assert.match(html, /html:fullscreen body, html:-webkit-full-screen body \{ width:100vw; height:100vh; min-height:100vh; margin:0; overflow:hidden; background:var\(--bg\); \}/, `${platform}: fullscreen body fills the viewport without covering ambient layers`);
+  assert.match(html, /html:fullscreen, html:-webkit-full-screen \{ width:100vw; height:100vh; min-height:100vh; overflow:hidden; background:#050505 !important; \}/, `${platform}: fullscreen root fills the viewport`);
+  assert.match(html, /html:fullscreen::backdrop, html:-webkit-full-screen::backdrop \{ background:#050505/, `${platform}: fullscreen backdrop stays dark and does not expose white viewport strips`);
+  assert.match(html, /html:fullscreen body, html:-webkit-full-screen body \{ position:fixed; inset:0; width:100vw; height:100vh; min-height:100vh; margin:0; overflow:hidden; background:#050505 !important; \}/, `${platform}: fullscreen body covers the entire viewport`);
   assert.match(html, /body\.fullscreen-mode\.video-mode \{ width:100vw; height:100vh; min-height:100vh; margin:0; overflow:hidden; background:#050505 !important; \}/, `${platform}: fullscreen video content covers the full viewport`);
   assert.match(html, /videoModeActive\?videoModePlaying:!audio\.paused/, `${platform}: player UI follows whichever media source is active`);
 
