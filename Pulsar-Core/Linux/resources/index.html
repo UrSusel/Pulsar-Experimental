@@ -550,35 +550,49 @@
   .selection-hint { font-size:12px; color:var(--accent); padding:4px 4px 0; }
 
   /* Modal */
-  .sound-atlas { position:fixed; inset:0; z-index:45; display:flex; flex-direction:column; padding:clamp(16px, 3vw, 34px); background:rgba(10,11,16,.96); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s, visibility .2s; }
+  .sound-atlas { position:fixed; inset:0; z-index:45; display:flex; flex-direction:column; padding:clamp(18px,3.2vw,40px); background:radial-gradient(ellipse at 18% 12%,rgba(74,112,255,.12),transparent 38%),radial-gradient(ellipse at 82% 86%,rgba(246,90,157,.08),transparent 35%),rgba(8,10,16,.97); backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .22s,visibility .22s; }
   .sound-atlas.open { opacity:1; visibility:visible; pointer-events:auto; }
   body.atlas-open { overflow:hidden; }
-  .atlas-head { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; max-width:1280px; width:100%; margin:0 auto 18px; }
-  .atlas-head h2 { margin:0; font-size:clamp(24px,4vw,38px); letter-spacing:-.04em; }
-  .atlas-intro { color:var(--text-muted); font-size:13px; margin:6px 0 0; }
-  .atlas-layout { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:22px; max-width:1280px; width:100%; flex:1; min-height:0; margin:0 auto; }
-  .atlas-map-wrap { display:flex; flex-direction:column; min-height:0; border:1px solid rgba(255,255,255,.1); border-radius:18px; background:radial-gradient(ellipse at 50% 48%,rgba(124,92,255,.09),transparent 68%),rgba(255,255,255,.025); padding:12px; }
-  #atlasCanvas { display:block; width:100%; height:100%; min-height:300px; flex:1; touch-action:manipulation; outline:none; }
-  #atlasCanvas:focus-visible { box-shadow:inset 0 0 0 2px var(--accent); border-radius:10px; }
-  .atlas-axis-x { text-align:center; color:var(--text-muted); font-size:11px; padding:4px 0 0; }
-  .atlas-side { display:flex; flex-direction:column; gap:14px; }
-  .atlas-stat, .atlas-selected { border:1px solid rgba(255,255,255,.1); border-radius:14px; background:rgba(255,255,255,.04); padding:15px; }
-  .atlas-stat { color:var(--text-muted); font-size:12px; line-height:1.6; }
-  .atlas-stat strong { display:block; color:#fff; font-size:23px; letter-spacing:-.03em; }
-  .atlas-selected { min-height:140px; }
-  .atlas-selected h3 { margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-muted); }
-  .atlas-track-title { font-weight:700; font-size:16px; line-height:1.3; }
-  .atlas-track-artist { color:var(--text-muted); margin-top:4px; font-size:13px; }
-  .atlas-track-data { color:var(--text-muted); margin:10px 0 12px; font-size:11px; }
-  .atlas-play { width:100%; }
-  .atlas-help { color:var(--text-muted); font-size:11px; line-height:1.55; margin:0; }
-  @media(max-width:760px) { .sound-atlas { padding:16px; } .atlas-layout { grid-template-columns:1fr; grid-template-rows:minmax(270px,1fr) auto; gap:10px; } .atlas-side { display:grid; grid-template-columns:1fr 1.4fr; gap:8px; } .atlas-stat,.atlas-selected { padding:11px; } .atlas-stat strong { font-size:18px; } .atlas-selected { min-height:100px; } .atlas-help { display:none; } #atlasCanvas { min-height:230px; } }
+  .atlas-head { display:flex; align-items:center; justify-content:space-between; gap:20px; max-width:1320px; width:100%; margin:0 auto 20px; }
+  .atlas-head h2 { margin:0; font-size:clamp(28px,4.3vw,42px); letter-spacing:-.05em; line-height:1; }
+  .atlas-intro { color:rgba(255,255,255,.55); font-size:13px; margin:8px 0 0; }
+  .atlas-head .icon-btn { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.09); }
+  .atlas-layout { display:grid; grid-template-columns:minmax(0,1fr) 284px; gap:18px; max-width:1320px; width:100%; flex:1; min-height:0; margin:0 auto; }
+  .atlas-map-wrap { display:flex; flex-direction:column; min-height:0; border:1px solid rgba(255,255,255,.11); border-radius:22px; background:linear-gradient(150deg,rgba(255,255,255,.045),rgba(255,255,255,.012)),radial-gradient(ellipse at 48% 52%,rgba(113,103,255,.10),transparent 72%); padding:18px 20px 14px; box-shadow:0 26px 80px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.035); }
+  .atlas-map-top { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:0 2px 6px; }
+  .atlas-map-kicker { color:rgba(255,255,255,.38); font-size:9px; font-weight:800; letter-spacing:.17em; }
+  .atlas-map-title { color:#fff; font-size:15px; font-weight:700; letter-spacing:-.01em; margin:3px 0 0; }
+  .atlas-legend { display:flex; flex-direction:column; align-items:flex-end; gap:7px; color:rgba(255,255,255,.52); font-size:9px; white-space:nowrap; }
+  .atlas-energy-legend,.atlas-dot-legend { display:flex; align-items:center; gap:7px; }
+  .atlas-energy-legend i { display:block; width:66px; height:5px; border-radius:99px; background:linear-gradient(90deg,#48b7ee,#9d83ef,#ff709e); box-shadow:0 0 14px rgba(158,131,239,.25); }
+  .atlas-dot-legend i { width:9px; height:9px; border:1.5px dashed rgba(225,230,245,.8); border-radius:50%; }
+  #atlasCanvas { display:block; width:100%; height:100%; min-height:320px; flex:1; touch-action:manipulation; outline:none; border-radius:14px; }
+  #atlasCanvas:focus-visible { box-shadow:inset 0 0 0 2px var(--accent); }
+  .atlas-axis-x { text-align:center; color:rgba(255,255,255,.45); font-size:10px; font-weight:700; letter-spacing:.08em; padding:5px 0 0; text-transform:uppercase; }
+  .atlas-side { display:flex; flex-direction:column; gap:12px; min-height:0; }
+  .atlas-stat,.atlas-selected { position:relative; overflow:hidden; border:1px solid rgba(255,255,255,.10); border-radius:18px; background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); padding:17px; box-shadow:0 18px 50px rgba(0,0,0,.14); }
+  .atlas-stat-head { display:flex; align-items:center; justify-content:space-between; color:rgba(255,255,255,.52); font-size:10px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+  .atlas-stat-head i { width:7px; height:7px; border-radius:50%; background:#72e2bf; box-shadow:0 0 12px rgba(114,226,191,.7); }
+  .atlas-stat #atlasStats { color:rgba(255,255,255,.55); font-size:11px; margin-top:14px; }
+  .atlas-stat strong { display:block; color:#fff; font-size:32px; letter-spacing:-.055em; line-height:1.05; margin-bottom:5px; font-variant-numeric:tabular-nums; }
+  .atlas-stat-note { color:rgba(255,255,255,.36); font-size:10px; margin-top:11px; }
+  .atlas-selected { flex:1; min-height:168px; padding:18px; background:linear-gradient(150deg,rgba(134,112,255,.10),rgba(255,255,255,.025) 68%); }
+  .atlas-selected::after { content:""; position:absolute; right:-24px; top:20px; width:104px; height:104px; border:1px solid rgba(186,168,255,.10); border-radius:50%; box-shadow:0 0 0 12px rgba(186,168,255,.025),0 0 0 25px rgba(186,168,255,.018); pointer-events:none; }
+  .atlas-selected h3 { margin:0 0 24px; font-size:9px; text-transform:uppercase; letter-spacing:.16em; color:rgba(196,181,255,.72); }
+  .atlas-track-title { position:relative; z-index:1; font-weight:750; font-size:17px; line-height:1.3; letter-spacing:-.02em; overflow-wrap:anywhere; }
+  .atlas-track-artist { position:relative; z-index:1; color:rgba(255,255,255,.55); margin-top:5px; font-size:12px; }
+  .atlas-track-data { position:relative; z-index:1; color:rgba(255,255,255,.45); margin:12px 0 16px; font-size:10px; }
+  .atlas-play { position:relative; z-index:1; width:100%; min-height:40px; border-radius:12px; background:linear-gradient(100deg,#fff,#e9e6ff); }
+  .atlas-play:disabled { opacity:.4; }
+  .atlas-help { color:rgba(255,255,255,.40); font-size:10px; line-height:1.6; margin:0 2px; }
+  @media(max-width:760px) { .sound-atlas { padding:16px; } .atlas-head { margin-bottom:12px; } .atlas-layout { grid-template-columns:1fr; grid-template-rows:minmax(260px,1fr) auto; gap:10px; } .atlas-map-wrap { padding:13px 12px 10px; border-radius:18px; } .atlas-side { display:grid; grid-template-columns:minmax(115px,.8fr) minmax(0,1.4fr); gap:8px; } .atlas-stat,.atlas-selected { padding:12px; border-radius:14px; } .atlas-stat strong { font-size:23px; } .atlas-selected { min-height:116px; } .atlas-selected h3 { margin-bottom:12px; } .atlas-help { display:none; } #atlasCanvas { min-height:230px; } .atlas-legend { gap:5px; } }
+  @media(max-width:420px) { .atlas-map-top { align-items:flex-start; flex-direction:column; gap:8px; } .atlas-legend { align-items:flex-start; flex-direction:row; flex-wrap:wrap; white-space:normal; } .atlas-energy-legend i { width:44px; } .atlas-head h2 { font-size:28px; } .atlas-intro { max-width:260px; } }
   .onboarding { position:fixed; inset:0; z-index:80; display:block; padding:0; background:transparent; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s, visibility .2s; }
   .onboarding.open { opacity:1; visibility:visible; pointer-events:none; }
   .onboarding.no-target { background:rgba(4,5,9,.72); }
   body.tour-open { overflow:hidden; }
   .tour-spotlight { position:fixed; z-index:1; left:-10000px; top:-10000px; width:0; height:0; border:2px solid var(--accent); border-radius:12px; box-shadow:0 0 0 9999px rgba(4,5,9,.64),0 0 30px rgba(var(--accent-rgb),.48); pointer-events:none; transition:left .2s,top .2s,width .2s,height .2s; }
-  .tour-card { position:fixed; z-index:2; width:min(500px,calc(100vw - 32px)); max-height:calc(100vh - 32px); overflow:auto; border:1px solid rgba(255,255,255,.13); border-radius:22px; background:linear-gradient(145deg,rgba(31,31,40,.98),rgba(17,18,24,.99)); box-shadow:0 34px 100px rgba(0,0,0,.6); transform:translateY(12px) scale(.985); transition:transform .22s; pointer-events:auto; }
+  .tour-card { position:fixed; z-index:2; width:min(500px,calc(100vw - 32px)); max-height:calc(100vh - 32px); overflow:auto; border:1px solid rgba(255,255,255,.13); border-radius:22px; background:linear-gradient(145deg,rgba(31,31,40,.98),rgba(17,18,24,.99)); box-shadow:0 34px 100px rgba(0,0,0,.6); transform:translateY(12px) scale(.985); transition:left .32s cubic-bezier(.22,.8,.3,1),top .32s cubic-bezier(.22,.8,.3,1),transform .22s; will-change:left,top; pointer-events:auto; }
   .onboarding.open .tour-card { transform:none; }
   .tour-top { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 0; }
   .tour-brand { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
@@ -597,6 +611,7 @@
   .tour-back { border:1px solid rgba(255,255,255,.16); background:transparent; color:#fff; border-radius:999px; font:inherit; font-size:13px; padding:0 15px; cursor:pointer; }
   .tour-back:disabled { opacity:.4; cursor:default; }
   .tour-next { min-width:105px; }
+  @media(prefers-reduced-motion:reduce) { .tour-card,.tour-spotlight { transition:none !important; } }
   @media(max-width:520px) { .tour-card { max-height:calc(100dvh - 24px); } .tour-top { padding:16px 17px 0; } .tour-body { padding:16px 18px 18px; min-height:0; } .tour-progress { margin:0 18px; } .tour-footer { padding:13px 15px 16px; } .tour-footer button { min-height:36px; } .tour-footer-left,.tour-footer-right { gap:5px; } .tour-skip { font-size:12px; } }
 
   html.nl-mini .onboarding.open .tour-card { left:6px !important; top:6px !important; right:auto !important; bottom:auto !important; width:calc(100vw - 12px); max-height:calc(100vh - 12px); transform:none !important; }
@@ -1387,7 +1402,6 @@
       <button class="icon-btn" id="libraryBtn" title="Biblioteka" aria-label="Biblioteka">
         <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <button class="icon-btn" id="tourHelpBtn" type="button" title="Otwórz samouczek pierwszego uruchomienia" aria-label="Otwórz samouczek pierwszego uruchomienia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.3 1.8c-1.1 1-1.9 1.3-1.9 3"/><path d="M12 17.5h.01"/></svg></button>
       <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
       <input type="file" id="albumCoverInput" accept="image/*" hidden>
     </div>
@@ -1413,7 +1427,6 @@
       <button class="lib-tool" id="soundAtlasBtn" type="button">Sound Atlas</button>
       <button class="lib-tool" id="enrichBtn" type="button" title="Uzupełnij okładki i metadane brakujących utworów (Deezer / iTunes / MusicBrainz)">Uzupełnij online</button>
       <button class="lib-tool" id="dedupeBtn" type="button" title="Usuń powtórzone kopie utworów z biblioteki" disabled>Brak duplikatów</button>
-      <button class="lib-tool" id="autoAlbumsBtn" type="button" title="Utwórz albumy automatycznie na podstawie struktury folderów"><svg viewBox="0 0 24 24"><path d="M4 6h6l1.5 2H20v10H4z"/><path d="M14 6l.8 1.9L17 8.6l-2.2.7L14 11l-.8-1.7L11 8.6l2.2-.7z"/></svg>Sklej z folderów</button>
     </div>
 
     <div class="lib-subhead" id="libSubhead" hidden>
@@ -1514,8 +1527,11 @@
 
   <section class="sound-atlas" id="soundAtlas" aria-hidden="true" aria-labelledby="atlasTitle">
     <div class="atlas-head"><div><h2 id="atlasTitle">Sound Atlas</h2><p class="atlas-intro" id="atlasIntro">Explore your library by tempo and energy — analysed on this device.</p></div><button class="icon-btn" id="atlasCloseBtn" type="button" aria-label="Close Sound Atlas" title="Close">✕</button></div>
-    <div class="atlas-layout"><div class="atlas-map-wrap"><canvas id="atlasCanvas" tabindex="0" role="application" aria-label="Tempo and energy map. Use arrow keys to explore tracks and Enter to play the selected track."></canvas><div class="atlas-axis-x" id="atlasXAxis">Tempo · slow → fast</div></div>
-      <aside class="atlas-side"><div class="atlas-stat" id="atlasStats" aria-live="polite"><strong>0 / 0</strong> tracks analysed</div><div class="atlas-selected" id="atlasSelected"><h3 id="atlasSelectedLabel">Selected sound</h3><div class="atlas-track-title" id="atlasTrackTitle">Select a dot on the map</div><div class="atlas-track-artist" id="atlasTrackArtist"></div><div class="atlas-track-data" id="atlasTrackData"></div><button class="primary-btn atlas-play" id="atlasPlayBtn" type="button" disabled>Play track</button></div><p class="atlas-help" id="atlasHelp">Each dot is a track. Higher = more energy; left to right = slower to faster. Solid dots are analysed; outlined dots are still processing. Click a dot to play it, or use the arrow keys and Enter.</p></aside>
+    <div class="atlas-layout"><div class="atlas-map-wrap">
+        <div class="atlas-map-top"><div><div class="atlas-map-kicker" id="atlasMapKicker">MAPA BIBLIOTEKI</div><h3 class="atlas-map-title" id="atlasMapTitle">Tempo i energia</h3></div><div class="atlas-legend"><div class="atlas-energy-legend"><span id="atlasEnergyLow">niska</span><i></i><span id="atlasEnergyHigh">wysoka</span></div><div class="atlas-dot-legend"><i></i><span id="atlasUnknownLegend">BPM nieznane</span></div></div></div>
+        <canvas id="atlasCanvas" tabindex="0" role="application" aria-label="Tempo and energy map. Use arrow keys to explore tracks and Enter to play the selected track."></canvas><div class="atlas-axis-x" id="atlasXAxis">Tempo · slow → fast</div>
+      </div>
+      <aside class="atlas-side"><div class="atlas-stat"><div class="atlas-stat-head"><span id="atlasStatHeading">Analiza lokalna</span><i aria-hidden="true"></i></div><div id="atlasStats" aria-live="polite"><strong>0 / 0</strong> tracks analysed</div><div class="atlas-stat-note" id="atlasStatNote">Każdy punkt to jeden utwór</div></div><div class="atlas-selected" id="atlasSelected"><h3 id="atlasSelectedLabel">Selected sound</h3><div class="atlas-track-title" id="atlasTrackTitle">Select a dot on the map</div><div class="atlas-track-artist" id="atlasTrackArtist"></div><div class="atlas-track-data" id="atlasTrackData"></div><button class="primary-btn atlas-play" id="atlasPlayBtn" type="button" disabled>Play track</button></div><p class="atlas-help" id="atlasHelp">Each dot is a track. Higher = more energy; left to right = slower to faster. Solid dots are analysed; outlined dots are still processing. Click a dot to play it, or use the arrow keys and Enter.</p></aside>
     </div>
   </section>
 
@@ -2255,7 +2271,7 @@
     'Wybierz folder lub pojedyncze pliki audio. Możesz też przeciągnąć muzykę na okno. Pulsar dodaje ją do biblioteki, nie przenosi ani nie usuwa oryginałów.': { en: 'Choose a folder or individual audio files, or drag music onto the window. Pulsar adds it to your library without moving or deleting the originals.', es: 'Elige una carpeta o archivos de audio, o arrastra música a la ventana. Pulsar la añade a tu biblioteca sin mover ni borrar los originales.' },
     'Utwory i filtry': { en: 'Tracks and filters', es: 'Canciones y filtros' },
     'W widoku Utwory wyszukuj, sortuj, oznaczaj ulubione i zaznaczaj wiele pozycji. Zaznaczone utwory możesz dodać do nowego albo istniejącego albumu.': { en: 'In Tracks, search, sort, favourite and select multiple songs. Add selected tracks to a new or existing album.', es: 'En Canciones puedes buscar, ordenar, marcar favoritos y seleccionar varias. Añádelas a un álbum nuevo o existente.' },
-    'Twórz własne albumy, układaj ich kolejność, zmieniaj okładki i odtwarzaj całość lub losowo. „Sklej z folderów” automatycznie tworzy albumy ze struktury folderów.': { en: 'Create albums, arrange their tracks, change covers and play them in order or shuffle. “Build from folders” makes albums from your folder structure.', es: 'Crea álbumes, ordena sus canciones, cambia portadas y reproduce en orden o aleatoriamente. «Crear desde carpetas» usa la estructura de tus carpetas.' },
+    'Twórz albumy, zmieniaj kolejność i okładki, odtwarzaj w kolejności lub losowo. Zaznacz utwory na liście i dodaj je do własnego albumu.': { en: 'Create albums, rearrange tracks and change covers, then play in order or shuffle. Select tracks from the list to add them to your own album.', es: 'Crea álbumes, cambia el orden y las portadas, y reproduce en orden o aleatoriamente. Selecciona canciones de la lista para añadirlas a un álbum.' },
     'Otwórz Sound Atlas': { en: 'Open Sound Atlas', es: 'Abrir Sound Atlas' },
     'Sound Atlas to mapa Twojej muzyki. Otwórz go przyciskiem w Bibliotece; jeśli biblioteka jest pusta, zobaczysz mapę gotową na pierwsze utwory.': { en: 'Sound Atlas maps your music. Open it from Library; if your library is empty, you will see the map ready for your first tracks.', es: 'Sound Atlas crea un mapa de tu música. Ábrelo desde Biblioteca; si está vacía, verás el mapa listo para tus primeras canciones.' },
     'Poznaj mapę dźwięku': { en: 'Explore the sound map', es: 'Explora el mapa de sonido' },
@@ -2294,7 +2310,7 @@
     'Wyłącznik czasowy zatrzymuje muzykę po wybranym czasie lub po zakończeniu utworu.': { en: 'The sleep timer stops playback after a chosen time or at the end of the track.', es: 'El temporizador detiene la reproducción después del tiempo elegido o al terminar la canción.' },
     'Ustaw wyjście audio Pulsara dla OBS i sprawdź instrukcję nakładki transmisji. Ta opcja jest dostępna w aplikacji desktopowej.': { en: 'Set Pulsar audio output for OBS and view streaming-overlay instructions. This feature is available in the desktop app.', es: 'Configura la salida de audio de Pulsar para OBS y consulta las instrucciones de la superposición. Disponible en la aplicación de escritorio.' },
     'Gotowe': { en: 'All set', es: 'Listo' },
-    'To koniec przewodnika. Wyróżnione kontrolki pozostają interaktywne; wróć tu z Ustawienia → Pomoc albo ikoną „?”.': { en: 'That is the end of the tour. The highlighted controls stay interactive; return from Settings → Help or the “?” button.', es: 'Fin de la guía. Los controles resaltados siguen activos; vuelve desde Ajustes → Ayuda o con el botón «?». ' },
+    'To koniec przewodnika. Wyróżnione kontrolki pozostają interaktywne; wróć tu przez Ustawienia → Pomoc.': { en: 'That is the end of the tour. The highlighted controls stay interactive; replay it from Settings → Help.', es: 'Fin de la guía. Los controles resaltados siguen activos; repítela desde Ajustes → Ayuda.' },
     'Pomoc i samouczek': { en: 'Help and tour', es: 'Ayuda y guía' },
     'Poznaj Pulsara': { en: 'Discover Pulsar', es: 'Descubre Pulsar' },
     'Interaktywny przewodnik': { en: 'Interactive guide', es: 'Guía interactiva' },
@@ -2311,6 +2327,14 @@
     'Tempo nie wykryte': { en: 'No BPM detected', es: 'No se detectó el BPM' },
     'Analiza w toku': { en: 'Analysis pending', es: 'Análisis pendiente' },
     'Energia': { en: 'Energy', es: 'Energía' },
+    'Mapa biblioteki': { en: 'LIBRARY MAP', es: 'MAPA DE LA BIBLIOTECA' },
+    'Mapa tempa i energii': { en: 'Tempo × energy', es: 'Tempo × energía' },
+    'niska': { en: 'low', es: 'baja' },
+    'wysoka': { en: 'high', es: 'alta' },
+    'BPM nieznane': { en: 'BPM unknown', es: 'BPM desconocido' },
+    'Analiza lokalna': { en: 'ON-DEVICE ANALYSIS', es: 'ANÁLISIS LOCAL' },
+    'Każdy punkt to jeden utwór': { en: 'Each dot represents one track', es: 'Cada punto representa una canción' },
+    'Dodaj muzykę, aby wypełnić mapę': { en: 'Add music to populate your map', es: 'Añade música para llenar el mapa' },
     'Tempo · wolno → szybko': { en: 'Tempo · slow → fast', es: 'Tempo · lento → rápido' },
     'Zamknij Sound Atlas': { en: 'Close Sound Atlas', es: 'Cerrar Sound Atlas' },
     'Wybierz folder z muzyką': { en: 'Choose a music folder', es: 'Elige una carpeta de música' },
@@ -2333,8 +2357,6 @@
     'Uzupełnij okładki i metadane brakujących utworów (Deezer / iTunes / MusicBrainz)': { en: 'Fetch covers and metadata for tracks that miss them (Deezer / iTunes / MusicBrainz)', es: 'Completar portadas y metadatos que falten (Deezer / iTunes / MusicBrainz)' },
     'Brak duplikatów': { en: 'No duplicates', es: 'Sin duplicados' },
     'Usuń powtórzone kopie utworów z biblioteki': { en: 'Remove duplicate copies of tracks from the library', es: 'Elimina copias duplicadas de la biblioteca' },
-    'Sklej z folderów': { en: 'Group by folders', es: 'Agrupar por carpetas' },
-    'Utwórz albumy automatycznie na podstawie struktury folderów': { en: 'Create albums automatically from the folder structure', es: 'Crea álbumes automáticamente según la estructura de carpetas' },
     'Filtruj utwory': { en: 'Filter tracks', es: 'Filtrar canciones' },
     'Filtruj utwory w bibliotece': { en: 'Filter tracks in the library', es: 'Filtrar canciones en la biblioteca' },
     'Kolejność': { en: 'Order', es: 'Orden' },
@@ -2617,7 +2639,6 @@
   const modalBody = document.getElementById('modalBody');
   const modalOk = document.getElementById('modalOk');
   const modalCancel = document.getElementById('modalCancel');
-  const autoAlbumsBtn = document.getElementById('autoAlbumsBtn');
 
   mainIcon.innerHTML = ICON_PLAY;
   overlayIcon.innerHTML = ICON_PLAY;
@@ -4731,7 +4752,6 @@
     refreshAlbumMenu();
     showToast(created ? (t('Utworzono albumów: ') + created) : t('Foldery są już zgrupowane'));
   }
-  if (autoAlbumsBtn) autoAlbumsBtn.addEventListener('click', () => autoAlbumsFromFolders());
 
   function openRenameAlbumModal(album){
     if (!album) return;
@@ -7865,6 +7885,13 @@
   function openSoundAtlas(){
     atlasOpen = true; atlasSelected = tracks.length ? 0 : -1; atlasPanel.classList.add('open'); atlasPanel.setAttribute('aria-hidden','false');
     document.getElementById('atlasIntro').textContent=t('Odkrywaj bibliotekę według tempa i energii — analiza odbywa się na tym urządzeniu.');
+    document.getElementById('atlasMapKicker').textContent=t('Mapa biblioteki');
+    document.getElementById('atlasMapTitle').textContent=t('Mapa tempa i energii');
+    document.getElementById('atlasEnergyLow').textContent=t('niska');
+    document.getElementById('atlasEnergyHigh').textContent=t('wysoka');
+    document.getElementById('atlasUnknownLegend').textContent=t('BPM nieznane');
+    document.getElementById('atlasStatHeading').textContent=t('Analiza lokalna');
+    document.getElementById('atlasStatNote').textContent=t('Każdy punkt to jeden utwór');
     document.getElementById('atlasXAxis').textContent=t('Tempo · wolno → szybko');
     document.getElementById('atlasSelectedLabel').textContent=t('Wybrany dźwięk');
     document.getElementById('atlasPlayBtn').textContent=t('Odtwórz utwór');
@@ -7896,38 +7923,46 @@
     const W = rect.width, H = rect.height, pad = {l:48,r:18,t:20,b:30};
     const x0=pad.l, x1=W-pad.r, y0=pad.t, y1=H-pad.b;
     ctx.clearRect(0,0,W,H);
-    ctx.font='10px system-ui, sans-serif'; ctx.lineWidth=1;
-    ctx.fillStyle='rgba(255,255,255,.45)'; ctx.strokeStyle='rgba(255,255,255,.10)';
+    const mapBg=ctx.createLinearGradient(0,y0,0,y1);
+    mapBg.addColorStop(0,'rgba(255,112,158,.075)');mapBg.addColorStop(.52,'rgba(153,126,239,.045)');mapBg.addColorStop(1,'rgba(72,183,238,.075)');
+    ctx.fillStyle=mapBg;ctx.fillRect(x0,y0,x1-x0,y1-y0);
+    ctx.font='10px system-ui, sans-serif';ctx.lineWidth=1;
+    ctx.fillStyle='rgba(236,239,255,.55)';ctx.strokeStyle='rgba(220,225,255,.105)';
     for(let i=0;i<=4;i++){
       const y=y1-(y1-y0)*i/4;
       ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
-      ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(String(i*25),x0-8,y);
+      ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(String(i*25),x0-9,y);
     }
     [80,100,120,140,160,180].forEach(bpm=>{
       const x=x0+(x1-x0)*(bpm-70)/110;
       ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();
-      ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(String(bpm),x,y1+8);
+      ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='rgba(236,239,255,.55)';ctx.fillText(String(bpm),x,y1+8);
     });
-    ctx.save();ctx.translate(13,(y0+y1)/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillText(t('Energia'),0,0);ctx.restore();
+    ctx.save();ctx.translate(13,(y0+y1)/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='rgba(236,239,255,.68)';ctx.font='700 9px system-ui, sans-serif';ctx.fillText(t('Energia'),0,0);ctx.restore();
     const analysed=tracks.map(tr=>analysisCache.get(tr.id)).filter(a=>a&&isFinite(a.rms));
     const rmsVals=analysed.map(a=>a.rms).sort((a,b)=>a-b);
     const minRms=rmsVals.length?rmsVals[Math.floor(rmsVals.length*.05)]:0;
     const maxRms=rmsVals.length?rmsVals[Math.min(rmsVals.length-1,Math.floor(rmsVals.length*.95))]:1;
-    atlasPoints=[];
+    atlasPoints=[];const occupied=Object.create(null);
     tracks.forEach((tr,index)=>{
-      const rec=analysisCache.get(tr.id), has=!!rec;
-      const bpm=rec&&rec.bpm>0?rec.bpm:125;
-      const hasBpm=!!(rec&&rec.bpm>0);
+      const rec=analysisCache.get(tr.id),has=!!rec;
+      const bpm=rec&&rec.bpm>0?rec.bpm:125,hasBpm=!!(rec&&rec.bpm>0);
       const energy=atlasEnergy(tr,rec,minRms,maxRms);
-      const x=x0+(x1-x0)*(Math.max(70,Math.min(180,bpm))-70)/110;
-      const y=y1-(y1-y0)*energy;
-      const point={index:index,x:x,y:y,has:has,hasBpm:hasBpm,bpm:rec&&rec.bpm||0,energy:energy}; atlasPoints.push(point);
-      const hue=Array.from(String(tr.artist||tr.title||'Pulsar')).reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0,7)%360;
-      ctx.beginPath();ctx.arc(x,y,index===atlasSelected?8:5,0,Math.PI*2);
-      ctx.fillStyle=has?'hsla('+hue+',78%,68%,.84)':'rgba(180,185,205,.24)';
-      ctx.strokeStyle=index===atlasSelected?'#fff':(has?'hsla('+hue+',90%,82%,.9)':'rgba(220,225,240,.5)');ctx.lineWidth=index===atlasSelected?2.5:1;
-      ctx.fill();ctx.setLineDash(hasBpm?[]:[3,3]);ctx.stroke();ctx.setLineDash([]);
+      const baseX=x0+(x1-x0)*(Math.max(70,Math.min(180,bpm))-70)/110;
+      const baseY=y1-(y1-y0)*energy;
+      const cell=Math.round(baseX/9)+':'+Math.round(baseY/9),slot=occupied[cell]||0;occupied[cell]=slot+1;
+      const angle=slot*2.399963229728653,spread=slot?Math.min(9,2+Math.sqrt(slot)*2):0;
+      const x=baseX+Math.cos(angle)*spread,y=baseY+Math.sin(angle)*spread;
+      const point={index:index,x:x,y:y,has:has,hasBpm:hasBpm,bpm:rec&&rec.bpm||0,energy:energy};atlasPoints.push(point);
+      const hue=202-energy*155,radius=index===atlasSelected?8.5:5.5;
+      ctx.save();
+      if(index===atlasSelected){ctx.shadowColor='rgba(200,190,255,.85)';ctx.shadowBlur=18;}
+      ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);
+      ctx.fillStyle=has?'hsla('+hue+',82%,'+(61+energy*4)+'%,.94)':'rgba(190,200,220,.16)';
+      ctx.strokeStyle=index===atlasSelected?'rgba(255,255,255,.98)':(hasBpm?'rgba(255,255,255,.72)':'rgba(225,230,245,.62)');ctx.lineWidth=index===atlasSelected?2:1.1;
+      ctx.fill();ctx.setLineDash(hasBpm?[]:[3,2]);ctx.stroke();ctx.restore();
     });
+    if(!tracks.length){ctx.fillStyle='rgba(255,255,255,.46)';ctx.font='600 12px system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t('Dodaj muzykę, aby wypełnić mapę'),(x0+x1)/2,(y0+y1)/2);}
     const stats=document.getElementById('atlasStats');
     if(stats) stats.innerHTML='<strong>'+analysed.length+' / '+tracks.length+'</strong> '+t('utworów przeanalizowanych');
     updateAtlasSelection();
@@ -8500,11 +8535,11 @@
 
   let onboardingIndex = 0, onboardingOpen = false;
   const onboardingSteps = [
-    { title:'Witamy w Pulsar', text:'Elementy, które podświetlam, możesz klikać. „Dalej” prowadzi do kolejnego miejsca, a „Pomiń” kończy przewodnik w każdej chwili.', target:'#tourHelpBtn' },
+    { title:'Witamy w Pulsar', text:'Elementy, które podświetlam, możesz klikać. „Dalej” prowadzi do kolejnego miejsca, a „Pomiń” kończy przewodnik w każdej chwili.', target:'#settingsBtn' },
     { title:'Główna nawigacja', text:'Biblioteka otwiera Twoje utwory, albumy i wyszukiwanie online. Kliknij wyróżniony przycisk, aby otworzyć panel — przewodnik pozostanie aktywny.', target:'#libraryBtn' },
     { title:'Dodaj muzykę', text:'Wybierz folder lub pojedyncze pliki audio. Możesz też przeciągnąć muzykę na okno. Pulsar dodaje ją do biblioteki, nie przenosi ani nie usuwa oryginałów.', target:'#addMusicBtn', view:'tracks' },
     { title:'Utwory i filtry', text:'W widoku Utwory wyszukuj, sortuj, oznaczaj ulubione i zaznaczaj wiele pozycji. Zaznaczone utwory możesz dodać do nowego albo istniejącego albumu.', target:'#libraryTabs', view:'tracks' },
-    { title:'Albumy', text:'Twórz własne albumy, układaj ich kolejność, zmieniaj okładki i odtwarzaj całość lub losowo. „Sklej z folderów” automatycznie tworzy albumy ze struktury folderów.', target:'.lib-tab[data-view="albums"]', view:'albums' },
+    { title:'Albumy', text:'Twórz albumy, zmieniaj kolejność i okładki, odtwarzaj w kolejności lub losowo. Zaznacz utwory na liście i dodaj je do własnego albumu.', target:'.lib-tab[data-view="albums"]', view:'albums' },
     { title:'Otwórz Sound Atlas', text:'Sound Atlas to mapa Twojej muzyki. Otwórz go przyciskiem w Bibliotece; jeśli biblioteka jest pusta, zobaczysz mapę gotową na pierwsze utwory.', target:'#soundAtlasBtn', view:'albums' },
     { title:'Poznaj mapę dźwięku', text:'Oś pozioma pokazuje tempo, pionowa względną energię. Analiza działa lokalnie. Kliknij punkt albo wybierz go strzałkami i naciśnij Enter, aby odtworzyć utwór.', target:'#atlasCanvas', atlas:true },
     { title:'Muzyka z sieci', text:'Zakładka Sieć wyszukuje podglądy i utwory w dostępnych serwisach. Wybierz źródło, wyszukaj utwór i użyj podglądu lub zapisu. YouTube wymaga lokalnego mostka yt-dlp.', target:'#netQuery', view:'net' },
@@ -8524,7 +8559,7 @@
     { title:'Integracje desktopowe i OBS', text:'Na komputerze włącz mini-okno, zasobnik i powiadomienia. W zakładce OBS znajdziesz wyjście audio i wskazówki do nakładki transmisji.', target:'#smMiniBtn', settingsPane:'win' },
     { title:'OBS i transmisje', text:'Ustaw wyjście audio Pulsara dla OBS i sprawdź instrukcję nakładki transmisji. Ta opcja jest dostępna w aplikacji desktopowej.', target:'#smObsHelp', settingsPane:'obs' },
     { title:'Pomoc i powrót', text:'Tutaj możesz ponownie uruchomić interaktywny samouczek. Możesz też w każdej chwili zamknąć go przyciskiem × albo pominąć.', target:'#smTourBtn', settingsPane:'help' },
-    { title:'Gotowe', text:'To koniec przewodnika. Wyróżnione kontrolki pozostają interaktywne; wróć tu z Ustawienia → Pomoc albo ikoną „?”.', target:null }
+    { title:'Gotowe', text:'To koniec przewodnika. Wyróżnione kontrolki pozostają interaktywne; wróć tu przez Ustawienia → Pomoc.', target:null }
   ];
   const onboardingEl = document.getElementById('onboarding');
   const onboardingCard = onboardingEl.querySelector('.tour-card');
@@ -8560,8 +8595,7 @@
   }
   function placeTourCard(rect){
     const w=window.innerWidth,h=window.innerHeight,cw=onboardingCard.offsetWidth,ch=onboardingCard.offsetHeight,g=16;
-    if(!rect){onboardingCard.style.left='50%';onboardingCard.style.top='50%';onboardingCard.style.right='';onboardingCard.style.bottom='';onboardingCard.style.transform='translate(-50%,-50%)';return;}
-    onboardingCard.style.transform='none';
+    if(!rect){onboardingCard.style.left=Math.round(Math.max(g,(w-cw)/2))+'px';onboardingCard.style.top=Math.round(Math.max(g,(h-ch)/2))+'px';onboardingCard.style.right='';onboardingCard.style.bottom='';return;}
     let left=rect.right>w*.56?g:Math.max(g,w-cw-g);
     let top=rect.top>h*.53?g:Math.max(g,h-ch-g);
     if(ch>h-g*2)top=g;
@@ -8609,7 +8643,7 @@
     onboardingOpen=false;onboardingEl.classList.remove('open','no-target');onboardingEl.hidden=true;
     onboardingEl.setAttribute('aria-hidden','true');document.body.classList.remove('tour-open');
     try{localStorage.setItem('pulsarTutorialCompleteV2','1');}catch(e){}
-    document.getElementById('tourHelpBtn').focus();
+    settingsBtn.focus();
   }
   function advanceOnboarding(){
     if(onboardingIndex<onboardingSteps.length-1){onboardingIndex++;renderOnboardingStep();return;}
@@ -8621,7 +8655,6 @@
     if(tracks.length||albums.length){try{localStorage.setItem('pulsarTutorialCompleteV2','1');}catch(e){}return;}
     setTimeout(function(){if(!document.documentElement.classList.contains('nl-mini'))openOnboarding();},700);
   }
-  document.getElementById('tourHelpBtn').addEventListener('click',openOnboarding);
   document.getElementById('tourCloseBtn').addEventListener('click',closeOnboarding);
   document.getElementById('tourSkipBtn').addEventListener('click',closeOnboarding);
   onboardingCard.addEventListener('click',function(e){e.stopPropagation();});
