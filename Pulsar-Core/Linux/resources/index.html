@@ -550,6 +550,56 @@
   .selection-hint { font-size:12px; color:var(--accent); padding:4px 4px 0; }
 
   /* Modal */
+  .sound-atlas { position:fixed; inset:0; z-index:45; display:flex; flex-direction:column; padding:clamp(16px, 3vw, 34px); background:rgba(10,11,16,.96); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s, visibility .2s; }
+  .sound-atlas.open { opacity:1; visibility:visible; pointer-events:auto; }
+  body.atlas-open { overflow:hidden; }
+  .atlas-head { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; max-width:1280px; width:100%; margin:0 auto 18px; }
+  .atlas-head h2 { margin:0; font-size:clamp(24px,4vw,38px); letter-spacing:-.04em; }
+  .atlas-intro { color:var(--text-muted); font-size:13px; margin:6px 0 0; }
+  .atlas-layout { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:22px; max-width:1280px; width:100%; flex:1; min-height:0; margin:0 auto; }
+  .atlas-map-wrap { display:flex; flex-direction:column; min-height:0; border:1px solid rgba(255,255,255,.1); border-radius:18px; background:radial-gradient(ellipse at 50% 48%,rgba(124,92,255,.09),transparent 68%),rgba(255,255,255,.025); padding:12px; }
+  #atlasCanvas { display:block; width:100%; height:100%; min-height:300px; flex:1; touch-action:manipulation; outline:none; }
+  #atlasCanvas:focus-visible { box-shadow:inset 0 0 0 2px var(--accent); border-radius:10px; }
+  .atlas-axis-x { text-align:center; color:var(--text-muted); font-size:11px; padding:4px 0 0; }
+  .atlas-side { display:flex; flex-direction:column; gap:14px; }
+  .atlas-stat, .atlas-selected { border:1px solid rgba(255,255,255,.1); border-radius:14px; background:rgba(255,255,255,.04); padding:15px; }
+  .atlas-stat { color:var(--text-muted); font-size:12px; line-height:1.6; }
+  .atlas-stat strong { display:block; color:#fff; font-size:23px; letter-spacing:-.03em; }
+  .atlas-selected { min-height:140px; }
+  .atlas-selected h3 { margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-muted); }
+  .atlas-track-title { font-weight:700; font-size:16px; line-height:1.3; }
+  .atlas-track-artist { color:var(--text-muted); margin-top:4px; font-size:13px; }
+  .atlas-track-data { color:var(--text-muted); margin:10px 0 12px; font-size:11px; }
+  .atlas-play { width:100%; }
+  .atlas-help { color:var(--text-muted); font-size:11px; line-height:1.55; margin:0; }
+  @media(max-width:760px) { .sound-atlas { padding:16px; } .atlas-layout { grid-template-columns:1fr; grid-template-rows:minmax(270px,1fr) auto; gap:10px; } .atlas-side { display:grid; grid-template-columns:1fr 1.4fr; gap:8px; } .atlas-stat,.atlas-selected { padding:11px; } .atlas-stat strong { font-size:18px; } .atlas-selected { min-height:100px; } .atlas-help { display:none; } #atlasCanvas { min-height:230px; } }
+  .onboarding { position:fixed; inset:0; z-index:80; display:block; padding:0; background:transparent; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s, visibility .2s; }
+  .onboarding.open { opacity:1; visibility:visible; pointer-events:none; }
+  .onboarding.no-target { background:rgba(4,5,9,.72); }
+  body.tour-open { overflow:hidden; }
+  .tour-spotlight { position:fixed; z-index:1; left:-10000px; top:-10000px; width:0; height:0; border:2px solid var(--accent); border-radius:12px; box-shadow:0 0 0 9999px rgba(4,5,9,.64),0 0 30px rgba(var(--accent-rgb),.48); pointer-events:none; transition:left .2s,top .2s,width .2s,height .2s; }
+  .tour-card { position:fixed; z-index:2; width:min(500px,calc(100vw - 32px)); max-height:calc(100vh - 32px); overflow:auto; border:1px solid rgba(255,255,255,.13); border-radius:22px; background:linear-gradient(145deg,rgba(31,31,40,.98),rgba(17,18,24,.99)); box-shadow:0 34px 100px rgba(0,0,0,.6); transform:translateY(12px) scale(.985); transition:transform .22s; pointer-events:auto; }
+  .onboarding.open .tour-card { transform:none; }
+  .tour-top { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 0; }
+  .tour-brand { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+  .tour-close { border:0; background:rgba(255,255,255,.07); color:#fff; width:34px; height:34px; border-radius:50%; font:inherit; font-size:20px; cursor:pointer; }
+  .tour-body { padding:18px 26px 22px; min-height:150px; }
+  .tour-step-label { color:var(--text-muted); font-size:11px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; }
+  .tour-progress { height:3px; background:rgba(255,255,255,.1); border-radius:3px; overflow:hidden; margin:0 26px; }
+  .tour-progress-fill { width:5%; height:100%; border-radius:inherit; background:var(--accent); transition:width .22s; }
+  .tour-body h2 { margin:0 0 10px; font-size:clamp(23px,4vw,30px); letter-spacing:-.035em; }
+  .tour-body p { color:var(--text-muted); font-size:14px; line-height:1.65; margin:0; }
+  .tour-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; border-top:1px solid rgba(255,255,255,.08); padding:15px 24px 18px; }
+  .tour-footer-left,.tour-footer-right { display:flex; align-items:center; gap:9px; }
+  .tour-footer button { min-height:38px; }
+  .tour-skip { border:0; background:transparent; color:var(--text-muted); font:inherit; font-size:13px; padding:8px 4px; cursor:pointer; }
+  .tour-skip:hover { color:#fff; }
+  .tour-back { border:1px solid rgba(255,255,255,.16); background:transparent; color:#fff; border-radius:999px; font:inherit; font-size:13px; padding:0 15px; cursor:pointer; }
+  .tour-back:disabled { opacity:.4; cursor:default; }
+  .tour-next { min-width:105px; }
+  @media(max-width:520px) { .tour-card { max-height:calc(100dvh - 24px); } .tour-top { padding:16px 17px 0; } .tour-body { padding:16px 18px 18px; min-height:0; } .tour-progress { margin:0 18px; } .tour-footer { padding:13px 15px 16px; } .tour-footer button { min-height:36px; } .tour-footer-left,.tour-footer-right { gap:5px; } .tour-skip { font-size:12px; } }
+
+  html.nl-mini .onboarding.open .tour-card { left:6px !important; top:6px !important; right:auto !important; bottom:auto !important; width:calc(100vw - 12px); max-height:calc(100vh - 12px); transform:none !important; }
   .modal-dim { position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; padding:16px; }
   .modal-dim.show { opacity:1; pointer-events:auto; }
   .modal { width:min(380px, 92vw); background:rgba(24,24,24,.98); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:20px; box-shadow:0 30px 80px rgba(0,0,0,.7); transform:translateY(8px) scale(.98); transition:transform .2s; text-align:left;
@@ -1109,7 +1159,7 @@
   /* ================= Integracja z Windows (tylko wersja desktopowa) ================= */
   html:not(.nl-desktop) .sm-desktop-only { display: none !important; }
   .mini-view { display: none; }
-  html.nl-mini body > *:not(.mini-view):not(audio):not(#styleToast) { display: none !important; }
+  html.nl-mini body > *:not(.mini-view):not(audio):not(#styleToast):not(#onboarding) { display: none !important; }
   html.nl-mini, html.nl-mini body { background: #07070c; }
   html.nl-mini .mini-view {
     --mv-accent-rgb: 174,117,255;
@@ -1337,6 +1387,7 @@
       <button class="icon-btn" id="libraryBtn" title="Biblioteka" aria-label="Biblioteka">
         <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
+      <button class="icon-btn" id="tourHelpBtn" type="button" title="Otwórz samouczek pierwszego uruchomienia" aria-label="Otwórz samouczek pierwszego uruchomienia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.3 1.8c-1.1 1-1.9 1.3-1.9 3"/><path d="M12 17.5h.01"/></svg></button>
       <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
       <input type="file" id="albumCoverInput" accept="image/*" hidden>
     </div>
@@ -1359,6 +1410,7 @@
       <button class="lib-tool primary" id="addMusicBtn" type="button" title="Dodaj utwory z folderu lub pliki audio">+ Dodaj muzykę</button>
       <button class="lib-tool" id="selectToggleBtn" type="button">Zaznacz utwory</button>
       <button class="lib-tool" id="newAlbumBtn" type="button">+ Nowy album</button>
+      <button class="lib-tool" id="soundAtlasBtn" type="button">Sound Atlas</button>
       <button class="lib-tool" id="enrichBtn" type="button" title="Uzupełnij okładki i metadane brakujących utworów (Deezer / iTunes / MusicBrainz)">Uzupełnij online</button>
       <button class="lib-tool" id="dedupeBtn" type="button" title="Usuń powtórzone kopie utworów z biblioteki" disabled>Brak duplikatów</button>
       <button class="lib-tool" id="autoAlbumsBtn" type="button" title="Utwórz albumy automatycznie na podstawie struktury folderów"><svg viewBox="0 0 24 24"><path d="M4 6h6l1.5 2H20v10H4z"/><path d="M14 6l.8 1.9L17 8.6l-2.2.7L14 11l-.8-1.7L11 8.6l2.2-.7z"/></svg>Sklej z folderów</button>
@@ -1460,6 +1512,23 @@
   </aside>
   <div class="overlay-dim" id="overlayDim"></div>
 
+  <section class="sound-atlas" id="soundAtlas" aria-hidden="true" aria-labelledby="atlasTitle">
+    <div class="atlas-head"><div><h2 id="atlasTitle">Sound Atlas</h2><p class="atlas-intro" id="atlasIntro">Explore your library by tempo and energy — analysed on this device.</p></div><button class="icon-btn" id="atlasCloseBtn" type="button" aria-label="Close Sound Atlas" title="Close">✕</button></div>
+    <div class="atlas-layout"><div class="atlas-map-wrap"><canvas id="atlasCanvas" tabindex="0" role="application" aria-label="Tempo and energy map. Use arrow keys to explore tracks and Enter to play the selected track."></canvas><div class="atlas-axis-x" id="atlasXAxis">Tempo · slow → fast</div></div>
+      <aside class="atlas-side"><div class="atlas-stat" id="atlasStats" aria-live="polite"><strong>0 / 0</strong> tracks analysed</div><div class="atlas-selected" id="atlasSelected"><h3 id="atlasSelectedLabel">Selected sound</h3><div class="atlas-track-title" id="atlasTrackTitle">Select a dot on the map</div><div class="atlas-track-artist" id="atlasTrackArtist"></div><div class="atlas-track-data" id="atlasTrackData"></div><button class="primary-btn atlas-play" id="atlasPlayBtn" type="button" disabled>Play track</button></div><p class="atlas-help" id="atlasHelp">Each dot is a track. Higher = more energy; left to right = slower to faster. Solid dots are analysed; outlined dots are still processing. Click a dot to play it, or use the arrow keys and Enter.</p></aside>
+    </div>
+  </section>
+
+  <section class="onboarding" id="onboarding" hidden aria-hidden="true">
+    <div class="tour-spotlight" id="tourSpotlight" aria-hidden="true"></div>
+    <div class="tour-card" role="dialog" aria-modal="false" aria-labelledby="tourTitle" aria-describedby="tourDescription">
+      <div class="tour-top"><span class="tour-brand">Pulsar · <span id="tourBrandLabel">Samouczek</span></span><button class="tour-close" id="tourCloseBtn" type="button" aria-label="Zamknij samouczek" title="Zamknij">×</button></div>
+      <div class="tour-body"><div class="tour-step-label" id="tourStepLabel"></div><h2 id="tourTitle"></h2><p id="tourDescription"></p></div>
+      <div class="tour-progress" aria-hidden="true"><div class="tour-progress-fill" id="tourProgressFill"></div></div>
+      <div class="tour-footer"><div class="tour-footer-left"><button class="tour-skip" id="tourSkipBtn" type="button">Pomiń</button></div><div class="tour-footer-right"><button class="tour-back" id="tourBackBtn" type="button">Wstecz</button><button class="primary-btn tour-next" id="tourNextBtn" type="button">Dalej</button></div></div>
+    </div>
+  </section>
+
   <div class="modal-dim" id="modalDim" hidden>
     <div class="modal" id="modalShell" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h3 id="modalTitle"></h3>
@@ -1499,6 +1568,7 @@
         <button type="button" class="sm-tab" data-pane="net"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg><span>Pobieranie</span></button>
         <button type="button" class="sm-tab sm-desktop-only" data-pane="win"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M8 21h8"/></svg><span>Linux</span></button>
         <button type="button" class="sm-tab sm-desktop-only" data-pane="obs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.5"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg><span>OBS / streaming</span></button>
+        <button type="button" class="sm-tab" data-pane="help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.3 1.8c-1.1 1-1.9 1.3-1.9 3M12 17.5h.01"/></svg><span>Pomoc</span></button>
       </nav>
     </aside>
     <section class="sm-main">
@@ -1539,6 +1609,10 @@
       <div class="sm-pane sm-desktop-only" data-pane="obs">
         <h2 class="sm-pane-title">OBS / streaming</h2>
         <div class="sm-card"><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Dźwięk i overlay dla OBS</span><span class="sm-desc">Wysyła dźwięk Pulsara do źródła „Przeglądarka” w OBS (bez kabli wirtualnych)</span></div><label class="switch"><input type="checkbox" id="smObs"><span class="slider"></span></label></div><button type="button" class="sm-btn" id="smObsHelp">Jak podłączyć OBS…</button></div>
+      </div>
+      <div class="sm-pane" data-pane="help">
+        <h2 class="sm-pane-title">Pomoc i samouczek</h2>
+        <div class="sm-card"><h3 class="sm-cap">Poznaj Pulsara</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Interaktywny przewodnik</span><span class="sm-desc">Przejdź przez najważniejsze funkcje. Wyróżnione elementy aplikacji pozostają klikalne, a przewodnik możesz pominąć w dowolnej chwili.</span></div></div><button type="button" class="sm-btn" id="smTourBtn">Uruchom samouczek</button></div>
       </div>
       <div class="sm-empty" id="smEmpty" hidden>Brak wyników</div>
       </div>
@@ -2154,6 +2228,91 @@
     'Ustawienia i rzadziej używane': { en: 'Settings and less common options', es: 'Ajustes y opciones menos frecuentes' },
     'Biblioteka': { en: 'Library', es: 'Biblioteca' },
     'Albumy': { en: 'Albums', es: 'Álbumes' },
+    'Sound Atlas': { en: 'Sound Atlas', es: 'Atlas de sonido' },
+    'Samouczek': { en: 'Quick tour', es: 'Guía rápida' },
+    'Krok': { en: 'Step', es: 'Paso' },
+    'Witamy w Pulsar': { en: 'Welcome to Pulsar', es: 'Te damos la bienvenida a Pulsar' },
+    'Pulsar to odtwarzacz, który dopasujesz do siebie. Muzyka i analiza dźwięku pozostają na Twoim urządzeniu. W kilka kroków pokażemy Ci najważniejsze miejsca.': { en: 'Pulsar is a music player you can make your own. Your music and audio analysis stay on your device. This quick tour points out the essentials.', es: 'Pulsar es un reproductor de música que puedes adaptar a tu gusto. Tu música y el análisis de audio permanecen en tu dispositivo. En unos pasos te mostramos lo esencial.' },
+    'Dodaj swoją muzykę': { en: 'Add your music', es: 'Añade tu música' },
+    'Otwórz Bibliotekę w prawym dolnym rogu i wybierz „+ Dodaj muzykę”, aby wskazać folder lub pliki. Możesz też przeciągnąć pliki audio na okno. Biblioteka niczego nie usuwa z dysku.': { en: 'Open Library at the bottom right and choose “+ Add music” to select a folder or files. You can also drag audio files onto the window. Pulsar never deletes files from your disk.', es: 'Abre Biblioteca abajo a la derecha y elige «+ Añadir música» para seleccionar una carpeta o archivos. También puedes arrastrar archivos de audio a la ventana. Pulsar nunca borra archivos de tu disco.' },
+    'Sterowanie odtwarzaniem': { en: 'Playback controls', es: 'Controles de reproducción' },
+    'Użyj przycisków poprzedni, odtwórz i następny oraz paska postępu. Losowanie i powtarzanie znajdziesz obok nich; głośność jest po prawej. Skróty: Spacja — play/pauza, ←/→ — zmiana utworu.': { en: 'Use Previous, Play and Next, plus the progress bar. Shuffle and Repeat are beside them; volume is on the right. Shortcuts: Space to play or pause, Left/Right to change tracks.', es: 'Usa Anterior, Reproducir y Siguiente, además de la barra de progreso. Aleatorio y Repetir están al lado; el volumen está a la derecha. Atajos: Espacio para reproducir o pausar, Izquierda/Derecha para cambiar de canción.' },
+    'Albumy i Sound Atlas': { en: 'Albums and Sound Atlas', es: 'Álbumes y Sound Atlas' },
+    'W Bibliotece twórz albumy i porządkuj utwory. Sound Atlas układa muzykę według tempa i energii — kliknij punkt, aby od razu odtworzyć pasujący utwór.': { en: 'Create albums and organise tracks in Library. Sound Atlas maps music by tempo and energy; click a dot to play a track that catches your ear.', es: 'Crea álbumes y organiza canciones en Biblioteca. Sound Atlas organiza la música por tempo y energía; pulsa un punto para reproducir esa canción.' },
+    'Odkrywaj ustawienia': { en: 'Make Pulsar yours', es: 'Personaliza Pulsar' },
+    'Ikona koła zębatego otwiera ustawienia: język, wygląd, equalizer, przejścia między utworami i wiele więcej. W każdej chwili wrócisz do tego samouczka przyciskiem „?”.': { en: 'The gear opens Settings: language, appearance, equalizer, transitions and more. You can replay this tour any time with the “?” button.', es: 'El engranaje abre Ajustes: idioma, aspecto, ecualizador, transiciones y mucho más. Puedes repetir esta guía en cualquier momento con el botón «?».' },
+    'Pomiń': { en: 'Skip', es: 'Saltar' },
+    'Wstecz': { en: 'Back', es: 'Atrás' },
+    'Dalej': { en: 'Next', es: 'Siguiente' },
+    'Zakończ': { en: 'Finish', es: 'Terminar' },
+    'Otwórz bibliotekę': { en: 'Open Library', es: 'Abrir Biblioteca' },
+    'Zamknij samouczek': { en: 'Close tutorial', es: 'Cerrar tutorial' },
+    'Otwórz samouczek pierwszego uruchomienia': { en: 'Open the getting started tour', es: 'Abrir la guía de inicio' },
+    'Elementy, które podświetlam, możesz klikać. „Dalej” prowadzi do kolejnego miejsca, a „Pomiń” kończy przewodnik w każdej chwili.': { en: 'You can click the highlighted controls. Next moves to the next feature; Skip exits the tour at any time.', es: 'Puedes pulsar los controles resaltados. Siguiente te lleva a la próxima función; Saltar cierra la guía cuando quieras.' },
+    'Główna nawigacja': { en: 'Main navigation', es: 'Navegación principal' },
+    'Biblioteka otwiera Twoje utwory, albumy i wyszukiwanie online. Kliknij wyróżniony przycisk, aby otworzyć panel — przewodnik pozostanie aktywny.': { en: 'Library contains your tracks, albums and online search. Click the highlighted button to open it; the tour will stay active.', es: 'Biblioteca contiene tus canciones, álbumes y búsqueda en línea. Pulsa el botón resaltado para abrirla; la guía seguirá activa.' },
+    'Dodaj muzykę': { en: 'Add music', es: 'Añadir música' },
+    'Wybierz folder lub pojedyncze pliki audio. Możesz też przeciągnąć muzykę na okno. Pulsar dodaje ją do biblioteki, nie przenosi ani nie usuwa oryginałów.': { en: 'Choose a folder or individual audio files, or drag music onto the window. Pulsar adds it to your library without moving or deleting the originals.', es: 'Elige una carpeta o archivos de audio, o arrastra música a la ventana. Pulsar la añade a tu biblioteca sin mover ni borrar los originales.' },
+    'Utwory i filtry': { en: 'Tracks and filters', es: 'Canciones y filtros' },
+    'W widoku Utwory wyszukuj, sortuj, oznaczaj ulubione i zaznaczaj wiele pozycji. Zaznaczone utwory możesz dodać do nowego albo istniejącego albumu.': { en: 'In Tracks, search, sort, favourite and select multiple songs. Add selected tracks to a new or existing album.', es: 'En Canciones puedes buscar, ordenar, marcar favoritos y seleccionar varias. Añádelas a un álbum nuevo o existente.' },
+    'Twórz własne albumy, układaj ich kolejność, zmieniaj okładki i odtwarzaj całość lub losowo. „Sklej z folderów” automatycznie tworzy albumy ze struktury folderów.': { en: 'Create albums, arrange their tracks, change covers and play them in order or shuffle. “Build from folders” makes albums from your folder structure.', es: 'Crea álbumes, ordena sus canciones, cambia portadas y reproduce en orden o aleatoriamente. «Crear desde carpetas» usa la estructura de tus carpetas.' },
+    'Otwórz Sound Atlas': { en: 'Open Sound Atlas', es: 'Abrir Sound Atlas' },
+    'Sound Atlas to mapa Twojej muzyki. Otwórz go przyciskiem w Bibliotece; jeśli biblioteka jest pusta, zobaczysz mapę gotową na pierwsze utwory.': { en: 'Sound Atlas maps your music. Open it from Library; if your library is empty, you will see the map ready for your first tracks.', es: 'Sound Atlas crea un mapa de tu música. Ábrelo desde Biblioteca; si está vacía, verás el mapa listo para tus primeras canciones.' },
+    'Poznaj mapę dźwięku': { en: 'Explore the sound map', es: 'Explora el mapa de sonido' },
+    'Oś pozioma pokazuje tempo, pionowa względną energię. Analiza działa lokalnie. Kliknij punkt albo wybierz go strzałkami i naciśnij Enter, aby odtworzyć utwór.': { en: 'The horizontal axis is tempo; the vertical axis is relative energy. Analysis runs locally. Click a dot, or select one with the arrow keys and press Enter to play it.', es: 'El eje horizontal muestra el tempo y el vertical la energía relativa. El análisis es local. Pulsa un punto o selecciónalo con las flechas y presiona Enter para reproducirlo.' },
+    'Muzyka z sieci': { en: 'Online music', es: 'Música en línea' },
+    'Zakładka Sieć wyszukuje podglądy i utwory w dostępnych serwisach. Wybierz źródło, wyszukaj utwór i użyj podglądu lub zapisu. YouTube wymaga lokalnego mostka yt-dlp.': { en: 'The Web tab searches previews and tracks from available services. Choose a source, search, then preview or save. YouTube requires the local yt-dlp bridge.', es: 'La pestaña Red busca canciones y muestras en los servicios disponibles. Elige una fuente, busca y reproduce una muestra o guarda la canción. YouTube requiere el puente local yt-dlp.' },
+    'Sterowanie odtwarzaczem': { en: 'Player controls', es: 'Controles del reproductor' },
+    'Odtwarzaj, pauzuj i przechodź między utworami. Przeciągnij pasek postępu, aby zmienić pozycję; regulacja głośności, losowanie i powtarzanie są obok. Spacja i strzałki też działają.': { en: 'Play, pause and skip between tracks. Drag the progress bar to seek; volume, shuffle and repeat are nearby. Space and the arrow keys also work.', es: 'Reproduce, pausa y cambia de canción. Arrastra la barra para avanzar; volumen, aleatorio y repetición están cerca. También funcionan Espacio y las flechas.' },
+    'Kolejka odtwarzania': { en: 'Play queue', es: 'Cola de reproducción' },
+    'Kolejka pokazuje, co będzie dalej; możesz zmienić kolejność przeciągając utwory. Obok znajdziesz teksty utworów i tryb karaoke, jeśli tekst jest dostępny.': { en: 'The queue shows what plays next; drag tracks to reorder them. Nearby, Lyrics opens synced lyrics and karaoke when available.', es: 'La cola muestra lo que sigue; arrastra canciones para cambiar el orden. Cerca, Letras abre letras sincronizadas y karaoke cuando están disponibles.' },
+    'Auto-DJ i cisza': { en: 'Auto-DJ and silence skip', es: 'Auto-DJ y silencios' },
+    'Auto-DJ dobiera następny utwór na podstawie tempa i energii. „Pomijaj ciszę” przycina długie intro, przerwy i outro. Oba tryby można włączać i wyłączać w pasku odtwarzacza.': { en: 'Auto-DJ picks the next track by tempo and energy. Skip Silence trims long intros, gaps and outros. Toggle either feature in the player bar.', es: 'Auto-DJ elige la siguiente canción según el tempo y la energía. Omitir silencios recorta intros, pausas y outros largos. Activa o desactiva ambas funciones en la barra.' },
+    'Teksty utworów': { en: 'Lyrics', es: 'Letras' },
+    'Panel tekstów synchronizuje wiersze z muzyką. Pulsar może wczytać pliki LRC obok utworów oraz wyszukiwać dostępne teksty online.': { en: 'The lyrics panel syncs lines to the music. Pulsar can load LRC files beside your tracks and search online for available lyrics.', es: 'El panel de letras sincroniza las líneas con la música. Pulsar puede cargar archivos LRC junto a tus canciones y buscar letras en línea.' },
+    'Wizualizacje': { en: 'Visuals', es: 'Visualizaciones' },
+    'Zmień styl wizualizacji 3D, włącz reakcję tła na dźwięk lub śledzenie kursora. Equalizer i normalizacja dźwięku są dostępne w ustawieniach odtwarzania.': { en: 'Change the 3D visualiser, make the background react to audio or follow the cursor. Equalizer and volume normalisation are in Playback settings.', es: 'Cambia el visualizador 3D, haz que el fondo reaccione al audio o siga el cursor. El ecualizador y la normalización están en Ajustes de reproducción.' },
+    'Mini-player': { en: 'Mini-player', es: 'Mini-reproductor' },
+    'Mini-player zmniejsza Pulsara do kompaktowego okna z okładką i podstawowymi przyciskami. W ustawieniach możesz włączyć też tryb „zawsze na wierzchu” i zasobnik systemowy.': { en: 'Mini-player shrinks Pulsar to a compact window with cover art and essential controls. Settings also include always-on-top and the system tray.', es: 'El mini-reproductor reduce Pulsar a una ventana compacta con portada y controles básicos. Ajustes también incluye siempre visible y la bandeja del sistema.' },
+    'Otwórz Ustawienia': { en: 'Open Settings', es: 'Abrir Ajustes' },
+    'Przejdź do kolejnych kroków, aby zobaczyć zakładki ustawień. Możesz zmieniać opcje podczas przewodnika; pominięcie lub zamknięcie jest zawsze dostępne.': { en: 'Continue to tour the Settings sections. You can change options during the tour; Skip and Close are always available.', es: 'Continúa para recorrer las secciones de Ajustes. Puedes cambiar opciones durante la guía; Saltar y Cerrar siempre están disponibles.' },
+    'Dźwięk i odtwarzanie': { en: 'Sound and playback', es: 'Sonido y reproducción' },
+    'Equalizer, normalizacja głośności, balans, mono, crossfade, bezprzerwowe przejścia i wyłącznik czasowy. Włączaj tylko te opcje, których potrzebujesz.': { en: 'Equalizer, volume normalisation, balance, mono, crossfade, gapless playback and sleep timer. Enable only what you need.', es: 'Ecualizador, normalización, balance, mono, crossfade, reproducción sin pausas y temporizador. Activa solo lo que necesites.' },
+    'Wygląd i język': { en: 'Appearance and language', es: 'Aspecto e idioma' },
+    'Zmień język, akcent kolorystyczny, czcionkę, animacje i zachowanie tła. Zmiany wyglądu możesz cofnąć w każdej chwili.': { en: 'Change language, accent colour, font, animations and background behaviour. You can adjust the appearance again any time.', es: 'Cambia idioma, color de acento, fuente, animaciones y comportamiento del fondo. Puedes modificar el aspecto cuando quieras.' },
+    'Biblioteka i kopie': { en: 'Library and backups', es: 'Biblioteca y copias' },
+    'Ustaw obserwowany folder, odśwież okładki, eksportuj kolejkę i twórz kopie .pulsarlib. Kopia zawiera bibliotekę, albumy, ulubione, statystyki i ustawienia.': { en: 'Watch a folder, refresh covers, export the queue and create .pulsarlib backups. A backup includes your library, albums, favourites, stats and settings.', es: 'Vigila una carpeta, actualiza portadas, exporta la cola y crea copias .pulsarlib. Incluyen biblioteca, álbumes, favoritos, estadísticas y ajustes.' },
+    'Pobieranie i zapisywanie': { en: 'Downloads and saving', es: 'Descargas y guardado' },
+    'Wybierz docelowy folder biblioteki, zarządzaj pobranymi utworami i opcjonalną kopią na dysku. Dostępność pobierania zależy od źródła i skonfigurowanych mostków.': { en: 'Choose the library destination, manage downloaded tracks and optional disk copies. Downloads depend on the source and configured bridges.', es: 'Elige la carpeta de destino, administra canciones descargadas y copias opcionales. Las descargas dependen de la fuente y de los puentes configurados.' },
+    'Integracje desktopowe i OBS': { en: 'Desktop integrations and OBS', es: 'Integraciones de escritorio y OBS' },
+    'Na komputerze włącz mini-okno, zasobnik i powiadomienia. W zakładce OBS znajdziesz wyjście audio i wskazówki do nakładki transmisji.': { en: 'On desktop, enable the mini window, tray and notifications. The OBS section has audio output and streaming-overlay instructions.', es: 'En escritorio, activa mini-ventana, bandeja y notificaciones. La sección OBS incluye salida de audio e instrucciones para la superposición.' },
+    'Pomoc i powrót': { en: 'Help and replay', es: 'Ayuda y repetir' },
+    'Tutaj możesz ponownie uruchomić interaktywny samouczek. Możesz też w każdej chwili zamknąć go przyciskiem × albo pominąć.': { en: 'Replay the interactive tour from here. You can always close it with × or skip it.', es: 'Vuelve a iniciar la guía interactiva desde aquí. Puedes cerrarla con × o saltarla cuando quieras.' },
+    'Uruchom samouczek': { en: 'Start interactive tour', es: 'Iniciar guía interactiva' },
+    'OBS i transmisje': { en: 'OBS and streaming', es: 'OBS y streaming' },
+    'Tryb pełnoekranowy rozkłada odtwarzacz na całe okno. Kliknij ikonę ponownie lub naciśnij Esc, aby wrócić.': { en: 'Fullscreen expands the player to fill the window. Click the icon again or press Esc to return.', es: 'La pantalla completa expande el reproductor a toda la ventana. Pulsa de nuevo el icono o Esc para volver.' },
+    'Wyłącznik czasowy zatrzymuje muzykę po wybranym czasie lub po zakończeniu utworu.': { en: 'The sleep timer stops playback after a chosen time or at the end of the track.', es: 'El temporizador detiene la reproducción después del tiempo elegido o al terminar la canción.' },
+    'Ustaw wyjście audio Pulsara dla OBS i sprawdź instrukcję nakładki transmisji. Ta opcja jest dostępna w aplikacji desktopowej.': { en: 'Set Pulsar audio output for OBS and view streaming-overlay instructions. This feature is available in the desktop app.', es: 'Configura la salida de audio de Pulsar para OBS y consulta las instrucciones de la superposición. Disponible en la aplicación de escritorio.' },
+    'Gotowe': { en: 'All set', es: 'Listo' },
+    'To koniec przewodnika. Wyróżnione kontrolki pozostają interaktywne; wróć tu z Ustawienia → Pomoc albo ikoną „?”.': { en: 'That is the end of the tour. The highlighted controls stay interactive; return from Settings → Help or the “?” button.', es: 'Fin de la guía. Los controles resaltados siguen activos; vuelve desde Ajustes → Ayuda o con el botón «?». ' },
+    'Pomoc i samouczek': { en: 'Help and tour', es: 'Ayuda y guía' },
+    'Poznaj Pulsara': { en: 'Discover Pulsar', es: 'Descubre Pulsar' },
+    'Interaktywny przewodnik': { en: 'Interactive guide', es: 'Guía interactiva' },
+    'Przejdź przez najważniejsze funkcje. Wyróżnione elementy aplikacji pozostają klikalne, a przewodnik możesz pominąć w dowolnej chwili.': { en: 'Explore the main features. Highlighted parts of the app remain clickable, and you can skip the tour at any time.', es: 'Explora las funciones principales. Los elementos resaltados siguen siendo interactivos y puedes saltarte la guía cuando quieras.' },
+    'Pomoc': { en: 'Help', es: 'Ayuda' },
+    'Odkrywaj bibliotekę według tempa i energii — analiza odbywa się na tym urządzeniu.': { en: 'Explore your library by tempo and energy — analysed on this device.', es: 'Explora tu biblioteca por tempo y energía; el análisis se realiza en este dispositivo.' },
+    'Wolno → szybko': { en: 'Slow → fast', es: 'Lento → rápido' },
+    'Wybierz punkt na mapie': { en: 'Select a dot on the map', es: 'Selecciona un punto del mapa' },
+    'Wybrany dźwięk': { en: 'Selected sound', es: 'Sonido seleccionado' },
+    'Odtwórz utwór': { en: 'Play track', es: 'Reproducir canción' },
+    'Każda kropka to utwór. Wyżej oznacza więcej energii; od lewej do prawej tempo rośnie. Wypełnione kropki są przeanalizowane, obwiedzione czekają na analizę. Kliknij punkt, aby odtworzyć utwór, albo użyj strzałek i Enter.': { en: 'Each dot is a track. Higher means more energy; tempo increases from left to right. Outlined dots have not been analysed; dashed dots have no detected BPM. Click a dot to play it, or use the arrow keys and Enter.', es: 'Cada punto representa una canción. Más arriba significa más energía; el tempo aumenta de izquierda a derecha. Los puntos contorneados aún no se han analizado; los discontinuos no tienen BPM detectado. Haz clic para reproducir o usa las flechas y Enter.' },
+    'utworów przeanalizowanych': { en: 'tracks analysed', es: 'canciones analizadas' },
+    'Brak analizy': { en: 'Not analysed', es: 'Sin analizar' },
+    'Tempo nie wykryte': { en: 'No BPM detected', es: 'No se detectó el BPM' },
+    'Analiza w toku': { en: 'Analysis pending', es: 'Análisis pendiente' },
+    'Energia': { en: 'Energy', es: 'Energía' },
+    'Tempo · wolno → szybko': { en: 'Tempo · slow → fast', es: 'Tempo · lento → rápido' },
+    'Zamknij Sound Atlas': { en: 'Close Sound Atlas', es: 'Cerrar Sound Atlas' },
     'Wybierz folder z muzyką': { en: 'Choose a music folder', es: 'Elige una carpeta de música' },
     'Wybierz folder z muzyką (możesz też upuścić pliki na okno)': { en: 'Choose a music folder (you can also drop files onto the window)', es: 'Elige una carpeta de música (también puedes soltar archivos en la ventana)' },
     'Utwory': { en: 'Tracks', es: 'Canciones' },
@@ -2235,10 +2394,8 @@
     'YouTube bez mostka nie zadziała': { en: 'YouTube will not work without the bridge', es: 'YouTube no funcionará sin el puente' },
     'Kliknij, aby skopiować': { en: 'Click to copy', es: 'Pulsa para copiar' },
     'Dodaj do albumu': { en: 'Add to album', es: 'Añadir al álbum' },
-    'Kolejka odtwarzania': { en: 'Play queue', es: 'Cola de reproducción' },
     'Tekst utworu (karaoke)': { en: 'Lyrics (karaoke)', es: 'Letra (karaoke)' },
     'Tekst utworu': { en: 'Lyrics', es: 'Letra' },
-    'Mini-player': { en: 'Mini-player', es: 'Minirreproductor' },
     'Anuluj': { en: 'Cancel', es: 'Cancelar' },
     'Zamknij': { en: 'Close', es: 'Cerrar' },
     'Zamknij modal': { en: 'Close dialog', es: 'Cerrar diálogo' }
@@ -3738,6 +3895,8 @@
     selectToggleBtn.textContent = selectionMode ? t('Anuluj zaznaczanie') : t('Zaznacz utwory');
     selectToggleBtn.hidden = addingToAlbumId || !tracks.length;
     newAlbumBtn.hidden = Boolean(addingToAlbumId) || !tracks.length;
+    const atlasBtnEl = document.getElementById('soundAtlasBtn');
+    if (atlasBtnEl) atlasBtnEl.hidden = Boolean(addingToAlbumId);
     if (enrichBtnEl) enrichBtnEl.hidden = !tracks.length;
     if (dedupeBtnEl) dedupeBtnEl.hidden = !tracks.length;
     updateDedupeBtn();
@@ -6770,6 +6929,7 @@
       } catch(e){}
       if (tracks[currentIndex] === track) applyNorm();
       drawWaves(); updateBpmChip();
+      if (atlasOpen && (analysisPending.length % 8 === 0 || analysisPending.length === 0)) drawSoundAtlas();
     } catch(e){ analysisSeen.delete(track.id); }
     analysisBusy = false;
     if (analysisPending.length) pumpAnalysis();
@@ -7698,6 +7858,110 @@
   });
 
   /* ---------- Zdarzenia: zakładki, zaznaczanie, szczegóły albumu ---------- */
+  const atlasPanel = document.getElementById('soundAtlas');
+  const atlasCanvas = document.getElementById('atlasCanvas');
+  const atlasBtn = document.getElementById('soundAtlasBtn');
+  let atlasOpen = false, atlasPoints = [], atlasSelected = -1;
+  function openSoundAtlas(){
+    atlasOpen = true; atlasSelected = tracks.length ? 0 : -1; atlasPanel.classList.add('open'); atlasPanel.setAttribute('aria-hidden','false');
+    document.getElementById('atlasIntro').textContent=t('Odkrywaj bibliotekę według tempa i energii — analiza odbywa się na tym urządzeniu.');
+    document.getElementById('atlasXAxis').textContent=t('Tempo · wolno → szybko');
+    document.getElementById('atlasSelectedLabel').textContent=t('Wybrany dźwięk');
+    document.getElementById('atlasPlayBtn').textContent=t('Odtwórz utwór');
+    document.getElementById('atlasHelp').textContent=t('Każda kropka to utwór. Wyżej oznacza więcej energii; od lewej do prawej tempo rośnie. Wypełnione kropki są przeanalizowane, obwiedzione czekają na analizę. Kliknij punkt, aby odtworzyć utwór, albo użyj strzałek i Enter.');
+    document.getElementById('atlasCloseBtn').setAttribute('aria-label',t('Zamknij Sound Atlas'));
+    document.getElementById('atlasCloseBtn').title=t('Zamknij Sound Atlas');
+    document.body.classList.add('atlas-open');
+    queueLibraryAnalysis(); drawSoundAtlas();
+    setTimeout(() => { try { atlasCanvas.focus(); } catch(e){} }, 20);
+  }
+  function closeSoundAtlas(){
+    atlasOpen = false; atlasPanel.classList.remove('open'); atlasPanel.setAttribute('aria-hidden','true');
+    document.body.classList.remove('atlas-open');
+    if (atlasBtn) atlasBtn.focus();
+  }
+  function atlasEnergy(track, rec, minRms, maxRms){
+    if (!rec || !isFinite(rec.rms)) return 0.5;
+    if (maxRms - minRms < 0.0001) return 0.5;
+    return Math.max(0, Math.min(1, (rec.rms - minRms) / (maxRms - minRms)));
+  }
+  function drawSoundAtlas(){
+    if (!atlasCanvas || !atlasOpen) return;
+    const rect = atlasCanvas.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (!rect.width || !rect.height) return;
+    atlasCanvas.width = Math.round(rect.width * dpr); atlasCanvas.height = Math.round(rect.height * dpr);
+    const ctx = atlasCanvas.getContext('2d'); if (!ctx) return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const W = rect.width, H = rect.height, pad = {l:48,r:18,t:20,b:30};
+    const x0=pad.l, x1=W-pad.r, y0=pad.t, y1=H-pad.b;
+    ctx.clearRect(0,0,W,H);
+    ctx.font='10px system-ui, sans-serif'; ctx.lineWidth=1;
+    ctx.fillStyle='rgba(255,255,255,.45)'; ctx.strokeStyle='rgba(255,255,255,.10)';
+    for(let i=0;i<=4;i++){
+      const y=y1-(y1-y0)*i/4;
+      ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+      ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(String(i*25),x0-8,y);
+    }
+    [80,100,120,140,160,180].forEach(bpm=>{
+      const x=x0+(x1-x0)*(bpm-70)/110;
+      ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();
+      ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(String(bpm),x,y1+8);
+    });
+    ctx.save();ctx.translate(13,(y0+y1)/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillText(t('Energia'),0,0);ctx.restore();
+    const analysed=tracks.map(tr=>analysisCache.get(tr.id)).filter(a=>a&&isFinite(a.rms));
+    const rmsVals=analysed.map(a=>a.rms).sort((a,b)=>a-b);
+    const minRms=rmsVals.length?rmsVals[Math.floor(rmsVals.length*.05)]:0;
+    const maxRms=rmsVals.length?rmsVals[Math.min(rmsVals.length-1,Math.floor(rmsVals.length*.95))]:1;
+    atlasPoints=[];
+    tracks.forEach((tr,index)=>{
+      const rec=analysisCache.get(tr.id), has=!!rec;
+      const bpm=rec&&rec.bpm>0?rec.bpm:125;
+      const hasBpm=!!(rec&&rec.bpm>0);
+      const energy=atlasEnergy(tr,rec,minRms,maxRms);
+      const x=x0+(x1-x0)*(Math.max(70,Math.min(180,bpm))-70)/110;
+      const y=y1-(y1-y0)*energy;
+      const point={index:index,x:x,y:y,has:has,hasBpm:hasBpm,bpm:rec&&rec.bpm||0,energy:energy}; atlasPoints.push(point);
+      const hue=Array.from(String(tr.artist||tr.title||'Pulsar')).reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0,7)%360;
+      ctx.beginPath();ctx.arc(x,y,index===atlasSelected?8:5,0,Math.PI*2);
+      ctx.fillStyle=has?'hsla('+hue+',78%,68%,.84)':'rgba(180,185,205,.24)';
+      ctx.strokeStyle=index===atlasSelected?'#fff':(has?'hsla('+hue+',90%,82%,.9)':'rgba(220,225,240,.5)');ctx.lineWidth=index===atlasSelected?2.5:1;
+      ctx.fill();ctx.setLineDash(hasBpm?[]:[3,3]);ctx.stroke();ctx.setLineDash([]);
+    });
+    const stats=document.getElementById('atlasStats');
+    if(stats) stats.innerHTML='<strong>'+analysed.length+' / '+tracks.length+'</strong> '+t('utworów przeanalizowanych');
+    updateAtlasSelection();
+  }
+  function updateAtlasSelection(){
+    const p=atlasPoints[atlasSelected];
+    const title=document.getElementById('atlasTrackTitle'),artist=document.getElementById('atlasTrackArtist'),data=document.getElementById('atlasTrackData'),play=document.getElementById('atlasPlayBtn');
+    if(!p||!tracks[p.index]){ title.textContent=t('Wybierz punkt na mapie');artist.textContent='';data.textContent='';play.disabled=true;return; }
+    const tr=tracks[p.index]; title.textContent=tr.title||'—';artist.textContent=tr.artist||'';
+    data.textContent=(p.bpm?p.bpm+' BPM · ':t('Tempo nie wykryte')+' · ')+t('Energia')+' '+Math.round(p.energy*100)+'%'+(p.has?'':' · '+t('Brak analizy'));
+    play.disabled=false;
+  }
+  function chooseAtlasPoint(x,y,play){
+    let best=-1,dist=Infinity;
+    atlasPoints.forEach((p,i)=>{const d=Math.hypot(p.x-x,p.y-y);if(d<dist){dist=d;best=i;}});
+    if(best<0||dist>28)return;
+    atlasSelected=best; drawSoundAtlas();
+    if(play) loadTrack(atlasPoints[best].index,{autoplay:true});
+  }
+  atlasBtn.addEventListener('click',openSoundAtlas);
+  document.getElementById('atlasCloseBtn').addEventListener('click',closeSoundAtlas);
+  atlasPanel.addEventListener('click',e=>{if(e.target===atlasPanel)closeSoundAtlas();});
+  document.getElementById('atlasPlayBtn').addEventListener('click',()=>{const p=atlasPoints[atlasSelected];if(p)loadTrack(p.index,{autoplay:true});});
+  atlasCanvas.addEventListener('click',e=>{const r=atlasCanvas.getBoundingClientRect();const d=window.devicePixelRatio||1;chooseAtlasPoint((e.clientX-r.left),e.clientY-r.top,true);});
+  atlasCanvas.addEventListener('keydown',e=>{
+    if(!atlasPoints.length)return;
+    if(e.key==='Enter'){const p=atlasPoints[atlasSelected];if(p)loadTrack(p.index,{autoplay:true});e.preventDefault();return;}
+    const dirs={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]},dir=dirs[e.key];if(!dir)return;
+    e.preventDefault();let best=-1,score=Infinity;const cur=atlasPoints[atlasSelected]||atlasPoints[0];
+    atlasPoints.forEach((p,i)=>{const dx=p.x-cur.x,dy=p.y-cur.y;if(dx*dir[0]+dy*dir[1]<=0)return;const s=Math.hypot(dx,dy)+(Math.abs(dx*dir[1]-dy*dir[0])*.7);if(s<score){score=s;best=i;}});
+    if(best>=0){atlasSelected=best;drawSoundAtlas();}
+  });
+  window.addEventListener('resize',()=>{if(atlasOpen)drawSoundAtlas();});
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&atlasOpen)closeSoundAtlas();});
   libraryTabs.addEventListener('click', e => {
     const btn = e.target.closest('.lib-tab');
     if (!btn) return;
@@ -8231,8 +8495,144 @@
   requestAnimationFrame(tick);
   updateModeButtons();
   renderLibrary();
-  restoreLibrary();
+  restoreLibrary().then(function(){ startOnboardingIfNeeded(); });
   loadAnalysisFromDB();
+
+  let onboardingIndex = 0, onboardingOpen = false;
+  const onboardingSteps = [
+    { title:'Witamy w Pulsar', text:'Elementy, które podświetlam, możesz klikać. „Dalej” prowadzi do kolejnego miejsca, a „Pomiń” kończy przewodnik w każdej chwili.', target:'#tourHelpBtn' },
+    { title:'Główna nawigacja', text:'Biblioteka otwiera Twoje utwory, albumy i wyszukiwanie online. Kliknij wyróżniony przycisk, aby otworzyć panel — przewodnik pozostanie aktywny.', target:'#libraryBtn' },
+    { title:'Dodaj muzykę', text:'Wybierz folder lub pojedyncze pliki audio. Możesz też przeciągnąć muzykę na okno. Pulsar dodaje ją do biblioteki, nie przenosi ani nie usuwa oryginałów.', target:'#addMusicBtn', view:'tracks' },
+    { title:'Utwory i filtry', text:'W widoku Utwory wyszukuj, sortuj, oznaczaj ulubione i zaznaczaj wiele pozycji. Zaznaczone utwory możesz dodać do nowego albo istniejącego albumu.', target:'#libraryTabs', view:'tracks' },
+    { title:'Albumy', text:'Twórz własne albumy, układaj ich kolejność, zmieniaj okładki i odtwarzaj całość lub losowo. „Sklej z folderów” automatycznie tworzy albumy ze struktury folderów.', target:'.lib-tab[data-view="albums"]', view:'albums' },
+    { title:'Otwórz Sound Atlas', text:'Sound Atlas to mapa Twojej muzyki. Otwórz go przyciskiem w Bibliotece; jeśli biblioteka jest pusta, zobaczysz mapę gotową na pierwsze utwory.', target:'#soundAtlasBtn', view:'albums' },
+    { title:'Poznaj mapę dźwięku', text:'Oś pozioma pokazuje tempo, pionowa względną energię. Analiza działa lokalnie. Kliknij punkt albo wybierz go strzałkami i naciśnij Enter, aby odtworzyć utwór.', target:'#atlasCanvas', atlas:true },
+    { title:'Muzyka z sieci', text:'Zakładka Sieć wyszukuje podglądy i utwory w dostępnych serwisach. Wybierz źródło, wyszukaj utwór i użyj podglądu lub zapisu. YouTube wymaga lokalnego mostka yt-dlp.', target:'#netQuery', view:'net' },
+    { title:'Sterowanie odtwarzaczem', text:'Odtwarzaj, pauzuj i przechodź między utworami. Przeciągnij pasek postępu, aby zmienić pozycję; regulacja głośności, losowanie i powtarzanie są obok. Spacja i strzałki też działają.', target:'#playBtn', player:true },
+    { title:'Pełny ekran', text:'Tryb pełnoekranowy rozkłada odtwarzacz na całe okno. Kliknij ikonę ponownie lub naciśnij Esc, aby wrócić.', target:'#fullscreenBtn', player:true },
+    { title:'Kolejka odtwarzania', text:'Kolejka pokazuje, co będzie dalej; możesz zmienić kolejność przeciągając utwory. Obok znajdziesz teksty utworów i tryb karaoke, jeśli tekst jest dostępny.', target:'#queuePanel', player:true, queue:true },
+    { title:'Auto-DJ i cisza', text:'Auto-DJ dobiera następny utwór na podstawie tempa i energii. „Pomijaj ciszę” przycina długie intro, przerwy i outro. Oba tryby można włączać i wyłączać w pasku odtwarzacza.', target:'#autoDjBtn', player:true },
+    { title:'Teksty utworów', text:'Panel tekstów synchronizuje wiersze z muzyką. Pulsar może wczytać pliki LRC obok utworów oraz wyszukiwać dostępne teksty online.', target:'#lyricsBtn', player:true },
+    { title:'Wizualizacje', text:'Zmień styl wizualizacji 3D, włącz reakcję tła na dźwięk lub śledzenie kursora. Equalizer i normalizacja dźwięku są dostępne w ustawieniach odtwarzania.', target:'#ambientStyleBtn', player:true },
+    { title:'Mini-player', text:'Mini-player zmniejsza Pulsara do kompaktowego okna z okładką i podstawowymi przyciskami. W ustawieniach możesz włączyć też tryb „zawsze na wierzchu” i zasobnik systemowy.', target:'#pipBtn', player:true },
+    { title:'Otwórz Ustawienia', text:'Przejdź do kolejnych kroków, aby zobaczyć zakładki ustawień. Możesz zmieniać opcje podczas przewodnika; pominięcie lub zamknięcie jest zawsze dostępne.', target:'#settingsBtn' },
+    { title:'Dźwięk i odtwarzanie', text:'Equalizer, normalizacja głośności, balans, mono, crossfade, bezprzerwowe przejścia i wyłącznik czasowy. Włączaj tylko te opcje, których potrzebujesz.', target:'#smEqBtn', settingsPane:'play' },
+    { title:'Wyłącznik czasowy', text:'Wyłącznik czasowy zatrzymuje muzykę po wybranym czasie lub po zakończeniu utworu.', target:'#smSleep', settingsPane:'play' },
+    { title:'Wygląd i język', text:'Zmień język, akcent kolorystyczny, czcionkę, animacje i zachowanie tła. Zmiany wyglądu możesz cofnąć w każdej chwili.', target:'#smLang', settingsPane:'look' },
+    { title:'Biblioteka i kopie', text:'Ustaw obserwowany folder, odśwież okładki, eksportuj kolejkę i twórz kopie .pulsarlib. Kopia zawiera bibliotekę, albumy, ulubione, statystyki i ustawienia.', target:'#smBackupBtn', settingsPane:'lib' },
+    { title:'Pobieranie i zapisywanie', text:'Wybierz docelowy folder biblioteki, zarządzaj pobranymi utworami i opcjonalną kopią na dysku. Dostępność pobierania zależy od źródła i skonfigurowanych mostków.', target:'#smNetFolderBtn', settingsPane:'net' },
+    { title:'Integracje desktopowe i OBS', text:'Na komputerze włącz mini-okno, zasobnik i powiadomienia. W zakładce OBS znajdziesz wyjście audio i wskazówki do nakładki transmisji.', target:'#smMiniBtn', settingsPane:'win' },
+    { title:'OBS i transmisje', text:'Ustaw wyjście audio Pulsara dla OBS i sprawdź instrukcję nakładki transmisji. Ta opcja jest dostępna w aplikacji desktopowej.', target:'#smObsHelp', settingsPane:'obs' },
+    { title:'Pomoc i powrót', text:'Tutaj możesz ponownie uruchomić interaktywny samouczek. Możesz też w każdej chwili zamknąć go przyciskiem × albo pominąć.', target:'#smTourBtn', settingsPane:'help' },
+    { title:'Gotowe', text:'To koniec przewodnika. Wyróżnione kontrolki pozostają interaktywne; wróć tu z Ustawienia → Pomoc albo ikoną „?”.', target:null }
+  ];
+  const onboardingEl = document.getElementById('onboarding');
+  const onboardingCard = onboardingEl.querySelector('.tour-card');
+  const tourSpotlight = document.getElementById('tourSpotlight');
+  const onboardingNextBtn = document.getElementById('tourNextBtn');
+  const onboardingBackBtn = document.getElementById('tourBackBtn');
+  function tourExpandMini(){
+    if(document.documentElement.classList.contains('nl-mini')){const b=document.getElementById('mvExpandBtn');if(b)b.click();}
+  }
+  function tourClosePanels(keepLibrary){
+    tourExpandMini();
+    if(document.body.classList.contains('fullscreen-mode'))setFullscreen(false);
+    if(atlasOpen)closeSoundAtlas();
+    if(!keepLibrary&&libraryPanel.classList.contains('open'))libraryBtn.click();
+    if(!settingsMenu.hidden)settingsMenu.hidden=true;
+    const qp=document.getElementById('queuePanel');if(qp)qp.hidden=true;
+    const bar=document.getElementById('bottomBar');if(bar)bar.classList.remove('hidden');
+  }
+  function tourOpenLibrary(view){
+    if(!libraryPanel.classList.contains('open'))libraryBtn.click();
+    openAlbumId=null; selectionMode=false; selectedIds.clear();
+    setLibView(view); renderLibrary();
+    if(view==='net'){renderNetGenres();renderNetBrowseState();}
+  }
+  function tourOpenSettings(pane){
+    tourExpandMini();
+    if(document.body.classList.contains('fullscreen-mode'))setFullscreen(false);
+    if(atlasOpen)closeSoundAtlas();
+    if(libraryPanel.classList.contains('open'))libraryBtn.click();
+    const qp=document.getElementById('queuePanel');if(qp)qp.hidden=true;
+    if(settingsMenu.hidden){settingsBtn.click();smResetSearch();}
+    smShowPane(pane);
+  }
+  function placeTourCard(rect){
+    const w=window.innerWidth,h=window.innerHeight,cw=onboardingCard.offsetWidth,ch=onboardingCard.offsetHeight,g=16;
+    if(!rect){onboardingCard.style.left='50%';onboardingCard.style.top='50%';onboardingCard.style.right='';onboardingCard.style.bottom='';onboardingCard.style.transform='translate(-50%,-50%)';return;}
+    onboardingCard.style.transform='none';
+    let left=rect.right>w*.56?g:Math.max(g,w-cw-g);
+    let top=rect.top>h*.53?g:Math.max(g,h-ch-g);
+    if(ch>h-g*2)top=g;
+    onboardingCard.style.left=Math.round(Math.max(g,Math.min(w-cw-g,left)))+'px';
+    onboardingCard.style.top=Math.round(Math.max(g,Math.min(h-ch-g,top)))+'px';
+    onboardingCard.style.right='';onboardingCard.style.bottom='';
+  }
+  function syncTourSpotlight(){
+    if(!onboardingOpen)return;
+    const step=onboardingSteps[onboardingIndex];let target=null,rect=null;
+    try{target=step.target?document.querySelector(step.target):null;}catch(e){}
+    if(target&&step.settingsPane&&target.scrollIntoView){try{target.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'});}catch(e){}}
+    if(target&&target.getClientRects().length){rect=target.getBoundingClientRect();if(!rect.width||!rect.height)rect=null;}
+    onboardingEl.classList.toggle('no-target',!rect);
+    if(rect){const pad=7;tourSpotlight.style.left=Math.round(rect.left-pad)+'px';tourSpotlight.style.top=Math.round(rect.top-pad)+'px';tourSpotlight.style.width=Math.round(rect.width+pad*2)+'px';tourSpotlight.style.height=Math.round(rect.height+pad*2)+'px';}
+    else{tourSpotlight.style.left='-10000px';tourSpotlight.style.top='-10000px';tourSpotlight.style.width='0';tourSpotlight.style.height='0';}
+    placeTourCard(rect);
+  }
+  function prepareTourStep(){
+    const step=onboardingSteps[onboardingIndex];
+    if(step.settingsPane){tourOpenSettings(step.settingsPane);}
+    else if(step.atlas){if(!atlasOpen){tourClosePanels(true);tourOpenLibrary('albums');openSoundAtlas();}else{if(!settingsMenu.hidden)settingsMenu.hidden=true;if(!libraryPanel.classList.contains('open'))tourOpenLibrary('albums');}}
+    else if(step.view){tourClosePanels(true);tourOpenLibrary(step.view);}
+    else{tourClosePanels();}
+    if(step.queue){const qp=document.getElementById('queuePanel');if(qp&&qp.hidden)document.getElementById('queueBtn').click();}
+    requestAnimationFrame(syncTourSpotlight);setTimeout(syncTourSpotlight,380);
+  }
+  function renderOnboardingStep(){
+    const step=onboardingSteps[onboardingIndex];
+    document.getElementById('tourStepLabel').textContent=t('Krok')+' '+(onboardingIndex+1)+' / '+onboardingSteps.length;
+    document.getElementById('tourTitle').textContent=t(step.title);
+    document.getElementById('tourDescription').textContent=t(step.text);
+    document.getElementById('tourProgressFill').style.width=((onboardingIndex+1)/onboardingSteps.length*100)+'%';
+    onboardingBackBtn.disabled=onboardingIndex===0;
+    onboardingNextBtn.textContent=onboardingIndex===onboardingSteps.length-1?t('Zakończ'):t('Dalej');
+    prepareTourStep();
+  }
+  function openOnboarding(){
+    onboardingIndex=0;onboardingOpen=true;onboardingEl.hidden=false;onboardingEl.setAttribute('aria-hidden','false');
+    document.body.classList.add('tour-open');renderOnboardingStep();
+    requestAnimationFrame(function(){onboardingEl.classList.add('open');onboardingNextBtn.focus();syncTourSpotlight();});
+  }
+  function closeOnboarding(){
+    if(!onboardingOpen)return;
+    onboardingOpen=false;onboardingEl.classList.remove('open','no-target');onboardingEl.hidden=true;
+    onboardingEl.setAttribute('aria-hidden','true');document.body.classList.remove('tour-open');
+    try{localStorage.setItem('pulsarTutorialCompleteV2','1');}catch(e){}
+    document.getElementById('tourHelpBtn').focus();
+  }
+  function advanceOnboarding(){
+    if(onboardingIndex<onboardingSteps.length-1){onboardingIndex++;renderOnboardingStep();return;}
+    const needsMusic=!tracks.length;closeOnboarding();if(needsMusic)tourOpenLibrary('tracks');
+  }
+  function startOnboardingIfNeeded(){
+    let complete=false;try{complete=localStorage.getItem('pulsarTutorialCompleteV2')==='1'||localStorage.getItem('pulsarTutorialCompleteV1')==='1';}catch(e){}
+    if(complete)return;
+    if(tracks.length||albums.length){try{localStorage.setItem('pulsarTutorialCompleteV2','1');}catch(e){}return;}
+    setTimeout(function(){if(!document.documentElement.classList.contains('nl-mini'))openOnboarding();},700);
+  }
+  document.getElementById('tourHelpBtn').addEventListener('click',openOnboarding);
+  document.getElementById('tourCloseBtn').addEventListener('click',closeOnboarding);
+  document.getElementById('tourSkipBtn').addEventListener('click',closeOnboarding);
+  onboardingCard.addEventListener('click',function(e){e.stopPropagation();});
+  onboardingBackBtn.addEventListener('click',function(){if(onboardingIndex>0){onboardingIndex--;renderOnboardingStep();}});
+  onboardingNextBtn.addEventListener('click',advanceOnboarding);
+  onboardingEl.addEventListener('keydown',function(e){if(onboardingOpen&&e.key==='Escape'){e.preventDefault();e.stopPropagation();closeOnboarding();}});
+  window.addEventListener('keydown',function(e){if(onboardingOpen&&e.key==='Escape')closeOnboarding();});
+  window.addEventListener('resize',syncTourSpotlight);
+  window.addEventListener('scroll',syncTourSpotlight,true);
+  document.getElementById('smTourBtn').addEventListener('click',function(){settingsMenu.hidden=true;openOnboarding();});
+
 
   /* ---------- Sleep timer ---------- */
   var sleepRemainSec = 0, sleepEndTrack = false, sleepIntervalId = null, sleepFading = false;
