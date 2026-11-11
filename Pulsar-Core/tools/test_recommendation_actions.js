@@ -9,9 +9,19 @@ for (const platform of ['Linux', 'Windows']) {
   const html = fs.readFileSync(path.join(__dirname, '..', platform, 'resources', 'index.html'), 'utf8');
   assert.match(html, /recommendation-play/, `${platform}: recommendations expose a listen control`);
   assert.match(html, /recommendation-download/, `${platform}: recommendations expose a download control`);
-  assert.match(html, /play\.addEventListener\('click',function\(\)\{playRecommendation\(item,play\);\}\)/, `${platform}: listen control starts playback`);
-  assert.match(html, /const stream=await netYtStream\(id\)/, `${platform}: playback resolves the YouTube audio stream`);
-  assert.match(html, /await netImport\(-1,download,recommendationAsNetResult\(item\)\)/, `${platform}: download uses the same library import flow as YouTube search`);
-  assert.match(html, /async function netImport\(i, btnEl, overrideResult\)/, `${platform}: shared importer accepts recommendation tracks`);
+  assert.match(html, /play\.addEventListener\('click',function\(\)\{playRecommendation\(item,recommendationItems,itemIndex,play\);\}\)/, `${platform}: listen control starts main-player playback`);
+  assert.match(html, /async function playOnlineYoutube\(/, `${platform}: online playback has a shared path`);
+  const playback = html.match(/async function playOnlineYoutube\([\s\S]*?\n  function playRecommendation\(/);
+  assert.ok(playback, `${platform}: shared main-player handler exists`);
+  assert.match(playback[0], /audio\.src=resolved\.url/, `${platform}: YouTube streams use the main audio element`);
+  assert.match(playback[0], /currentIndex=-1/, `${platform}: online playback stays out of the local library`);
+  assert.match(playback[0], /setCover\(activeOnlineTrack\.coverUrl\)/, `${platform}: online artwork is shown in the player`);
+  assert.doesNotMatch(playback[0], /tracks\.push|persistTrack\(|toggleFav\(/, `${platform}: playing an online track does not save or favourite it`);
+  assert.match(html, /if\(r\.provider==='youtube'\|\|r\.ytStream\)[\s\S]{0,120}playOnlineYoutube\(/, `${platform}: YouTube search uses main-player playback`);
+  assert.match(html, /await netImport\(-1,download,recommendationAsNetResult\(item\)\)/, `${platform}: recommendations keep an explicit download action`);
+  assert.match(html, /dataset\.act = 'download'/, `${platform}: the network plus action is now a download action`);
+  assert.match(html, /async function netImport\(i, btnEl, overrideResult\)/, `${platform}: download reuses the existing importer`);
+  assert.match(html, /coverAddBtn\.hidden=!!activeOnlineTrack/, `${platform}: online playback cannot be added to an album`);
+  assert.match(html, /mv\.fav\.hidden = !!activeOnlineTrack/, `${platform}: online playback cannot be favourited`);
   console.log(`${platform}: For You listen/download checks passed`);
 }
