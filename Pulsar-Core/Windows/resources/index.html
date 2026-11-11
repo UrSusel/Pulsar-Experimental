@@ -368,15 +368,28 @@
   .video-stage:hover .video-stage-play, .video-stage-play:focus-visible { opacity:1; }
   .video-stage-play:hover { background:rgba(0,0,0,.78); }
   .video-stage-play svg { width:23px; height:23px; fill:currentColor; }
+  .video-stage-fullscreen { position:absolute; z-index:5; top:12px; right:12px; width:38px; height:38px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.34); border-radius:9px; background:rgba(0,0,0,.58); color:#fff; opacity:.88; cursor:pointer; }
+  .video-stage-fullscreen:hover, .video-stage-fullscreen:focus-visible { opacity:1; background:rgba(0,0,0,.82); }
+  .video-stage-fullscreen svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
   .video-player-mount { pointer-events:none; }
   .video-play-unlock { position:absolute; z-index:4; inset:auto auto 18px 50%; transform:translateX(-50%); border:1px solid rgba(255,255,255,.4); border-radius:999px; background:rgba(0,0,0,.76); color:#fff; padding:10px 18px; font:inherit; cursor:pointer; }
   .video-play-unlock[hidden] { display:none; }
-  body.video-mode:not(.fullscreen-mode) .player { padding-top:20px; }
+  body.video-mode:not(.fullscreen-mode) .player {
+    display:grid; grid-template-columns:minmax(240px,.28fr) minmax(0,.72fr); grid-template-rows:minmax(0,1fr) auto auto auto;
+    align-content:center; align-items:center; justify-items:stretch; column-gap:clamp(20px,3vw,52px); row-gap:3px;
+    min-height:100vh; padding:24px 4vw calc(var(--barh,100px) + 18px);
+  }
+  body.video-mode:not(.fullscreen-mode) .video-stage { grid-column:2; grid-row:1; align-self:center; width:100%; max-width:none; margin:0; }
   body.video-mode:not(.fullscreen-mode) .cover-wrap { display:none; }
-  body.video-mode:not(.fullscreen-mode) .video-stage { flex:0 0 auto; width:min(92vw,900px); margin-bottom:10px; }
-  body.video-mode:not(.fullscreen-mode) .lyrics-box, body.video-mode:not(.fullscreen-mode).lyrics-side .lyrics-box { position:relative; left:auto; top:auto; transform:none; width:min(92vw,900px); max-height:22vh; margin:4px auto 8px; padding:4px 8px; }
-  body.video-mode:not(.fullscreen-mode) .lyrics-box .lyrics-line { font-size:15px; padding:3px 10px; }
-  body.video-mode:not(.fullscreen-mode) .lyrics-box .lyrics-line.active { font-size:17px; }
+  body.video-mode:not(.fullscreen-mode) .lyrics-box, body.video-mode:not(.fullscreen-mode).lyrics-side .lyrics-box {
+    grid-column:1; grid-row:1; position:relative; left:auto; top:auto; transform:none; width:100%; max-height:70vh;
+    margin:0; padding:12px 8px; text-align:left; z-index:6;
+  }
+  body.video-mode:not(.fullscreen-mode) .lyrics-box .lyrics-line { font-size:clamp(14px,1.25vw,18px); padding:4px 8px; text-align:left; }
+  body.video-mode:not(.fullscreen-mode) .lyrics-box .lyrics-line.active { font-size:clamp(16px,1.45vw,21px); }
+  body.video-mode:not(.fullscreen-mode) .center-seek-row { grid-column:2; grid-row:2; width:100%; margin:12px 0 0; opacity:1; transform:none; pointer-events:auto; }
+  body.video-mode:not(.fullscreen-mode) .track-title { grid-column:2; grid-row:3; width:100%; max-width:none; margin:10px 0 0; text-align:right; }
+  body.video-mode:not(.fullscreen-mode) .track-artist { grid-column:2; grid-row:4; width:100%; max-width:none; margin:2px 0 0; justify-content:flex-end; }
   body.fullscreen-mode.video-mode .cover-wrap { display:none; }
   body.fullscreen-mode.video-mode .video-stage { position:fixed; z-index:6; right:3vw; top:44%; transform:translateY(-50%); width:min(56vw,1000px); margin:0; }
   body.fullscreen-mode.video-mode .lyrics-box, body.fullscreen-mode.video-mode.lyrics-side .lyrics-box { position:fixed; z-index:6; left:3vw; top:50%; transform:translateY(-50%); width:min(38vw,680px); max-height:82vh; margin:0; padding:14px 10px; }
@@ -392,6 +405,13 @@
   .mv-video-btn:hover, .mv-video-btn.active { color:#fff; background:rgba(255,255,255,.17); }
   .mv-video-btn svg { width:13px; height:12px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
   @media (max-width:760px) {
+    body.video-mode:not(.fullscreen-mode) .player { grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(100px,22vh) auto auto auto; row-gap:5px; padding:16px 4vw calc(var(--barh,100px) + 16px); }
+    body.video-mode:not(.fullscreen-mode) .video-stage { grid-column:1; grid-row:1; width:100%; }
+    body.video-mode:not(.fullscreen-mode) .lyrics-box, body.video-mode:not(.fullscreen-mode).lyrics-side .lyrics-box { grid-column:1; grid-row:2; max-height:22vh; text-align:center; }
+    body.video-mode:not(.fullscreen-mode) .lyrics-box .lyrics-line, body.video-mode:not(.fullscreen-mode) .lyrics-box .lyrics-line.active { text-align:center; }
+    body.video-mode:not(.fullscreen-mode) .center-seek-row { grid-column:1; grid-row:3; }
+    body.video-mode:not(.fullscreen-mode) .track-title { grid-column:1; grid-row:4; text-align:center; }
+    body.video-mode:not(.fullscreen-mode) .track-artist { grid-column:1; grid-row:5; justify-content:center; }
     body.fullscreen-mode.video-mode .video-stage { right:4vw; width:92vw; top:32%; transform:translateY(-50%); }
     body.fullscreen-mode.video-mode .lyrics-box, body.fullscreen-mode.video-mode.lyrics-side .lyrics-box { left:4vw; top:68%; width:92vw; max-height:34vh; transform:translateY(-50%); }
     body.fullscreen-mode.video-mode .track-title, body.fullscreen-mode.video-mode .track-artist, body.fullscreen-mode.video-mode .center-seek-row { right:4vw; width:92vw; }
@@ -1397,6 +1417,7 @@
       <div class="video-player-mount" id="videoPlayerMount"></div>
       <div class="video-wait" id="videoWait">Ładowanie teledysku…</div>
       <button class="video-stage-play" id="videoStagePlay" type="button" aria-label="Odtwórz lub wstrzymaj teledysk"><span id="videoStagePlayIcon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></button>
+      <button class="video-stage-fullscreen" id="videoStageFullscreen" type="button" aria-label="Włącz lub wyłącz pełny ekran" title="Pełny ekran"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <button class="video-play-unlock" id="videoPlayUnlock" type="button" hidden>Odtwórz teledysk</button>
     </div>
     <div class="cover-wrap reactive" id="coverWrap">
@@ -2751,6 +2772,7 @@
   const ambientStyleBtn = document.getElementById('ambientStyleBtn');
   const bottomBar = document.getElementById('bottomBar');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const videoStageFullscreenBtn = document.getElementById('videoStageFullscreen');
   const coverAddBtn = document.getElementById('coverAddBtn');
   const playlistMenu = document.getElementById('playlistMenu');
   const playlistMenuItems = document.getElementById('playlistMenuItems');
@@ -9099,6 +9121,7 @@
     if (ambientVisual) ambientVisual.resize();
   }
   fullscreenBtn.addEventListener('click', (e) => { e.stopPropagation(); setFullscreen(!document.body.classList.contains('fullscreen-mode')); });
+  if(videoStageFullscreenBtn)videoStageFullscreenBtn.addEventListener('click',function(e){e.stopPropagation();setFullscreen(!document.body.classList.contains('fullscreen-mode'));});
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('fullscreen-mode'); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (modalDim.classList.contains('show')) closeModal(); if (playlistMenu.classList.contains('open')) playlistMenu.classList.remove('open'); else setFullscreen(false); } });
 
