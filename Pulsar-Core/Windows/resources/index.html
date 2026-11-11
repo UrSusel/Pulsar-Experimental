@@ -347,6 +347,56 @@
     transition: opacity .2s ease, transform 0.5s ease;
     text-shadow: 0 1px 10px rgba(0,0,0,.85);
   }
+  .track-artist { display:flex; align-items:center; justify-content:center; gap:8px; }
+  .track-artist-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .video-mode-btn, .mv-video-btn { border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.42); color:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .video-mode-btn { width:28px; height:24px; border-radius:7px; padding:3px 5px; opacity:.78; transition:opacity .15s,background .15s,border-color .15s; }
+  .video-mode-btn:hover, .video-mode-btn.active { opacity:1; background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.56); }
+  .video-mode-btn[hidden], .mv-video-btn[hidden] { display:none !important; }
+  .video-mode-btn svg { width:16px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .video-backdrop { position:fixed; inset:-5%; z-index:-4; overflow:hidden; opacity:0; pointer-events:none; transition:opacity .35s ease; background:#050505; }
+  .video-backdrop img { width:100%; height:100%; display:block; object-fit:cover; filter:blur(34px) brightness(.34) saturate(.72); transform:scale(1.12); }
+  .video-backdrop::after { content:""; position:absolute; inset:0; background:radial-gradient(ellipse at 60% 48%,rgba(0,0,0,.02),rgba(0,0,0,.42) 72%,rgba(0,0,0,.72)); }
+  body.video-mode .video-backdrop { opacity:1; }
+  body.video-mode .ambient-bg-container, body.video-mode .bg-grain, body.video-mode .vignette, body.video-mode .ambient-3d-canvas { opacity:0 !important; }
+  .video-stage { display:none; position:relative; width:min(90vw,900px); aspect-ratio:16/9; margin:0 auto 8px; overflow:hidden; border-radius:10px; background:#050505; box-shadow:0 24px 80px rgba(0,0,0,.62); }
+  body.video-mode .video-stage { display:block; }
+  .video-player-mount, .video-player-mount iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .video-wait { position:absolute; inset:0; z-index:2; display:grid; place-items:center; color:rgba(255,255,255,.82); background:rgba(0,0,0,.18); font-size:14px; pointer-events:none; }
+  .video-wait[hidden] { display:none; }
+  .video-stage-play { position:absolute; z-index:3; left:50%; top:50%; transform:translate(-50%,-50%); width:56px; height:56px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.45); border-radius:50%; background:rgba(0,0,0,.48); color:#fff; opacity:0; transition:opacity .18s,background .18s; cursor:pointer; }
+  .video-stage:hover .video-stage-play, .video-stage-play:focus-visible { opacity:1; }
+  .video-stage-play:hover { background:rgba(0,0,0,.78); }
+  .video-stage-play svg { width:23px; height:23px; fill:currentColor; }
+  .video-player-mount { pointer-events:none; }
+  .video-play-unlock { position:absolute; z-index:4; inset:auto auto 18px 50%; transform:translateX(-50%); border:1px solid rgba(255,255,255,.4); border-radius:999px; background:rgba(0,0,0,.76); color:#fff; padding:10px 18px; font:inherit; cursor:pointer; }
+  .video-play-unlock[hidden] { display:none; }
+  body.video-mode:not(.fullscreen-mode) .player { padding-top:20px; }
+  body.video-mode:not(.fullscreen-mode) .cover-wrap { display:none; }
+  body.video-mode:not(.fullscreen-mode) .video-stage { flex:0 0 auto; width:min(92vw,900px); margin-bottom:10px; }
+  body.video-mode:not(.fullscreen-mode) .lyrics-box, body.video-mode:not(.fullscreen-mode).lyrics-side .lyrics-box { position:relative; left:auto; top:auto; transform:none; width:min(92vw,900px); max-height:22vh; margin:4px auto 8px; padding:4px 8px; }
+  body.video-mode:not(.fullscreen-mode) .lyrics-box .lyrics-line { font-size:15px; padding:3px 10px; }
+  body.video-mode:not(.fullscreen-mode) .lyrics-box .lyrics-line.active { font-size:17px; }
+  body.fullscreen-mode.video-mode .cover-wrap { display:none; }
+  body.fullscreen-mode.video-mode .video-stage { position:fixed; z-index:6; right:3vw; top:44%; transform:translateY(-50%); width:min(56vw,1000px); margin:0; }
+  body.fullscreen-mode.video-mode .lyrics-box, body.fullscreen-mode.video-mode.lyrics-side .lyrics-box { position:fixed; z-index:6; left:3vw; top:50%; transform:translateY(-50%); width:min(38vw,680px); max-height:82vh; margin:0; padding:14px 10px; }
+  body.fullscreen-mode.video-mode .lyrics-box .lyrics-line { font-size:clamp(18px,3vh,28px); padding:6px 14px; }
+  body.fullscreen-mode.video-mode .lyrics-box .lyrics-line.active { font-size:clamp(23px,4vh,36px); }
+  body.fullscreen-mode.video-mode .track-title { position:fixed; z-index:6; right:3vw; bottom:94px; width:min(56vw,1000px); max-width:none; margin:0; text-align:right; }
+  body.fullscreen-mode.video-mode .track-artist { position:fixed; z-index:6; right:3vw; bottom:66px; width:min(56vw,1000px); max-width:none; margin:0; justify-content:flex-end; }
+  body.fullscreen-mode.video-mode .center-seek-row { position:fixed; z-index:6; right:3vw; bottom:30px; left:auto; width:min(56vw,1000px); margin:0; opacity:1; transform:none; pointer-events:auto; }
+  body.fullscreen-mode.video-mode .bottombar { display:none; }
+  .mv-artist-row { display:flex; align-items:center; gap:5px; min-width:0; }
+  .mv-artist-row .mv-artist { min-width:0; flex:1; }
+  .mv-video-btn { width:22px; height:19px; border-radius:5px; padding:2px 4px; color:rgba(255,255,255,.74); }
+  .mv-video-btn:hover, .mv-video-btn.active { color:#fff; background:rgba(255,255,255,.17); }
+  .mv-video-btn svg { width:13px; height:12px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  @media (max-width:760px) {
+    body.fullscreen-mode.video-mode .video-stage { right:4vw; width:92vw; top:32%; transform:translateY(-50%); }
+    body.fullscreen-mode.video-mode .lyrics-box, body.fullscreen-mode.video-mode.lyrics-side .lyrics-box { left:4vw; top:68%; width:92vw; max-height:34vh; transform:translateY(-50%); }
+    body.fullscreen-mode.video-mode .track-title, body.fullscreen-mode.video-mode .track-artist, body.fullscreen-mode.video-mode .center-seek-row { right:4vw; width:92vw; }
+    body.fullscreen-mode.video-mode .track-title { bottom:86px; } body.fullscreen-mode.video-mode .track-artist { bottom:60px; }
+  }
 
   /* Chip nazwy stylu wizualizacji */
   .style-toast {
@@ -1315,6 +1365,12 @@
   .obs-note { font-size: 12px; color: rgba(255,255,255,.6); }
   @media (max-height: 120px){ .mv-time { display: none; } .mv-cover { width: 64px; height: 64px; } }
   @media (max-width: 300px){ html.nl-mini .mini-view { grid-template-columns: 1fr; } .mv-art { display: none; } }
+  body.video-mode.lyrics-side:not(.fullscreen-mode) .track-title,
+  body.video-mode.lyrics-side:not(.fullscreen-mode) .track-artist,
+  body.video-mode.lyrics-side:not(.fullscreen-mode) .center-seek-row { left:0; transform:none; }
+  body.fullscreen-mode.video-mode.lyrics-side .track-title,
+  body.fullscreen-mode.video-mode.lyrics-side .track-artist { left:auto; transform:none; }
+  body.fullscreen-mode.video-mode.lyrics-side .center-seek-row { left:auto; transform:none; }
 </style>
 </head>
 <body>
@@ -1334,8 +1390,15 @@
   <div class="bg-grain" aria-hidden="true"></div>
   <canvas class="ambient-3d-canvas" id="ambient3dCanvas" aria-hidden="true"></canvas>
   <div class="vignette"></div>
+  <div class="video-backdrop" id="videoBackdrop" aria-hidden="true"><img id="videoBackdropImg" alt=""></div>
 
   <main class="player">
+    <div class="video-stage" id="videoStage" aria-label="Teledysk YouTube">
+      <div class="video-player-mount" id="videoPlayerMount"></div>
+      <div class="video-wait" id="videoWait">Ładowanie teledysku…</div>
+      <button class="video-stage-play" id="videoStagePlay" type="button" aria-label="Odtwórz lub wstrzymaj teledysk"><span id="videoStagePlayIcon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></button>
+      <button class="video-play-unlock" id="videoPlayUnlock" type="button" hidden>Odtwórz teledysk</button>
+    </div>
     <div class="cover-wrap reactive" id="coverWrap">
       <img id="coverImg" alt="Okładka utworu" draggable="false">
       <button class="fullscreen-btn" id="fullscreenBtn" aria-label="Tryb pełnoekranowy" title="Tryb pełnoekranowy"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -1381,7 +1444,7 @@
     </div>
 
     <h1 class="track-title" id="trackTitle">Wybierz utwór</h1>
-    <p class="track-artist" id="trackArtist">z folderu z muzyką</p>
+    <p class="track-artist" id="trackArtist"><span class="track-artist-text" id="trackArtistText">z folderu z muzyką</span><button class="video-mode-btn" id="videoModeBtn" type="button" aria-label="Odtwórz teledysk" title="Odtwórz teledysk" hidden><svg viewBox="0 0 24 24"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button></p>
     <p class="empty-hint" id="emptyHint">Wybierz folder z muzyką (ikona foldera na dole) albo po prostu upuść pliki audio na to okno. Wykryte zostaną MP3, WAV, OGG, M4A i FLAC wraz z okładkami ID3. Skróty: Spacja — play/pauza, ←/→ — utwory, R — powtarzanie, S — losowo.</p>
   </main>
 
@@ -1624,7 +1687,7 @@
     <div class="mv-visual" id="mvVisual" aria-hidden="true"><canvas class="mv-viz" id="mvViz" width="640" height="220"></canvas></div>
     <div class="mv-now">
       <div class="mv-art"><img class="mv-cover" id="mvCover" alt="" title="Pełny widok"><button type="button" class="mv-fav" id="mvFavBtn" title="Ulubione" aria-label="Ulubione"><span id="mvFavIcon">♡</span></button></div>
-      <div class="mv-body"><div class="mv-head"><div class="mv-txt"><div class="mv-label">NOW PLAYING</div><div class="mv-title" id="mvTitle">Wybierz utwór</div><div class="mv-artist" id="mvArtist">—</div></div></div><input type="range" class="mv-seek" id="mvSeek" min="0" max="1000" value="0" aria-label="Pozycja utworu"><div class="mv-time"><span id="mvCur">0:00</span><span id="mvDur">0:00</span></div></div>
+      <div class="mv-body"><div class="mv-head"><div class="mv-txt"><div class="mv-label">NOW PLAYING</div><div class="mv-title" id="mvTitle">Wybierz utwór</div><div class="mv-artist-row"><div class="mv-artist" id="mvArtist">—</div><button class="mv-video-btn" id="mvVideoBtn" type="button" aria-label="Odtwórz teledysk" title="Odtwórz teledysk" hidden><svg viewBox="0 0 24 24"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button></div></div></div><input type="range" class="mv-seek" id="mvSeek" min="0" max="1000" value="0" aria-label="Pozycja utworu"><div class="mv-time"><span id="mvCur">0:00</span><span id="mvDur">0:00</span></div></div>
     </div>
     <div class="mv-ctl"><button type="button" class="mv-btn mode" id="mvShuffleBtn" title="Losowe odtwarzanie" aria-label="Losowe odtwarzanie"></button><button type="button" class="mv-btn" id="mvPrevBtn" title="Poprzedni" aria-label="Poprzedni"><svg viewBox="0 0 24 24"><path d="M7 5v14"/><path class="fill" d="M19 5l-10 7 10 7z"/></svg></button><button type="button" class="mv-btn big" id="mvPlayBtn" title="Odtwórz / pauza" aria-label="Odtwórz / pauza"></button><button type="button" class="mv-btn" id="mvNextBtn" title="Następny" aria-label="Następny"><svg viewBox="0 0 24 24"><path d="M17 5v14"/><path class="fill" d="M5 5l10 7-10 7z"/></svg></button><button type="button" class="mv-btn mode" id="mvRepeatBtn" title="Powtarzanie" aria-label="Powtarzanie"></button><button type="button" class="mv-btn volume" id="mvMuteBtn" title="Wycisz" aria-label="Wycisz"></button></div>
   </div>
@@ -1717,6 +1780,11 @@
     if (!_savedLang){ try { localStorage.setItem('playerLang', CUR_LANG); } catch(e){} }
   } catch(e){ CUR_LANG = 'pl'; }
   var I18N_DICT = {
+    'Odtwórz teledysk': { en: 'Play music video', es: 'Reproducir videoclip' },
+    'Wróć do audio': { en: 'Back to audio', es: 'Volver al audio' },
+    'Ładowanie teledysku…': { en: 'Loading music video…', es: 'Cargando videoclip…' },
+    'Nie udało się załadować teledysku YouTube.': { en: 'Could not load the YouTube music video.', es: 'No se pudo cargar el videoclip de YouTube.' },
+    'Dla tego utworu nie znaleziono teledysku.': { en: 'No matching music video was found for this track.', es: 'No se encontró un videoclip para esta canción.' },
     'Panel zasobnika w stylu Pulsara': { en: 'Pulsar-style tray panel', es: 'Panel de bandeja al estilo de Pulsar' },
     'Ikona w zasobniku otwiera ciemny panel z okładką i przyciskami zamiast zwykłego menu Windows': { en: 'The tray icon opens a dark panel with the cover and buttons instead of the plain Windows menu', es: 'El icono de la bandeja abre un panel oscuro con la portada y botones en lugar del menú normal de Windows' },
     'Zmiana wyglądu zasobnika zadziała w pełni po ponownym uruchomieniu Pulsara': { en: 'The tray change fully applies after restarting Pulsar', es: 'El cambio de la bandeja se aplicará por completo al reiniciar Pulsar' },
@@ -2665,6 +2733,9 @@
 
   const trackTitleEl = document.getElementById('trackTitle');
   const trackArtistEl = document.getElementById('trackArtist');
+  const trackArtistTextEl = document.getElementById('trackArtistText');
+  const videoModeBtn = document.getElementById('videoModeBtn');
+  const mvVideoBtn = document.getElementById('mvVideoBtn');
   const bbThumb = document.getElementById('bbThumb');
   const bbTitle = document.getElementById('bbTitle');
   const bbArtist = document.getElementById('bbArtist');
@@ -3222,6 +3293,9 @@
 
   let tracks = [];
   let activeOnlineTrack = null, activeOnlineSession = null, onlinePlaybackToken = 0, onlinePlaybackLoading = false;
+  let videoPlayer = null, videoModeActive = false, videoModeReady = false, videoModeHasPlayed = false, videoModeDuration = 0, videoModePlaying = false, videoModePosition = 0, videoModeCuts = [], videoModeCutPendingUntil = 0, videoModeWasPlaying = false, videoModeLyricsWasOn = false, videoModeToken = 0, videoLookupToken = 0, currentVideoId = '';
+  const videoIdCache = new Map();
+  let youtubeApiPromise = null;
   let albums = [];               // albumy trzymane w store 'playlists' (kompatybilność ze starszymi zapisami)
   let recommendationsEnabled = false;
   let recommendationHistory = [];
@@ -3484,14 +3558,15 @@
     vol = Math.max(0, Math.min(1, vol));
     audio.volume = vol;
     audio.muted = false;
+    if(videoModeActive&&videoPlayer)try{videoPlayer.unMute();videoPlayer.setVolume(Math.round(vol*100));}catch(e){}
     currentVolume = vol;
     try { localStorage.setItem('playerVolume', vol); } catch(e){}
     updateVolumeUI(vol);
   }
 
   muteBtn.addEventListener('click', () => {
-    if (audio.volume > 0 && !audio.muted) { audio.muted = true; updateVolumeUI(0); } 
-    else { audio.muted = false; if (currentVolume === 0) setVolume(0.5); else updateVolumeUI(currentVolume); }
+    if (audio.volume > 0 && !audio.muted) { audio.muted = true; if(videoModeActive&&videoPlayer)try{videoPlayer.mute();}catch(e){} updateVolumeUI(0); }
+    else { audio.muted = false; if(videoModeActive&&videoPlayer)try{videoPlayer.unMute();videoPlayer.setVolume(Math.round(currentVolume*100));}catch(e){} if (currentVolume === 0) setVolume(0.5); else updateVolumeUI(currentVolume); }
   });
 
   function volSeekFromEvent(e){
@@ -4990,9 +5065,10 @@
     const albumName = activeOnlineTrack ? 'YouTube' : currentAlbumName();
     const sub = artist + (albumName ? ' • ♫ ' + albumName : '');
     if (trackTitleEl.textContent !== title){
-      trackTitleEl.textContent = title; trackArtistEl.textContent = sub;
+      trackTitleEl.textContent = title; trackArtistTextEl.textContent = sub;
       animSwap(trackTitleEl, 'swap-anim'); animSwap(trackArtistEl, 'swap-anim');
     }
+    trackArtistTextEl.textContent=sub;
     if (bbTitle.textContent !== title){
       bbTitle.textContent = title; bbArtist.textContent = sub;
       animSwap(bbTitle, 'swap-anim'); animSwap(bbArtist, 'swap-anim');
@@ -5865,7 +5941,7 @@
   }
   let netNowIdx = -1, recommendationNowId = '';
   function netRenderPlayStates(){
-    const onlinePlaying=!!(activeOnlineTrack&&!audio.paused);
+    const onlinePlaying=!!(activeOnlineTrack&&playerIsPlaying());
     if (netGrid) netGrid.querySelectorAll('.net-card').forEach(function(c){
       const idx=Number(c.dataset.idx),ytResult=netResults[idx];
       const currentOnline=onlinePlaying&&ytResult&&String(ytResult.id)===String(activeOnlineTrack.ytId);
@@ -5887,6 +5963,8 @@
   async function playOnlineYoutube(item,session,position,button,netIndex){
     const id=String((item&&item.ytId)|| (item&&item.id)||'');
     if(!id||!audio)return;
+    if(videoModeActive&&activeOnlineTrack&&String(activeOnlineTrack.ytId)===id){togglePlay();return;}
+    if(videoModeActive)stopVideoMode(false);
     if(activeOnlineTrack&&String(activeOnlineTrack.ytId)===id){
       if(!audio.paused){audio.pause();return;}
       if(button){button.disabled=true;button.textContent=t('Ładuję…');}
@@ -5925,6 +6003,7 @@
       highlightActiveInList();setMediaSessionMeta(activeOnlineTrack);updateOnlinePlayerActions();
       if(typeof renderQueuePanel==='function')renderQueuePanel();
       refreshLyrics(activeOnlineTrack);applyNorm();drawWaves();
+      discoverVideoForTrack(activeOnlineTrack);
       onlinePlaybackLoading=false;
       audio.load();
       const p=audio.play();
@@ -5940,7 +6019,238 @@
   function playRecommendation(item,items,index,button){
     return playOnlineYoutube(recommendationAsNetResult(item),{kind:'recommendations',items:items},index,button,-1);
   }
-  function navigateOnlineTrack(delta,auto){
+  function videoTrack(){ return activeOnlineTrack || (currentIndex>=0 ? tracks[currentIndex] : null); }
+  function playerIsPlaying(){ return videoModeActive ? videoModePlaying : !audio.paused; }
+  function playerDuration(){ return videoModeActive&&videoModeDuration>0 ? videoModeDuration : (audio.duration||0); }
+  function userVideoCuts(track){
+    if(!track||!track.id)return [];
+    let cuts=null;
+    try{
+      const editor=window.PulsarAudioEditor;
+      const state=editor&&typeof editor.state==='function'?editor.state():null;
+      if(state&&String(state.trackId)===String(track.id)&&Array.isArray(state.cuts))cuts=state.cuts;
+    }catch(e){}
+    if(!cuts){
+      try{
+        const saved=JSON.parse(localStorage.getItem('pulsarEditorSession:'+track.id)||'null');
+        if(saved&&saved.version===2&&Array.isArray(saved.cuts))cuts=saved.cuts;
+      }catch(e){}
+    }
+    return (Array.isArray(cuts)?cuts:[]).map(function(cut){return {start:Number(cut.start),end:Number(cut.end)};})
+      .filter(function(cut){return Number.isFinite(cut.start)&&Number.isFinite(cut.end)&&cut.start>=0&&cut.end>cut.start;})
+      .sort(function(a,b){return a.start-b.start;});
+  }
+  function applyVideoEditCuts(){
+    if(!videoModeActive||!videoModePlaying||!videoModeCuts.length)return;
+    if(Date.now()<videoModeCutPendingUntil)return;
+    const now=videoModePosition;
+    const cut=videoModeCuts.find(function(item){return now>=item.start&&now<item.end-.002;});
+    if(!cut)return;
+    const duration=playerDuration();
+    if(duration&&cut.end>=duration-.03){seekPlaybackTo(duration);try{videoPlayer.pauseVideo();}catch(e){}setVideoPlayingUi(false);return;}
+    videoModeCutPendingUntil=Date.now()+800;
+    seekPlaybackTo(cut.end+.001);
+  }
+  function directYoutubeId(track){
+    if(!track)return '';
+    if(track.ytId)return String(track.ytId);
+    const netId=String(track.netId||'');
+    if(netId.indexOf('youtube:')===0)return netId.slice(8);
+    const link=String(track.netLink||track.link||track.url||track.src||'');
+    const m=link.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?[^#]*?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{6,20})/i);
+    return m?m[1]:'';
+  }
+  function syncVideoButtons(id){
+    currentVideoId=String(id||'');
+    const available=!!currentVideoId;
+    [videoModeBtn,mvVideoBtn].forEach(function(b){
+      if(!b)return;
+      b.hidden=!available;
+      b.classList.toggle('active',videoModeActive);
+      b.title=videoModeActive?t('Wróć do audio'):t('Odtwórz teledysk');
+      b.setAttribute('aria-label',b.title);
+    });
+    if(typeof miniSync==='function')miniSync(true);
+  }
+  function videoTextSimilarity(a,b){
+    const clean=function(v){return String(v||'').toLowerCase().replace(/\([^)]*(official|video|audio|lyrics?|teledysk|remaster|4k|hd)[^)]*\)/gi,' ').replace(/[^\p{L}\p{N}]+/gu,' ').trim();};
+    const x=clean(a),y=clean(b);
+    if(!x||!y)return 0;
+    if(x===y||x.includes(y)||y.includes(x))return 1;
+    const stop=new Set(['the','a','an','and','or','official','video','audio','lyrics','lyric','music','teledysk','tekst','remastered','version']);
+    const aa=x.split(/\s+/).filter(function(w){return w.length>1&&!stop.has(w);});
+    const bb=new Set(y.split(/\s+/).filter(function(w){return w.length>1&&!stop.has(w);}));
+    if(!aa.length||!bb.size)return 0;
+    return aa.filter(function(w){return bb.has(w);}).length/Math.max(aa.length,bb.size);
+  }
+  async function discoverVideoForTrack(track){
+    const token=++videoLookupToken;
+    const key=String(track&&(track.id||track.ytId||track.title)||'');
+    const current=videoTrack();
+    if(!track||!key||!current||String(current.id||current.ytId||current.title||'')!==key){syncVideoButtons('');return;}
+    const direct=directYoutubeId(track);
+    if(direct){videoIdCache.set(key,direct);syncVideoButtons(direct);return;}
+    if(videoIdCache.has(key)){syncVideoButtons(videoIdCache.get(key));return;}
+    syncVideoButtons('');
+    if(!netEnabled||!track.title)return;
+    const query=[track.artist,track.title].filter(Boolean).join(' ');
+    try{
+      const results=await netYoutube(query,8);
+      if(token!==videoLookupToken)return;
+      const stillCurrent=videoTrack();
+      if(!stillCurrent||String(stillCurrent.id||stillCurrent.ytId||stillCurrent.title||'')!==key)return;
+      let best=null,bestScore=0;
+      results.forEach(function(hit){
+        const titleScore=videoTextSimilarity(track.title,hit.title);
+        const artistKnown=track.artist&& !/^(unknown|unknown artist|youtube)$/i.test(track.artist);
+        const artistScore=artistKnown?videoTextSimilarity(track.artist,hit.artist):.5;
+        const score=artistKnown?titleScore*.78+artistScore*.22:titleScore;
+        if(score>bestScore){bestScore=score;best=hit;}
+      });
+      const id=best&&bestScore>=.52?String(best.ytId||best.id||''):'';
+      videoIdCache.set(key,id);
+      syncVideoButtons(id);
+      if(id&&mv.title)miniSync(true);
+    }catch(e){if(token===videoLookupToken)syncVideoButtons('');}
+  }
+  function loadYoutubeIframeApi(){
+    if(window.YT&&window.YT.Player)return Promise.resolve(window.YT);
+    if(youtubeApiPromise)return youtubeApiPromise;
+    youtubeApiPromise=new Promise(function(resolve,reject){
+      let done=false;
+      const timer=setTimeout(function(){if(!done){done=true;reject(new Error('YouTube player API timeout'));}},15000);
+      const previous=window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady=function(){
+        try{if(typeof previous==='function')previous();}catch(e){}
+        if(done)return;done=true;clearTimeout(timer);resolve(window.YT);
+      };
+      if(!document.querySelector('script[data-pulsar-youtube-api]')){
+        const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.async=true;script.dataset.pulsarYoutubeApi='1';
+        script.onerror=function(){if(!done){done=true;clearTimeout(timer);reject(new Error('YouTube player API failed'));}};
+        document.head.appendChild(script);
+      }
+    }).catch(function(e){youtubeApiPromise=null;throw e;});
+    return youtubeApiPromise;
+  }
+  function setVideoPlayingUi(playing){
+    videoModePlaying=!!playing;
+    const stageIcon=document.getElementById('videoStagePlayIcon');
+    if(stageIcon)stageIcon.innerHTML=videoModePlaying?'<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>':'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    if(videoModeBtn)videoModeBtn.classList.toggle('active',videoModeActive);
+    if(mvVideoBtn)mvVideoBtn.classList.toggle('active',videoModeActive);
+    setPlayIcon(videoModePlaying);
+    document.body.classList.toggle('playing',videoModePlaying);
+    if('mediaSession'in navigator)try{navigator.mediaSession.playbackState=videoModePlaying?'playing':'paused';}catch(e){}
+    if(videoModePlaying)resetHideTimer();else showBarPersistent();
+    if(typeof miniSync==='function')miniSync(true);
+    if(typeof netRenderPlayStates==='function')netRenderPlayStates();
+    if(typeof emitHostState==='function')emitHostState(videoModePlaying?'video-play':'video-pause');
+  }
+  function setVideoLyrics(on){
+    if(lyricsOn===on)return;
+    lyricsOn=on;
+    if(lyricsBtnEl)lyricsBtnEl.classList.toggle('active',on);
+    lyricsSyncButtons();
+    if(on){lyricsSetBox();refreshLyrics();if(lyricsBox){lyricsBox.classList.remove('lyrics-anim-in');void lyricsBox.offsetWidth;lyricsBox.classList.add('lyrics-anim-in');}}
+    else lyricsSetBox('');
+  }
+  function stopVideoMode(resumeAudio,keepVideoPosition){
+    if(!videoModeActive)return;
+    const wasPlaying=videoModePlaying||videoModeWasPlaying;
+    if(videoPlayer){
+      if(videoModeHasPlayed)try{const pos=videoPlayer.getCurrentTime();if(Number.isFinite(pos)){videoModePosition=pos;audio.currentTime=pos;}}catch(e){}
+      try{videoPlayer.destroy();}catch(e){}
+    }
+    videoPlayer=null;videoModeToken++;videoModeActive=false;videoModeReady=false;videoModeHasPlayed=false;videoModeDuration=0;videoModePlaying=false;videoModeCuts=[];videoModeCutPendingUntil=0;
+    document.body.classList.remove('video-mode');
+    const image=document.getElementById('videoBackdropImg');if(image)image.removeAttribute('src');
+    const mount=document.getElementById('videoPlayerMount');if(mount)mount.innerHTML='';
+    const wait=document.getElementById('videoWait');if(wait)wait.hidden=false;
+    const unlock=document.getElementById('videoPlayUnlock');if(unlock)unlock.hidden=true;
+    syncVideoButtons(currentVideoId);
+    if(!videoModeLyricsWasOn&&!videoModeLyricsUserChanged)setVideoLyrics(false);
+    videoModeLyricsUserChanged=false;
+    try{if(audio.duration&&videoModePosition<audio.duration)audio.currentTime=videoModePosition;}catch(e){}
+    if(resumeAudio&&wasPlaying)audio.play().catch(function(){});else audio.pause();
+    setPlayIcon(!!(resumeAudio&&wasPlaying));
+    document.body.classList.toggle('playing',!!(resumeAudio&&wasPlaying));
+    miniSync(true);
+  }
+  async function startVideoMode(){
+    if(videoModeActive){stopVideoMode(true);return;}
+    const track=videoTrack(),id=currentVideoId||directYoutubeId(track);
+    if(!track||!id){showToast(t('Dla tego utworu nie znaleziono teledysku.'));return;}
+    videoModeToken++;
+    const token=videoModeToken;
+    videoModePosition=Math.max(0,audio.currentTime||0);
+    videoModeWasPlaying=!audio.paused;
+    videoModePlaying=false;videoModeHasPlayed=false;videoModeDuration=0;videoModeCuts=userVideoCuts(track);videoModeCutPendingUntil=0;
+    videoModeLyricsWasOn=lyricsOn;
+    videoModeLyricsUserChanged=false;
+    videoModeActive=true;
+    document.body.classList.add('video-mode');
+    const backdrop=document.getElementById('videoBackdropImg');
+    if(backdrop)backdrop.src=ytThumbUrl(id);
+    const wait=document.getElementById('videoWait');if(wait){wait.hidden=false;wait.textContent=t('Ładowanie teledysku…');}
+    const unlock=document.getElementById('videoPlayUnlock');if(unlock)unlock.hidden=true;
+    syncVideoButtons(id);
+    if(!lyricsOn)setVideoLyrics(true);
+    audio.pause();
+    setVideoPlayingUi(false);
+    try{
+      const YT=await loadYoutubeIframeApi();
+      if(token!==videoModeToken||!videoModeActive)return;
+      const playerVars={autoplay:0,controls:0,disablekb:1,fs:0,playsinline:1,rel:0,modestbranding:1,iv_load_policy:3,start:Math.floor(videoModePosition),enablejsapi:1};
+      if(/^https?:$/.test(location.protocol))playerVars.origin=location.origin;
+      videoPlayer=new YT.Player('videoPlayerMount',{width:'100%',height:'100%',videoId:id,playerVars:playerVars,events:{
+        onReady:function(event){
+          if(token!==videoModeToken||!videoModeActive)return;
+          videoModeReady=true;
+          try{videoModeDuration=event.target.getDuration()||0;}catch(e){}
+          try{event.target.setVolume(audio.muted?0:Math.round(audio.volume*100));}catch(e){}
+          try{if(videoModePosition>0)event.target.seekTo(videoModePosition,true);}catch(e){}
+          if(videoModeWasPlaying)event.target.playVideo();else{event.target.pauseVideo();setTimeout(function(){if(token===videoModeToken){const w=document.getElementById('videoWait');if(w)w.hidden=true;}},700);}
+        },
+        onStateChange:function(event){
+          if(token!==videoModeToken||!videoModeActive)return;
+          const state=event.data;
+          if(state===YT.PlayerState.PLAYING){
+            videoModeHasPlayed=true;videoModeWasPlaying=true;try{videoModeDuration=event.target.getDuration()||videoModeDuration;}catch(e){}
+            const w=document.getElementById('videoWait');if(w)w.hidden=true;
+            const b=document.getElementById('videoPlayUnlock');if(b)b.hidden=true;
+            audio.pause();setVideoPlayingUi(true);
+          }else if(state===YT.PlayerState.PAUSED){if(videoModePlaying)videoModeWasPlaying=false;setVideoPlayingUi(false);}
+          else if(state===YT.PlayerState.ENDED){
+            videoModeWasPlaying=false;setVideoPlayingUi(false);
+            if(repeatMode===2){try{event.target.seekTo(0,true);event.target.playVideo();}catch(e){}}
+            else if(activeOnlineSession&&activeOnlineSession.items&&activeOnlineSession.items.length>1)nextTrack(true);
+          }
+        },
+        onError:function(){if(token!==videoModeToken||!videoModeActive)return;showToast(t('Nie udało się załadować teledysku YouTube.'));stopVideoMode(videoModeWasPlaying);},
+        onAutoplayBlocked:function(){if(token!==videoModeToken||!videoModeActive)return;const w=document.getElementById('videoWait');if(w)w.hidden=true;const b=document.getElementById('videoPlayUnlock');if(b)b.hidden=false;}
+      }});
+    }catch(e){if(token===videoModeToken&&videoModeActive){showToast(t('Nie udało się załadować teledysku YouTube.'));stopVideoMode(videoModeWasPlaying);}}
+  }
+  function seekPlaybackTo(position){
+    const time=Math.max(0,Number(position)||0);
+    if(videoModeActive){videoModePosition=time;if(videoPlayer)try{videoPlayer.seekTo(time,true);}catch(e){}}
+    try{audio.currentTime=time;}catch(e){}
+  }
+  function togglePlayback(){
+    if(videoModeActive&&videoPlayer){try{if(videoModePlaying)videoPlayer.pauseVideo();else videoPlayer.playVideo();}catch(e){}return;}
+    togglePlay();
+  }
+  if(videoModeBtn)videoModeBtn.addEventListener('click',function(e){e.stopPropagation();startVideoMode();});
+  if(mvVideoBtn)mvVideoBtn.addEventListener('click',function(e){
+    e.stopPropagation();
+    const host=desktopHost();
+    if(miniActive()&&host&&host.setMini){Promise.resolve(host.setMini(false)).then(function(){setTimeout(startVideoMode,120);});}else startVideoMode();
+  });
+  const videoStagePlayBtn=document.getElementById('videoStagePlay');
+  if(videoStagePlayBtn)videoStagePlayBtn.addEventListener('click',function(e){e.stopPropagation();togglePlay();});
+  const videoUnlockBtn=document.getElementById('videoPlayUnlock');
+  if(videoUnlockBtn)videoUnlockBtn.addEventListener('click',function(){if(videoPlayer)try{videoPlayer.playVideo();}catch(e){}});
+    function navigateOnlineTrack(delta,auto){
     const session=activeOnlineSession;
     if(!session||!session.items||!session.items.length){if(!auto)audio.currentTime=0;return true;}
     let next=session.index+delta;
@@ -6647,7 +6957,7 @@
       } else {
         queue = [];
         trackTitleEl.textContent = t('Wybierz utwór');
-        trackArtistEl.textContent = t('z folderu z muzyką');
+        trackArtistTextEl.textContent = t('z folderu z muzyką');
         bbTitle.textContent = t('Wybierz utwór');
         bbArtist.textContent = '—';
         setCover(DEFAULT_COVER);
@@ -6886,7 +7196,9 @@
   async function loadTrack(index, opts){
     opts = opts || { autoplay: true };
     if (!tracks.length || index < 0 || index >= tracks.length) return;
-    onlinePlaybackToken++;
+    if(videoModeActive)stopVideoMode(false);
+    videoLookupToken++;syncVideoButtons('');
+    const loadToken=++onlinePlaybackToken;
     onlinePlaybackLoading = false;
     activeOnlineTrack = null; activeOnlineSession = null; recommendationNowId = '';
     updateOnlinePlayerActions();
@@ -6905,8 +7217,10 @@
     setMediaSessionMeta(track);
 
     await ensureTrackMeta(track);
+    if(loadToken!==onlinePlaybackToken||currentIndex!==index||tracks[index]!==track)return;
     scheduleAnalysis(track, true); applyNorm(); drawWaves();
     refreshLyrics(track);
+    discoverVideoForTrack(track);
     if (opts.autoplay){ tryPlayWithGesture(); }
   }
 
@@ -6933,13 +7247,13 @@
 
   function prevTrack(){
     if (activeOnlineTrack){
-      if (audio.currentTime > 3){ audio.currentTime = 0; return; }
+      if (audio.currentTime > 3){ seekPlaybackTo(0); return; }
       navigateOnlineTrack(-1, false); return;
     }
     if (!tracks.length) return;
     cancelCrossfade();
     // Jak w znanych odtwarzaczach: dłuższe tapnięcie = początek bieżącego utworu
-    if (audio.currentTime > 3){ audio.currentTime = 0; return; }
+    if (audio.currentTime > 3){ seekPlaybackTo(0); return; }
     if (autoDjOn && djHistory.length){ const back = djHistory.pop(); if (back >= 0 && back < tracks.length && back !== currentIndex){ djNotePlayed(); loadTrack(back, { autoplay: true }); return; } }
     if (!queue.length || queue.indexOf(currentIndex) === -1) rebuildQueue();
     if (!queue.length) return;
@@ -7956,13 +8270,13 @@
       let seekingPip = false;
       seek.addEventListener('input', function(){ seekingPip = true; });
       seek.addEventListener('change', function(){
-        const dur = audio.duration || 0;
-        if (dur) audio.currentTime = (+seek.value / 1000) * dur;
+        const dur = playerDuration();
+        if (dur) seekPlaybackTo((+seek.value / 1000) * dur);
         seekingPip = false;
       });
       bPrev.addEventListener('click', function(){ prevTrack(); });
       bNext.addEventListener('click', function(){ nextTrack(false); });
-      bPlay.addEventListener('click', function(){ if (audio.paused){ ensureAudioContext(); audio.play().catch(function(){}); } else audio.pause(); });
+      bPlay.addEventListener('click', function(){ togglePlay(); });
       function pipSync(force){
         if (!pipWin) return;
         const now = performance.now();
@@ -7975,9 +8289,9 @@
           const cu = activeOnlineTrack ? activeOnlineTrack.coverUrl : coverUrlOf(t);
           if (cu && img.dataset.src !== cu){ img.dataset.src = cu; img.src = cu; }
         }
-        const ico = audio.paused ? '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+        const ico = playerIsPlaying() ? '<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
         if (bPlay.dataset.ico !== ico){ bPlay.dataset.ico = ico; bPlay.innerHTML = ico; }
-        const dur = audio.duration || 0;
+        const dur = playerDuration();
         if (!seekingPip && dur) seek.value = String(Math.round((audio.currentTime / dur) * 1000));
         tmCur.textContent = formatTime(audio.currentTime || 0);
         tmDur.textContent = formatTime(dur || 0);
@@ -8042,6 +8356,11 @@
   }
 
   function togglePlay(){
+    if(videoModeActive){
+      if(videoPlayer){try{if(videoModePlaying)videoPlayer.pauseVideo();else videoPlayer.playVideo();}catch(e){}}
+      else{videoModeWasPlaying=!videoModeWasPlaying;setPlayIcon(videoModeWasPlaying);}
+      return;
+    }
     if (!tracks.length && !activeOnlineTrack){ folderInput.click(); return; }
     if (audio.paused) tryPlayWithGesture(); else { ensureAudioContext(); audio.pause(); }
   }
@@ -8053,6 +8372,7 @@
   }
 
   audio.addEventListener('play', () => {
+    if(videoModeActive)return;
     if (activeOnlineTrack) recordRecommendationListen(activeOnlineTrack);
     else if (currentIndex > -1) recordRecommendationListen(tracks[currentIndex]);
     if (audioNet && !audioNet.paused) netStopPreview();
@@ -8062,6 +8382,7 @@
     if ('mediaSession' in navigator) try{ navigator.mediaSession.playbackState = 'playing'; } catch(e){}
   });
   audio.addEventListener('pause', () => {
+    if(videoModeActive||!audio.paused)return;
     if (typeof netRenderPlayStates === 'function') netRenderPlayStates();
     setPlayIcon(false); showBarPersistent();
     document.body.classList.remove('playing');
@@ -8106,11 +8427,11 @@
 
   if ('mediaSession' in navigator){
     try{
-      navigator.mediaSession.setActionHandler('play', () => audio.play().catch(() => {}));
-      navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+      navigator.mediaSession.setActionHandler('play', () => { if(videoModeActive&&videoPlayer)videoPlayer.playVideo();else audio.play().catch(() => {}); });
+      navigator.mediaSession.setActionHandler('pause', () => { if(videoModeActive&&videoPlayer)videoPlayer.pauseVideo();else audio.pause(); });
       navigator.mediaSession.setActionHandler('previoustrack', () => prevTrack());
       navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack(false));
-      navigator.mediaSession.setActionHandler('stop', () => { audio.pause(); audio.currentTime = 0; });
+      navigator.mediaSession.setActionHandler('stop', () => { if(videoModeActive&&videoPlayer){videoPlayer.pauseVideo();seekPlaybackTo(0);}else{audio.pause();audio.currentTime=0;} });
     } catch(e){}
   }
 
@@ -8131,7 +8452,7 @@
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     let ratio = (clientX - rect.left) / rect.width;
     ratio = Math.min(1, Math.max(0, ratio));
-    if (audio.duration) audio.currentTime = ratio * audio.duration;
+    const duration=playerDuration();if(duration)seekPlaybackTo(ratio*duration);
   }
 
   seekBar.addEventListener('pointerdown', function(e){
@@ -8624,7 +8945,7 @@
     bottomBar.classList.remove('hidden');
     document.body.classList.remove('bar-hidden');
     clearTimeout(hideTimer);
-    if (!audio.paused && !barHovered && !libraryPanel.classList.contains('open')){
+    if (playerIsPlaying() && !barHovered && !libraryPanel.classList.contains('open')){
       hideTimer = setTimeout(() => { 
         bottomBar.classList.add('hidden'); 
         document.body.classList.add('bar-hidden');
@@ -8642,8 +8963,8 @@
     if (modalDim.classList.contains('show')) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar'){ e.preventDefault(); togglePlay(); return; }
-    if (e.key === 'ArrowRight' && audio.duration){ audio.currentTime = Math.min(audio.duration, audio.currentTime + 5); return; }
-    if (e.key === 'ArrowLeft' && audio.duration){ audio.currentTime = Math.max(0, audio.currentTime - 5); return; }
+    if (e.key === 'ArrowRight' && playerDuration()){ seekPlaybackTo(Math.min(playerDuration(), audio.currentTime + 5)); return; }
+    if (e.key === 'ArrowLeft' && playerDuration()){ seekPlaybackTo(Math.max(0, audio.currentTime - 5)); return; }
     if (e.key === 'ArrowUp'){ e.preventDefault(); setVolume(Math.min(1, currentVolume + 0.05)); return; }
     if (e.key === 'ArrowDown'){ e.preventDefault(); setVolume(Math.max(0, currentVolume - 0.05)); return; }
     if (e.key === '?'){ openKeysModal(); return; }
@@ -8740,7 +9061,7 @@
   if (queueCloseBtnEl) queueCloseBtnEl.addEventListener('click', function(){ if (queuePanelEl) queuePanelEl.hidden = true; });
 
   /* ---- Tekst utworu (karaoke): pliki .lrc + LRCLIB.net ---- */
-  var lyricsOn = false;
+  var lyricsOn = false, videoModeLyricsUserChanged = false;
   try { lyricsOn = localStorage.getItem('playerLyricsOn') === '1'; } catch(e){}
   var lyricsData = null, lyricsCurIdx = -1;
   const lyricsCache = new Map();
@@ -8877,7 +9198,7 @@
         const d = document.createElement('div');
         d.className = 'lyrics-line'; d.dataset.i = String(i); d.dataset.t = String(l.t);
         d.textContent = l.txt;
-        d.addEventListener('click', function(){ audio.currentTime = l.t; updateLyricsHighlight(true); });
+        d.addEventListener('click', function(){ seekPlaybackTo(l.t); updateLyricsHighlight(true); });
         lyricsBox.appendChild(d);
       });
       updateLyricsHighlight(true);
@@ -8921,6 +9242,7 @@
   if (lyricsBtnEl){
     lyricsBtnEl.classList.toggle('active', lyricsOn);
     lyricsBtnEl.addEventListener('click', function(){
+      if(videoModeActive)videoModeLyricsUserChanged=true;
       lyricsOn = !lyricsOn;
       try { localStorage.setItem('playerLyricsOn', lyricsOn ? '1' : '0'); } catch(e){}
       lyricsBtnEl.classList.toggle('active', lyricsOn);
@@ -8981,6 +9303,7 @@
   }
 
   function tick(timestamp){
+    if(videoModeActive&&videoModeReady&&videoModeHasPlayed&&videoPlayer){try{const vt=videoPlayer.getCurrentTime();if(Number.isFinite(vt)){videoModePosition=vt;if(Math.abs(vt-audio.currentTime)>.45)audio.currentTime=vt;}}catch(e){}applyVideoEditCuts();}
     updateAudioMood();
     if (!threeDMode) updateAmbientMotion(timestamp);
     if (threeDMode && ambientVisual) ambientVisual.render();
@@ -8989,9 +9312,10 @@
     currentAccent.b += (targetAccent.b - currentAccent.b) * 0.05;
     document.documentElement.style.setProperty('--accent-rgb', `${Math.round(currentAccent.r)}, ${Math.round(currentAccent.g)}, ${Math.round(currentAccent.b)}`);
 
-    if (audio.duration && !seeking){
+    const activeDuration=playerDuration();
+    if (activeDuration && !seeking){
       // ---- Pomijanie ciszy (intro / martwe przerwy / długie outro) ----
-      if (skipSilenceOn && !audio.paused && !xf.active){
+      if (skipSilenceOn && playerIsPlaying() && !xf.active){
         const curT = tracks[currentIndex], aRec = curT && analysisCache.get(curT.id);
         const segs = aRec && aRec.silences;
         if (segs && segs.length){
@@ -9000,9 +9324,9 @@
             const s0 = segs[k][0], e0 = segs[k][1];
             if (now >= s0 + 0.15 && now < e0 - 0.06 && (e0 - s0) >= 0.75){
               if (e0 >= audio.duration - 0.25){
-                audio.currentTime = audio.duration; // outro → naturalny koniec utworu
+                seekPlaybackTo(audio.duration); // outro → naturalny koniec utworu
               } else {
-                audio.currentTime = e0 + 0.02;
+                seekPlaybackTo(e0 + 0.02);
                 showToast(t('⏭ Pominięto ciszę ') + formatTime(s0) + '–' + formatTime(e0));
               }
               break;
@@ -9010,14 +9334,14 @@
           }
         }
       }
-      const ratio = audio.currentTime / audio.duration;
+      const ratio = audio.currentTime / activeDuration;
       const pct = (ratio * 100) + '%';
       
       seekFill.style.width = pct; seekThumb.style.left = pct;
       centerSeekFill.style.width = pct; centerSeekThumb.style.left = pct;
       
       const cTime = formatTime(audio.currentTime);
-      const dTime = formatTime(audio.duration);
+      const dTime = formatTime(activeDuration);
       curTimeEl.textContent = cTime; durTimeEl.textContent = dTime;
       centerCurTimeEl.textContent = cTime; centerDurTimeEl.textContent = dTime;
       updateWaveClip(ratio);
@@ -9205,7 +9529,7 @@
     sleepIntervalId = setInterval(function(){
       sleepRemainSec -= 1;
       if (sleepRemainSec <= 0){ finishSleep(); return; }
-      if (sleepRemainSec <= 30 && !audio.paused){
+      if (sleepRemainSec <= 30 && playerIsPlaying()){
         sleepFading = true;
         try { audio.volume = Math.max(0, Math.min(1, currentVolume * (sleepRemainSec / 30))); } catch(e){}
       }
@@ -9532,7 +9856,7 @@
     mvLastSync = now;
     const tr = activeOnlineTrack || tracks[currentIndex];
     const title = tr ? (tr.title || '') : t('Wybierz utwór');
-    const artist = tr ? txArtist(tr.artist || '') : '—';
+    const artist = tr ? txArtist(tr.artist || '') + (currentVideoId ? ' · ♫ YouTube' : '') : '—';
     if (mv.label) mv.label.textContent = String(t('aktualnie odtwarzany')).toUpperCase();
     if (mv.title.textContent !== title){ mv.title.textContent = title; mv.title.title = title; }
     if (mv.artist.textContent !== artist){ mv.artist.textContent = artist; mv.artist.title = artist; }
@@ -9545,14 +9869,16 @@
       mv.cover.src = cu;
       setTimeout(function(){ mv.cover.classList.remove('is-changing'); }, 80);
     }
-    mv.cover.classList.toggle('is-playing', !audio.paused);
+    const playerPlaying=videoModeActive?videoModePlaying:!audio.paused;
+    mv.cover.classList.toggle('is-playing', playerPlaying);
     setMiniPalette(cu);
-    const ico = audio.paused ? MV_ICON_PLAY : MV_ICON_PAUSE;
-    if (mv.play.dataset.ico !== (audio.paused ? 'p' : 'z')){ mv.play.dataset.ico = audio.paused ? 'p' : 'z'; mv.play.innerHTML = ico; }
-    const d = audio.duration || 0;
+    const ico = playerPlaying ? MV_ICON_PAUSE : MV_ICON_PLAY;
+    if (mv.play.dataset.ico !== (playerPlaying ? 'z' : 'p')){ mv.play.dataset.ico = playerPlaying ? 'z' : 'p'; mv.play.innerHTML = ico; }
+    const d = playerDuration();
     if (!mvSeeking) mv.seek.value = d ? String(Math.round((audio.currentTime / d) * 1000)) : '0';
     mv.cur.textContent = formatTime(audio.currentTime || 0);
     mv.dur.textContent = formatTime(d || 0);
+    if(mv.video){mv.video.hidden=!currentVideoId;mv.video.classList.toggle('active',videoModeActive);}
     const host = desktopHost();
     mv.pin.classList.toggle('on', !!(host && host.isOnTop && host.isOnTop()));
     updateMiniModeButtons();
@@ -9562,12 +9888,12 @@
   if (mv.title){
     mv.seek.addEventListener('input', function(){
       mvSeeking = true;
-      const d = audio.duration || 0;
+      const d = playerDuration();
       if (d) mv.cur.textContent = formatTime((+mv.seek.value / 1000) * d);
     });
     mv.seek.addEventListener('change', function(){
-      const d = audio.duration || 0;
-      if (d) audio.currentTime = (+mv.seek.value / 1000) * d;
+      const d = playerDuration();
+      if (d) seekPlaybackTo((+mv.seek.value / 1000) * d);
       mvSeeking = false; miniSync(true);
     });
     mv.play.addEventListener('click', function(){ togglePlay(); });
@@ -9609,11 +9935,11 @@
       return {
         title: tr ? (tr.title || '') : '',
         artist: tr ? txArtist(tr.artist || '') : '',
-        playing: !audio.paused,
+        playing: playerIsPlaying(),
         hasTracks: tracks.length > 0 || !!activeOnlineTrack,
         hasTrack: !!tr,
         cover: (cu && cu !== DEFAULT_COVER) ? cu : '',
-        pos: audio.currentTime || 0,
+        pos: videoModeActive ? videoModePosition : (audio.currentTime || 0),
         dur: isFinite(audio.duration) ? audio.duration : 0,
         accent: accent
       };
@@ -9622,7 +9948,7 @@
     audioTap: function(){ return (audioCtx && analyser) ? { ctx: audioCtx, node: analyser } : null; },
     modal: function(opts){ openModal(Object.assign({ hideOk: true }, opts || {})); },
     closeModal: function(){ closeModal(); },
-    toggle: function(){ if (tracks.length) togglePlay(); },
+    toggle: function(){ if (tracks.length || activeOnlineTrack) togglePlay(); },
     next: function(){ nextTrack(false); },
     prev: function(){ prevTrack(); },
     t: function(s){ return t(s); },

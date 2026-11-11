@@ -171,7 +171,7 @@ LYRICS_RENDERER = r'''  /* Pulsar editor: word lyrics renderer */
             d.appendChild(span);
           });
         } else d.textContent = l.txt;
-        d.addEventListener('click', function(){ audio.currentTime = Math.max(0, l.t + lyricsOffset()); updateLyricsHighlight(true); });
+        d.addEventListener('click', function(){ seekPlaybackTo(Math.max(0, l.t + lyricsOffset())); updateLyricsHighlight(true); });
         lyricsBox.appendChild(d);
       });
       updateLyricsHighlight(true);
@@ -406,8 +406,8 @@ def apply_editor_runtime_patches(html: str) -> str:
 
     html = _replace_once(
         html,
-        "d.addEventListener('click', function(){ audio.currentTime = l.t; updateLyricsHighlight(true); });",
-        "d.addEventListener('click', function(){ audio.currentTime = Math.max(0, l.t + lyricsOffset()); updateLyricsHighlight(true); });",
+        "d.addEventListener('click', function(){ seekPlaybackTo(l.t); updateLyricsHighlight(true); });",
+        "d.addEventListener('click', function(){ seekPlaybackTo(Math.max(0, l.t + lyricsOffset())); updateLyricsHighlight(true); });",
     )
     html = _replace_once(
         html,
@@ -503,7 +503,7 @@ def editor_runtime_patched(html: str) -> bool:
     needles = [
         HELPER_BEGIN, HELPER_END, API_BEGIN, API_END,
         "const t = (audio.currentTime || 0) - lyricsOffset();",
-        "audio.currentTime = Math.max(0, l.t + lyricsOffset())",
+        "seekPlaybackTo(Math.max(0, l.t + lyricsOffset()))",
         "offset: () => lyricsOffset(), setOffset: v => setLyricsOffset(v)",
         "forTrack: id => { const tr = tracks.find(x => x.id === id)",
         "applyFor: (id, data, options) => applyGeneratedLyrics(id, data, !!(options && options.allowSourceWordSync))",
