@@ -3293,8 +3293,6 @@
   let activeOnlineTrack = null, activeOnlineSession = null, onlinePlaybackToken = 0, onlinePlaybackLoading = false;
   let videoPlayer = null, videoModeActive = false, videoModeReady = false, videoModeHasPlayed = false, videoModeDuration = 0, videoModePlaying = false, videoModePosition = 0, videoModeCuts = [], videoModeCutPendingUntil = 0, videoModeWasPlaying = false, videoModeLyricsWasOn = false, videoModeToken = 0, videoLookupToken = 0, currentVideoId = '';
   const videoIdCache = new Map();
-  const videoCandidateCache = new Map();
-  let videoModeTriedIds = new Set(), videoPlayerGeneration = 0;
   let youtubeApiPromise = null;
   let albums = [];               // albumy trzymane w store 'playlists' (kompatybilność ze starszymi zapisami)
   let recommendationsEnabled = false;
@@ -6083,30 +6081,13 @@
     if(!aa.length||!bb.size)return 0;
     return aa.filter(function(w){return bb.has(w);}).length/Math.max(aa.length,bb.size);
   }
-  function videoTrackKey(track){return String(track&&(track.id||track.ytId||track.title)||'');}
-  function rankVideoCandidates(track,results){
-    const artistKnown=track&&track.artist&&!/^(unknown|unknown artist|youtube)$/i.test(track.artist);
-    const byId=new Map();
-    (Array.isArray(results)?results:[]).forEach(function(hit){
-      if(!hit)return;
-      const id=String(hit.ytId||hit.id||'');
-      if(!id)return;
-      const titleScore=videoTextSimilarity(track.title,hit.title);
-      const artistScore=artistKnown?videoTextSimilarity(track.artist,hit.artist):.5;
-      const score=artistKnown?titleScore*.78+artistScore*.22:titleScore;
-      if(score<.52)return;
-      const previous=byId.get(id);
-      if(!previous||score>previous.score)byId.set(id,{id:id,score:score});
-    });
-    return Array.from(byId.values()).sort(function(a,b){return b.score-a.score;}).map(function(item){return item.id;});
-  }
   async function discoverVideoForTrack(track){
     const token=++videoLookupToken;
-    const key=videoTrackKey(track);
+    const key=String(track&&(track.id||track.ytId||track.title)||'');
     const current=videoTrack();
-    if(!track||!key||!current||videoTrackKey(current)!==key){syncVideoButtons('');return;}
+    if(!track||!key||!current||String(current.id||current.ytId||current.title||'')!==key){syncVideoButtons('');return;}
     const direct=directYoutubeId(track);
-    if(direct){videoCandidateCache.set(key,[direct]);videoIdCache.set(key,direct);syncVideoButtons(direct);return;}
+    if(direct){videoIdCache.set(key,direct);syncVideoButtons(direct);return;}
     if(videoIdCache.has(key)){syncVideoButtons(videoIdCache.get(key));return;}
     syncVideoButtons('');
     if(!netEnabled||!track.title)return;
@@ -6115,37 +6096,20 @@
       const results=await netYoutube(query,8);
       if(token!==videoLookupToken)return;
       const stillCurrent=videoTrack();
-      if(!stillCurrent||videoTrackKey(stillCurrent)!==key)return;
-      const candidates=rankVideoCandidates(track,results);
-      videoCandidateCache.set(key,candidates);
-      const id=candidates[0]||'';
+      if(!stillCurrent||String(stillCurrent.id||stillCurrent.ytId||stillCurrent.title||'')!==key)return;
+      let best=null,bestScore=0;
+      results.forEach(function(hit){
+        const titleScore=videoTextSimilarity(track.title,hit.title);
+        const artistKnown=track.artist&& !/^(unknown|unknown artist|youtube)$/i.test(track.artist);
+        const artistScore=artistKnown?videoTextSimilarity(track.artist,hit.artist):.5;
+        const score=artistKnown?titleScore*.78+artistScore*.22:titleScore;
+        if(score>bestScore){bestScore=score;best=hit;}
+      });
+      const id=best&&bestScore>=.52?String(best.ytId||best.id||''):'';
       videoIdCache.set(key,id);
       syncVideoButtons(id);
       if(id&&mv.title)miniSync(true);
     }catch(e){if(token===videoLookupToken)syncVideoButtons('');}
-  }
-  async function nextVideoCandidate(track,failedId){
-    const key=videoTrackKey(track);
-    videoModeTriedIds.add(String(failedId||''));
-    let candidates=videoCandidateCache.get(key)||[];
-    let next=candidates.find(function(id){return id&&!videoModeTriedIds.has(id);});
-    if(next){videoModeTriedIds.add(next);return next;}
-    if(!netEnabled||!track||!track.title)return '';
-    const artist=String(track.artist||'').trim(),title=String(track.title||'').trim();
-    const base=[artist,title].filter(Boolean).join(' ');
-    const queries=[base,[artist,title,'official video'].filter(Boolean).join(' '),[artist,title,'music video'].filter(Boolean).join(' ')].filter(function(q,i,a){return q&&a.indexOf(q)===i;});
-    for(let i=0;i<queries.length;i++){
-      try{
-        const results=await netYoutube(queries[i],20);
-        const extra=rankVideoCandidates(track,results);
-        const seen=new Set(candidates);
-        extra.forEach(function(id){if(!seen.has(id)){seen.add(id);candidates.push(id);}});
-        videoCandidateCache.set(key,candidates);
-        next=candidates.find(function(id){return id&&!videoModeTriedIds.has(id);});
-        if(next){videoModeTriedIds.add(next);return next;}
-      }catch(e){}
-    }
-    return '';
   }
   function loadYoutubeIframeApi(){
     if(window.YT&&window.YT.Player)return Promise.resolve(window.YT);
@@ -6195,7 +6159,7 @@
       if(videoModeHasPlayed)try{const pos=videoPlayer.getCurrentTime();if(Number.isFinite(pos)){videoModePosition=pos;audio.currentTime=pos;}}catch(e){}
       try{videoPlayer.destroy();}catch(e){}
     }
-    videoPlayer=null;videoModeToken++;videoPlayerGeneration++;videoModeActive=false;videoModeReady=false;videoModeHasPlayed=false;videoModeDuration=0;videoModePlaying=false;videoModeCuts=[];videoModeCutPendingUntil=0;
+    videoPlayer=null;videoModeToken++;videoModeActive=false;videoModeReady=false;videoModeHasPlayed=false;videoModeDuration=0;videoModePlaying=false;videoModeCuts=[];videoModeCutPendingUntil=0;
     document.body.classList.remove('video-mode');
     const image=document.getElementById('videoBackdropImg');if(image)image.removeAttribute('src');
     const mount=document.getElementById('videoPlayerMount');if(mount)mount.innerHTML='';
@@ -6209,73 +6173,6 @@
     setPlayIcon(!!(resumeAudio&&wasPlaying));
     document.body.classList.toggle('playing',!!(resumeAudio&&wasPlaying));
     miniSync(true);
-  }
-  async function loadYoutubeCandidate(track,id,token){
-    const generation=++videoPlayerGeneration;
-    try{
-      const YT=await loadYoutubeIframeApi();
-      if(token!==videoModeToken||generation!==videoPlayerGeneration||!videoModeActive)return;
-      const playerVars={autoplay:0,controls:0,disablekb:1,fs:0,playsinline:1,rel:0,modestbranding:1,iv_load_policy:3,start:Math.floor(videoModePosition),enablejsapi:1};
-      if(/^https?:$/.test(location.protocol)){
-        playerVars.origin=location.origin;
-        playerVars.widget_referrer=location.href;
-      }
-      try{if(videoPlayer)videoPlayer.destroy();}catch(e){}
-      const mount=document.getElementById('videoPlayerMount');
-      if(mount)mount.innerHTML='';
-      videoPlayer=null;
-      videoPlayer=new YT.Player('videoPlayerMount',{width:'100%',height:'100%',videoId:id,playerVars:playerVars,events:{
-        onReady:function(event){
-          if(token!==videoModeToken||generation!==videoPlayerGeneration||!videoModeActive)return;
-          videoModeReady=true;
-          try{videoModeDuration=event.target.getDuration()||0;}catch(e){}
-          try{event.target.setVolume(audio.muted?0:Math.round(audio.volume*100));}catch(e){}
-          try{if(videoModePosition>0)event.target.seekTo(videoModePosition,true);}catch(e){}
-          if(videoModeWasPlaying)event.target.playVideo();else{event.target.pauseVideo();setTimeout(function(){if(token===videoModeToken&&generation===videoPlayerGeneration){const w=document.getElementById('videoWait');if(w)w.hidden=true;}},700);}
-        },
-        onStateChange:function(event){
-          if(token!==videoModeToken||generation!==videoPlayerGeneration||!videoModeActive)return;
-          const state=event.data;
-          if(state===YT.PlayerState.PLAYING){
-            videoModeHasPlayed=true;videoModeWasPlaying=true;try{videoModeDuration=event.target.getDuration()||videoModeDuration;}catch(e){}
-            const w=document.getElementById('videoWait');if(w)w.hidden=true;
-            const b=document.getElementById('videoPlayUnlock');if(b)b.hidden=true;
-            audio.pause();setVideoPlayingUi(true);
-          }else if(state===YT.PlayerState.PAUSED){if(videoModePlaying)videoModeWasPlaying=false;setVideoPlayingUi(false);}
-          else if(state===YT.PlayerState.ENDED){
-            videoModeWasPlaying=false;setVideoPlayingUi(false);
-            if(repeatMode===2){try{event.target.seekTo(0,true);event.target.playVideo();}catch(e){}}
-            else if(activeOnlineSession&&activeOnlineSession.items&&activeOnlineSession.items.length>1)nextTrack(true);
-          }
-        },
-        onError:function(event){
-          if(token!==videoModeToken||generation!==videoPlayerGeneration||!videoModeActive)return;
-          const code=event&&Number(event.data);
-          console.error('[Pulsar video] YouTube IFrame Player error',code,'video',id,'origin',location.origin);
-          if(code===101||code===150){
-            const wait=document.getElementById('videoWait');
-            if(wait){wait.hidden=false;wait.textContent=t('Ten teledysk nie może być osadzony — szukam innej wersji…');}
-            nextVideoCandidate(track,id).then(function(next){
-              if(token!==videoModeToken||generation!==videoPlayerGeneration||!videoModeActive)return;
-              if(!next){showVideoPlayerError(code,id);return;}
-              videoIdCache.set(videoTrackKey(track),next);
-              syncVideoButtons(next);
-              const backdrop=document.getElementById('videoBackdropImg');if(backdrop)backdrop.src=ytThumbUrl(next);
-              loadYoutubeCandidate(track,next,token);
-            }).catch(function(){if(token===videoModeToken&&generation===videoPlayerGeneration&&videoModeActive)showVideoPlayerError(code,id);});
-            return;
-          }
-          showVideoPlayerError(code,id);
-        },
-        onAutoplayBlocked:function(){if(token!==videoModeToken||generation!==videoPlayerGeneration||!videoModeActive)return;const w=document.getElementById('videoWait');if(w)w.hidden=true;const b=document.getElementById('videoPlayUnlock');if(b)b.hidden=false;}
-      }});
-    }catch(e){
-      if(token===videoModeToken&&generation===videoPlayerGeneration&&videoModeActive){console.error('[Pulsar video] YouTube IFrame API/player setup failed',e);showToast(t('Nie udało się załadować teledysku YouTube.'));stopVideoMode(videoModeWasPlaying);}
-    }
-  }
-  function showVideoPlayerError(code,id){
-    showToast(t('Nie udało się załadować teledysku YouTube.')+(Number.isFinite(code)?' (YouTube '+code+')':''));
-    stopVideoMode(videoModeWasPlaying);
   }
   async function startVideoMode(){
     if(videoModeActive){stopVideoMode(true);return;}
@@ -6298,8 +6195,49 @@
     if(!lyricsOn)setVideoLyrics(true);
     audio.pause();
     setVideoPlayingUi(false);
-    videoModeTriedIds=new Set([id]);
-    await loadYoutubeCandidate(track,id,token);
+    try{
+      const YT=await loadYoutubeIframeApi();
+      if(token!==videoModeToken||!videoModeActive)return;
+      const playerVars={autoplay:0,controls:0,disablekb:1,fs:0,playsinline:1,rel:0,modestbranding:1,iv_load_policy:3,start:Math.floor(videoModePosition),enablejsapi:1};
+      if(/^https?:$/.test(location.protocol)){
+        playerVars.origin=location.origin;
+        // Desktop webviews need an explicit embedder URL for YouTube's player identity checks.
+        playerVars.widget_referrer=location.href;
+      }
+      videoPlayer=new YT.Player('videoPlayerMount',{width:'100%',height:'100%',videoId:id,playerVars:playerVars,events:{
+        onReady:function(event){
+          if(token!==videoModeToken||!videoModeActive)return;
+          videoModeReady=true;
+          try{videoModeDuration=event.target.getDuration()||0;}catch(e){}
+          try{event.target.setVolume(audio.muted?0:Math.round(audio.volume*100));}catch(e){}
+          try{if(videoModePosition>0)event.target.seekTo(videoModePosition,true);}catch(e){}
+          if(videoModeWasPlaying)event.target.playVideo();else{event.target.pauseVideo();setTimeout(function(){if(token===videoModeToken){const w=document.getElementById('videoWait');if(w)w.hidden=true;}},700);}
+        },
+        onStateChange:function(event){
+          if(token!==videoModeToken||!videoModeActive)return;
+          const state=event.data;
+          if(state===YT.PlayerState.PLAYING){
+            videoModeHasPlayed=true;videoModeWasPlaying=true;try{videoModeDuration=event.target.getDuration()||videoModeDuration;}catch(e){}
+            const w=document.getElementById('videoWait');if(w)w.hidden=true;
+            const b=document.getElementById('videoPlayUnlock');if(b)b.hidden=true;
+            audio.pause();setVideoPlayingUi(true);
+          }else if(state===YT.PlayerState.PAUSED){if(videoModePlaying)videoModeWasPlaying=false;setVideoPlayingUi(false);}
+          else if(state===YT.PlayerState.ENDED){
+            videoModeWasPlaying=false;setVideoPlayingUi(false);
+            if(repeatMode===2){try{event.target.seekTo(0,true);event.target.playVideo();}catch(e){}}
+            else if(activeOnlineSession&&activeOnlineSession.items&&activeOnlineSession.items.length>1)nextTrack(true);
+          }
+        },
+        onError:function(event){
+          if(token!==videoModeToken||!videoModeActive)return;
+          const code=event&&Number(event.data);
+          console.error('[Pulsar video] YouTube IFrame Player error',code,'video',id,'origin',location.origin);
+          showToast(t('Nie udało się załadować teledysku YouTube.')+(Number.isFinite(code)?' (YouTube '+code+')':''));
+          stopVideoMode(videoModeWasPlaying);
+        },
+        onAutoplayBlocked:function(){if(token!==videoModeToken||!videoModeActive)return;const w=document.getElementById('videoWait');if(w)w.hidden=true;const b=document.getElementById('videoPlayUnlock');if(b)b.hidden=false;}
+      }});
+    }catch(e){if(token===videoModeToken&&videoModeActive){console.error('[Pulsar video] YouTube IFrame API/player setup failed',e);showToast(t('Nie udało się załadować teledysku YouTube.'));stopVideoMode(videoModeWasPlaying);}}
   }
   function seekPlaybackTo(position){
     const time=Math.max(0,Number(position)||0);
