@@ -1824,6 +1824,18 @@
     body.retro-mode[data-retro-layout="winamp"] .library-panel { left:10px; right:10px; bottom:10px; top:199px; width:auto; }
   }
 
+  /* In the retro cover-display window, synced lyrics belong directly beneath the artwork. */
+  body.retro-mode .lyrics-box,
+  body.retro-mode.lyrics-side .lyrics-box { position:relative; inset:auto; left:auto; top:auto; transform:none; width:100%; max-width:100%; flex:0 0 auto; max-height:min(25vh,220px); margin:5px 0 0; padding:5px 2px; z-index:1; border:1px solid color-mix(in srgb,var(--retro-accent) 28%,transparent); border-radius:3px; background:linear-gradient(180deg,color-mix(in srgb,var(--retro-panel-a) 66%,transparent),color-mix(in srgb,var(--retro-panel-b) 82%,transparent)); -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 8%,#000 92%,transparent 100%); mask-image:linear-gradient(180deg,transparent 0,#000 8%,#000 92%,transparent 100%); }
+  body.retro-mode .lyrics-box .lyrics-line,
+  body.retro-mode.lyrics-side .lyrics-box .lyrics-line { padding:4px 7px; margin:1px 0; color:color-mix(in srgb,var(--retro-accent) 48%,#eef7ff); font:11px/1.4 Tahoma,Verdana,sans-serif; border-radius:2px; }
+  body.retro-mode .lyrics-box .lyrics-line.active,
+  body.retro-mode.lyrics-side .lyrics-box .lyrics-line.active { color:#f4ffff; font-size:13px; text-shadow:0 0 9px color-mix(in srgb,var(--retro-accent) 65%,transparent); }
+  body.retro-mode .lyrics-box .lyrics-empty,
+  body.retro-mode.lyrics-side .lyrics-box .lyrics-empty { padding:7px 4px; color:color-mix(in srgb,var(--retro-accent) 54%,#dae5ed); font:10px/1.4 Tahoma,Verdana,sans-serif; }
+  body.retro-mode[data-retro-layout="winamp"] .lyrics-box,
+  body.retro-mode[data-retro-layout="winamp"].lyrics-side .lyrics-box { display:none !important; }
+
   /* Album accents must remain legible over album art and translucent surfaces. */
   :root { --accent-contrast: #10141b; }
   body:not(.retro-mode) .ctrl-btn:not(.play-main),

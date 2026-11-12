@@ -58,6 +58,10 @@ def check(platform: str) -> None:
             f"{platform}: retro library toolbar remains oversized")
     require("body.retro-mode .bpm-chip { display: none !important; }" in source,
             f"{platform}: BPM badge remains visible in retro mode")
+    require("body.retro-mode.lyrics-side .lyrics-box { position:relative; inset:auto; left:auto; top:auto; transform:none;" in source,
+            f"{platform}: retro lyrics remain detached from the cover display")
+    require('body.retro-mode[data-retro-layout="winamp"] .lyrics-box' in source,
+            f"{platform}: lyrics overflow into the compact Winamp deck")
     require('data-retro-layout="winamp"' in source and 'id="smRetroLayoutWinamp"' in source,
             f"{platform}: Winamp layout option is missing")
     require('id="smRetroLayoutClassic"' in source and
