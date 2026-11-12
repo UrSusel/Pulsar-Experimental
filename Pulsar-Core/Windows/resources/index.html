@@ -2633,6 +2633,24 @@
   );
 
   const AUDIO_EXT_RE = /\.(mp3|mp2|mpga|wav|aif|aiff|caf|ogg|oga|m4a|m4b|m4p|mp4|3gp|3g2|aac|flac|opus|weba|webm|mka|ape|wv|mpc|wma|dsf|dff)$/i;
+  const AUDIO_MIME_BY_EXT = Object.freeze({
+    mp3:'audio/mpeg',mp2:'audio/mpeg',mpga:'audio/mpeg',wav:'audio/wav',aif:'audio/aiff',aiff:'audio/aiff',caf:'audio/x-caf',
+    ogg:'audio/ogg',oga:'audio/ogg',opus:'audio/ogg',m4a:'audio/mp4',m4b:'audio/mp4',m4p:'audio/mp4',mp4:'audio/mp4',
+    '3gp':'audio/3gpp','3g2':'audio/3gpp2',aac:'audio/aac',flac:'audio/flac',weba:'audio/webm',webm:'audio/webm',
+    mka:'audio/x-matroska',ape:'audio/ape',wv:'audio/x-wavpack',mpc:'audio/x-musepack',wma:'audio/x-ms-wma',dsf:'audio/dsf',dff:'audio/dsd'
+  });
+  function audioMimeForFile(name,type){
+    const match=String(name||'').toLowerCase().match(/\.([^.]+)$/);
+    const inferred=match&&AUDIO_MIME_BY_EXT[match[1]];
+    if(inferred)return inferred;
+    const hinted=String(type||'').split(';')[0].trim().toLowerCase();
+    return hinted&&hinted!=='application/octet-stream'&&hinted!=='binary/octet-stream'?hinted:'';
+  }
+  function normalizeAudioFile(file){
+    const mime=audioMimeForFile(file&&file.name,file&&file.type);
+    if(!file||!mime||String(file.type||'').toLowerCase()===mime)return file;
+    return new File([file],file.name,{type:mime,lastModified:file.lastModified||Date.now()});
+  }
 
   const audio = document.getElementById('audio');
   const coverImg = document.getElementById('coverImg');
@@ -3396,7 +3414,7 @@
       const storedTracks = await dbGetAll('tracks');
       const storedAlbums = await dbGetAll('playlists');
       tracks = storedTracks.map(item => ({
-        id: item.id, file: new File([item.blob], item.name, { type: item.type || 'audio/mpeg' }),
+        id: item.id, file: normalizeAudioFile(new File([item.blob], item.name, { type: item.type || item.blob.type || '' })), 
         folder: item.folder || '', title: item.title, artist: item.artist,
         matchedImg: null, coverBlob: item.coverBlob || null, coverUrl: null, coverSource: item.coverSource || (item.coverBlob ? 'legacy' : ''), resolved: true,
         fav: !!item.fav, plays: item.plays || 0, lastPlay: item.lastPlay || 0, srcPath: item.srcPath || '',
@@ -3844,7 +3862,8 @@
       const matchedImg = imgMap.get(baseKey) || null;
       const fallback = parseNameFallback(f.name);
       const folder = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : 'Muzyka';
-      return { id: makeId(), file: f, folder: folder, title: fallback.title, artist: fallback.artist, matchedImg: matchedImg, coverBlob: matchedImg, coverUrl: null, coverSource: matchedImg ? 'matched' : '', resolved: false, lrcFile: lrcMap.get(baseKey) || null, srcPath: f.__srcPath || '' };
+      const playableFile = normalizeAudioFile(f);
+      return { id: makeId(), file: playableFile, folder: folder, title: fallback.title, artist: fallback.artist, matchedImg: matchedImg, coverBlob: matchedImg, coverUrl: null, coverSource: matchedImg ? 'matched' : '', resolved: false, lrcFile: lrcMap.get(baseKey) || null, srcPath: f.__srcPath || '' };
     });
 
     // Zawsze DOKŁADAMY do biblioteki — nigdy jej nie podmieniamy. Utwór, który już jest (ta sama nazwa pliku i rozmiar,
@@ -4682,9 +4701,10 @@
       const item = unstripRecord(file, m, r);
       if (!item.blob) continue;
       // Blob z pliku kopii → własna kopia w IndexedDB (plik kopii można potem usunąć)
-      const audioBlob = new Blob([await item.blob.arrayBuffer()], { type: item.type || 'audio/mpeg' });
+      const audioType = audioMimeForFile(item.name, item.type || item.blob.type) || 'audio/mpeg';
+      const audioBlob = new Blob([await item.blob.arrayBuffer()], { type: audioType });
       const cover = item.coverBlob ? new Blob([await item.coverBlob.arrayBuffer()], { type: item.coverBlob.type || 'image/jpeg' }) : null;
-      const tr = { id: item.id || makeId(), file: new File([audioBlob], item.name || 'utwor', { type: item.type || 'audio/mpeg' }),
+      const tr = { id: item.id || makeId(), file: new File([audioBlob], item.name || 'utwor', { type: audioType }),
         folder: item.folder || '', title: item.title || item.name, artist: item.artist || '', matchedImg: null, coverBlob: cover, coverUrl: null, coverSource: item.coverSource || (cover ? 'legacy' : ''), resolved: true,
         fav: !!item.fav, plays: item.plays || 0, lastPlay: item.lastPlay || 0, srcPath: '' };
       Object.keys(item).forEach(function(k){ if (/^(net|yt)/.test(k) && !(k in tr)) tr[k] = item[k]; }); // pola źródeł sieciowych
@@ -6985,7 +7005,7 @@
     try { if (opts.autoplay !== false){ track.plays = (track.plays || 0) + 1; track.lastPlay = Date.now(); persistTrack(track); } } catch(e){}
 
     emptyHint.style.display = 'none';
-    audio.pause(); audio.src = URL.createObjectURL(track.file);
+    audio.pause(); audio.src = URL.createObjectURL(normalizeAudioFile(track.file));
 
     updateTitleArtist(txArtist(track.artist), track.title);
     setCover(coverUrlOf(track));
@@ -8200,7 +8220,8 @@
       const isLinux=/Linux/i.test(navigator.platform || navigator.userAgent || '');
       const failedTrack=tracks[currentIndex];
       if(isLinux){
-        const detail=t('Linux/WebKit nie obsłużył pliku (format lub kodek). Dla MP3/AAC zainstaluj kodeki GStreamer (libav, good, ugly) i uruchom Pulsar ponownie.')+' [media error '+e.code+']'+(failedTrack?' — '+failedTrack.title:'');
+        const mediaInfo=failedTrack&&failedTrack.file?' ['+failedTrack.file.name+'; '+(failedTrack.file.type||'brak MIME')+']':'';
+        const detail=t('Linux/WebKit nie obsłużył pliku (format lub kodek). Dla MP3/AAC zainstaluj kodeki GStreamer (libav, good, ugly) i uruchom Pulsar ponownie.')+' [media error '+e.code+']'+mediaInfo+(failedTrack?' — '+failedTrack.title:'');
         console.error('[Pulsar] local audio decode failed', {code:e.code, message:e.message||'', name:failedTrack&&failedTrack.file&&failedTrack.file.name});
         showToast(detail,10000);
         audio.pause(); return;
