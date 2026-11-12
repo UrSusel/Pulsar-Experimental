@@ -2915,7 +2915,8 @@
       '}',
       'vec3 pop(vec3 c){',
       '  float m = max(max(c.r, c.g), c.b);',
-      '  return c / max(m, 0.24) * 0.96;',
+      '  vec3 lifted = c / max(m, 0.28) * 0.82;',
+      '  return mix(c, lifted, 0.55);',
       '}',
       'vec3 aces(vec3 x){',
       '  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);',
@@ -2929,18 +2930,21 @@
       '  float energy = uBass + uBeat * 0.8;',
       '  vec3 col = vec3(0.0);',
       '  if (uMode == 0){',
-      '    vec2 q = vec2(fbm(p * 0.85 + vec2(t, -t * 0.4)), fbm(p * 0.85 + vec2(4.7, 1.9) + t * 0.55));',
-      '    float f = fbm(p + 1.7 * q + vec2(0.0, t * 0.5));',
-      '    float cur = smoothstep(0.25, 0.85, fbm(vec2(p.x * 0.6, t * 1.2)));',
-      '    float rib = 1.0 - abs(sin((p.x + p.y * 0.62) * 2.0 + f * 3.6 - t * 2.2));',
-      '    rib = pow(rib, 4.2 + uHigh * 5.0) * (0.35 + 0.8 * cur);',
-      '    float top = smoothstep(-1.2, 1.05, p.y + f * 0.7);',
-      '    float glow = pow(max(f, 0.0), 1.15);',
-      '    vec3 c1 = pop(paletteMix(f * 0.8 + 0.12));',
-      '    vec3 c2 = pop(paletteMix(fract(f * 1.25 + 0.55)));',
-      '    col += c1 * glow * (0.24 + energy * 0.42) * (0.3 + top * 0.95);',
-      '    col += c2 * rib * (0.85 + uBass * 1.15) * (0.4 + top * 0.7);',
-      '    col += pop(paletteMix(fract(f + 0.35))) * pow(rib, 2.6) * 0.55;',
+      '    float r = length(p);',
+      '    float a = atan(p.y, p.x);',
+      '    float field = fbm(p * 0.62 + vec2(t * 0.46, -t * 0.28));',
+      '    float flow = fbm(p * 1.18 + vec2(cos(a * 2.0) * 0.7 + t * 0.32, sin(a * 2.0) * 0.7 - t * 0.2));',
+      '    float folds = sin(a * 3.0 - r * 1.7 + t * 0.8 + field * 3.0);',
+      '    float curtain = pow(max(0.0, 1.0 - abs(folds)), 7.0);',
+      '    float halo = exp(-r * (0.72 - uBass * 0.1));',
+      '    float wave = sin(r * 4.0 - t * 1.45 + flow * 2.2);',
+      '    float filament = exp(-abs(wave) * 7.5);',
+      '    float detail = exp(-abs(sin(r * 7.1 - t * 1.1 + field * 5.0)) * 22.0);',
+      '    float falloff = 1.0 - smoothstep(0.05, 1.7, r);',
+      '    col += pop(paletteMix(0.18 + field * 0.22 + r * 0.08)) * halo * falloff * (0.08 + energy * 0.08);',
+      '    col += pop(paletteMix(0.28 + flow * 0.42 + uBass * 0.08)) * curtain * halo * (0.22 + uMid * 0.18 + uBeat * 0.14);',
+      '    col += pop(paletteMix(0.48 + field * 0.28)) * filament * halo * (0.065 + uHigh * 0.035);',
+      '    col += pop(paletteMix(0.72 + flow * 0.18)) * detail * halo * (0.025 + uHigh * 0.035);',
       '  } else if (uMode == 1){',
       '    float s = fbm(p * 1.05 + vec2(t * 0.85, -t * 0.5));',
       '    float swirl = sin((p.x * 2.4 + p.y * 1.5) * 2.1 + s * (7.5 + energy * 9.0) + t * 1.4);',
@@ -3082,13 +3086,13 @@
       '  col += pop(paletteMix(0.72 + uBass * 0.12)) * sourceRing * (0.1 + uBass * 0.16 + uBeat * 0.24);',
       '  col += pop(paletteMix(0.94)) * sourceCore * (0.06 + uBass * 0.1 + uBeat * 0.2);',
       '  col *= 1.0 + 0.42 * uBeat;',
-      '  col = aces(col * 1.32);',
+      '  col = aces(col * 1.16);',
       '  float lum = dot(col, vec3(0.299, 0.587, 0.114));',
-      '  col = mix(vec3(lum), col, 1.18);',
+      '  col = mix(vec3(lum), col, 1.08);',
       '  float vig = 1.0 - smoothstep(0.5, 1.85, length((uv - uOrigin) * vec2(aspect, 1.0) * 1.75));',
       '  col *= 0.42 + 0.58 * vig;',
       '  float grain = hash21(uv * uRes + fract(uTime) * 91.7) - 0.5;',
-      '  col += grain * 0.028;',
+      '  col += grain * 0.012;',
       '  gl_FragColor = vec4(col, 1.0);',
       '}'
     ].join('\n');
@@ -3238,7 +3242,7 @@
 
   let tracks = [];
   let activeOnlineTrack = null, activeOnlineSession = null, onlinePlaybackToken = 0, onlinePlaybackLoading = false;
-  let onlinePlaybackGateState = null, onlinePlaybackWantPlay = true, onlinePlaybackStartedUrl = '';
+  let onlinePlaybackGateState = null, onlinePlaybackWantPlay = true, onlinePlaybackStartedUrl = '', onlinePlaybackSourceReadyUrl = '', onlinePlaybackCanPlayHandler = null, onlinePlaybackReadyTimer = 0;
   const ONLINE_PLAYBACK_GATE_SRC = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
   let albums = [];               // albumy trzymane w store 'playlists' (kompatybilność ze starszymi zapisami)
   let recommendationsEnabled = false;
@@ -5904,16 +5908,16 @@
   }
   function beginOnlinePlaybackGate(){
     if(!onlinePlaybackGateState){
-      onlinePlaybackGateState={src:audio.currentSrc||audio.getAttribute('src')||'',time:Number(audio.currentTime)||0,wasPlaying:!audio.paused,muted:audio.muted,loop:audio.loop,startedUrl:onlinePlaybackStartedUrl};
+      onlinePlaybackGateState={src:audio.currentSrc||audio.getAttribute('src')||'',time:Number(audio.currentTime)||0,wasPlaying:!audio.paused,muted:audio.muted,loop:audio.loop,autoplay:audio.autoplay,startedUrl:onlinePlaybackStartedUrl};
     }
-    audio.muted=true;audio.loop=true;audio.src=ONLINE_PLAYBACK_GATE_SRC;audio.load();
+    audio.muted=true;audio.loop=true;audio.autoplay=true;audio.src=ONLINE_PLAYBACK_GATE_SRC;audio.load();
     const gatePlay=audio.play();if(gatePlay&&gatePlay.catch)gatePlay.catch(function(){});
   }
   function releaseOnlinePlaybackGate(restoreSource,keepLoop){
     const previous=onlinePlaybackGateState;onlinePlaybackGateState=null;
     if(!previous)return;
     audio.muted=previous.muted;
-    if(restoreSource||!keepLoop)audio.loop=previous.loop;
+    if(restoreSource||!keepLoop){audio.loop=previous.loop;audio.autoplay=previous.autoplay;}
     if(!restoreSource)return;
     onlinePlaybackStartedUrl=previous.startedUrl||'';
     audio.pause();
@@ -5931,7 +5935,9 @@
       if(button){button.disabled=true;button.textContent=t('Ładuję…');}
     }else if(button){button.disabled=true;button.textContent=t('Ładuję…');}
     const token=++onlinePlaybackToken;
-    onlinePlaybackLoading=true;onlinePlaybackWantPlay=true;onlinePlaybackStartedUrl='';
+    if(onlinePlaybackCanPlayHandler)audio.removeEventListener('canplay',onlinePlaybackCanPlayHandler);
+    clearTimeout(onlinePlaybackReadyTimer);onlinePlaybackCanPlayHandler=null;onlinePlaybackReadyTimer=0;
+    onlinePlaybackLoading=true;onlinePlaybackWantPlay=true;onlinePlaybackStartedUrl='';onlinePlaybackSourceReadyUrl='';
     window.__pulsarPendingPlay=false;
     try{
       ensureAudioContext();
@@ -5959,6 +5965,23 @@
       // ended event from that gate must not be mistaken for a short YouTube stream.
       releaseOnlinePlaybackGate(false,true);
       audio.crossOrigin='anonymous';
+      onlinePlaybackSourceReadyUrl=resolved.url;
+      onlinePlaybackCanPlayHandler=function(){
+        if(token!==onlinePlaybackToken||!onlinePlaybackLoading||audio.getAttribute('src')!==resolved.url||audio.readyState<3)return;
+        audio.removeEventListener('canplay',onlinePlaybackCanPlayHandler);onlinePlaybackCanPlayHandler=null;
+        clearTimeout(onlinePlaybackReadyTimer);onlinePlaybackReadyTimer=0;
+        onlinePlaybackLoading=false;audio.autoplay=false;audio.loop=false;
+        if(onlinePlaybackWantPlay){
+          const p=audio.play();
+          if(p&&p.catch)p.catch(function(err){
+            if(token!==onlinePlaybackToken)return;
+            if(err&&err.name==='NotAllowedError'){window.__pulsarPendingPlay=true;armAudioGesture();}
+            else showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));
+          });
+        }else audio.pause();
+        netRenderPlayStates();
+      };
+      audio.addEventListener('canplay',onlinePlaybackCanPlayHandler);
       audio.src=resolved.url;
       emptyHint.style.display='none';
       updateTitleArtist(txArtist(activeOnlineTrack.artist),activeOnlineTrack.title);
@@ -5966,16 +5989,14 @@
       highlightActiveInList();setMediaSessionMeta(activeOnlineTrack);updateOnlinePlayerActions();
       if(typeof renderQueuePanel==='function')renderQueuePanel();
       refreshLyrics(activeOnlineTrack);applyNorm();drawWaves();
-      onlinePlaybackLoading=false;
-      if(onlinePlaybackWantPlay){
-        const p=audio.play();
-        if(p&&p.catch)p.catch(function(err){
-          if(token!==onlinePlaybackToken)return;
-          if(err&&err.name==='NotAllowedError'){window.__pulsarPendingPlay=true;armAudioGesture();}
-          else showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));
-        });
-      }else audio.pause();
-      netRenderPlayStates();
+      if(audio.readyState>=3&&onlinePlaybackCanPlayHandler)onlinePlaybackCanPlayHandler();
+      if(onlinePlaybackLoading)onlinePlaybackReadyTimer=setTimeout(function(){
+        if(token!==onlinePlaybackToken||!onlinePlaybackLoading)return;
+        if(onlinePlaybackCanPlayHandler)audio.removeEventListener('canplay',onlinePlaybackCanPlayHandler);
+        onlinePlaybackCanPlayHandler=null;onlinePlaybackReadyTimer=0;
+        onlinePlaybackLoading=false;onlinePlaybackWantPlay=false;audio.autoplay=false;audio.loop=false;
+        releaseOnlinePlaybackGate(true);netSetHintAction(bridgeHintHtml());showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));
+      },20000);
     }catch(e){if(token===onlinePlaybackToken){onlinePlaybackLoading=false;onlinePlaybackWantPlay=false;releaseOnlinePlaybackGate(true);netSetHintAction(bridgeHintHtml());showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));}}
     finally{if(button&&token===onlinePlaybackToken){button.disabled=false;netRenderPlayStates();}}
   }
@@ -6930,8 +6951,10 @@
     opts = opts || { autoplay: true };
     if (!tracks.length || index < 0 || index >= tracks.length) return;
     onlinePlaybackToken++;
+    if(onlinePlaybackCanPlayHandler)audio.removeEventListener('canplay',onlinePlaybackCanPlayHandler);
+    clearTimeout(onlinePlaybackReadyTimer);onlinePlaybackCanPlayHandler=null;onlinePlaybackReadyTimer=0;
     if(onlinePlaybackGateState){audio.pause();releaseOnlinePlaybackGate(false);}
-    onlinePlaybackLoading = false;onlinePlaybackWantPlay=false;onlinePlaybackStartedUrl='';
+    onlinePlaybackLoading = false;onlinePlaybackWantPlay=false;onlinePlaybackStartedUrl='';onlinePlaybackSourceReadyUrl='';
     activeOnlineTrack = null; activeOnlineSession = null; recommendationNowId = '';
     updateOnlinePlayerActions();
     audio.removeAttribute('crossorigin');
@@ -8139,7 +8162,10 @@
   var decodeErrStreak = 0;
   audio.addEventListener('playing', function(){
     decodeErrStreak = 0;
-    if(!onlinePlaybackLoading&&activeOnlineTrack){audio.loop=false;onlinePlaybackStartedUrl=activeOnlineTrack.streamUrl||'';}
+    if(!onlinePlaybackLoading&&activeOnlineTrack&&onlinePlaybackSourceReadyUrl===activeOnlineTrack.streamUrl&&audio.currentTime>0.1)onlinePlaybackStartedUrl=activeOnlineTrack.streamUrl;
+  });
+  audio.addEventListener('timeupdate',function(){
+    if(!onlinePlaybackLoading&&activeOnlineTrack&&onlinePlaybackSourceReadyUrl===activeOnlineTrack.streamUrl&&audio.currentTime>0.1)onlinePlaybackStartedUrl=activeOnlineTrack.streamUrl;
   });
   /* Błąd dekodowania na Linuxie to najczęściej brak kodeków GStreamer
      (MP3/AAC wymagają-plugins-ugly / gst-libav). Zamiast cicho pomijać
