@@ -1330,6 +1330,168 @@
   .obs-note { font-size: 12px; color: rgba(255,255,255,.6); }
   @media (max-height: 120px){ .mv-time { display: none; } .mv-cover { width: 64px; height: 64px; } }
   @media (max-width: 300px){ html.nl-mini .mini-view { grid-template-columns: 1fr; } .mv-art { display: none; } }
+  /* Retro mode is a complete application skin, not only a settings-window theme. */
+  body.retro-mode {
+    --bg: #071321;
+    --panel-bg: rgba(8, 24, 43, .97);
+    --bar-bg: rgba(5, 18, 35, .97);
+    --text: #e6fbff;
+    --text-muted: rgba(184, 224, 239, .72);
+    --accent-rgb: 54, 230, 255;
+    --accent: #36e6ff;
+    --retro-cyan: #36e6ff;
+    --retro-pink: #ff55c8;
+    color: var(--text);
+    background: radial-gradient(ellipse at 50% 42%, #142d47 0%, #09192b 56%, #040b16 100%);
+    font-family: Tahoma, Verdana, Arial, sans-serif;
+  }
+  body.retro-mode .ambient-bg-container { filter: saturate(1.16) brightness(.78); }
+  body.retro-mode .vignette {
+    background: radial-gradient(ellipse at 50% 42%, rgba(2,13,27,.08), rgba(3,12,25,.45) 72%, rgba(2,8,18,.88)),
+                linear-gradient(180deg, rgba(7,24,43,.22), transparent 24%, transparent 76%, rgba(4,14,29,.62));
+  }
+  body.retro-mode .player { color: var(--text); }
+  body.retro-mode .track-title { color: #eafaff; text-shadow: 0 0 16px rgba(54,230,255,.28), 0 2px 8px #000; letter-spacing: .01em; }
+  body.retro-mode .track-artist { color: #9ac9df; }
+  body.retro-mode .cover-wrap {
+    border: 1px solid rgba(110,231,255,.68);
+    border-radius: 5px;
+    box-shadow: 0 0 0 3px rgba(21,62,91,.72), 0 0 24px rgba(54,230,255,.28), 0 28px 60px rgba(0,0,0,.72);
+  }
+  body.retro-mode .bottombar {
+    background: linear-gradient(180deg, rgba(15,48,73,.98), rgba(5,17,34,.99));
+    border-top: 1px solid rgba(84,219,246,.55);
+    box-shadow: 0 -8px 28px rgba(0,0,0,.36), inset 0 1px rgba(255,255,255,.12);
+  }
+  body.retro-mode .bb-title { color: #edfbff; }
+  body.retro-mode .bb-artist { color: #98c6d9; }
+  body.retro-mode .bb-thumb { border: 1px solid rgba(106,221,244,.55); border-radius: 3px; }
+  body.retro-mode .ctrl-btn:not(.play-main),
+  body.retro-mode .bb-right .icon-btn,
+  body.retro-mode .mv-btn:not(.big),
+  body.retro-mode .cover-control:not(.play-cover) {
+    border: 1px solid rgba(109,213,239,.32);
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(41,94,125,.72), rgba(9,35,61,.9));
+    color: #c9f5ff;
+    box-shadow: inset 0 1px rgba(255,255,255,.18);
+  }
+  body.retro-mode .ctrl-btn:hover,
+  body.retro-mode .bb-right .icon-btn:hover,
+  body.retro-mode .mv-btn:hover,
+  body.retro-mode .cover-control:hover { border-color: var(--retro-cyan); color: #fff; box-shadow: 0 0 12px rgba(54,230,255,.26); }
+  body.retro-mode .ctrl-btn.play-main,
+  body.retro-mode .cover-control.play-cover,
+  body.retro-mode .mv-btn.big {
+    border: 1px solid #ff8cda;
+    border-radius: 5px;
+    background: linear-gradient(180deg, #ff83d5, #a52c91);
+    color: #fff;
+    box-shadow: inset 0 1px rgba(255,255,255,.56), 0 0 16px rgba(255,85,200,.34);
+  }
+  body.retro-mode .ctrl-btn.play-main.playing { background: linear-gradient(180deg, #42efff, #1177a9); border-color: #9af7ff; }
+  body.retro-mode .seek-bar { height: 5px; border: 1px solid rgba(96,211,238,.45); border-radius: 2px; background: rgba(1,11,23,.9); }
+  body.retro-mode .seek-fill { border-radius: 0; background: linear-gradient(90deg, var(--retro-cyan), var(--retro-pink)); }
+  body.retro-mode .seek-thumb { border: 2px solid #eaffff; background: var(--retro-cyan); box-shadow: 0 0 10px rgba(54,230,255,.7); }
+  body.retro-mode .library-panel,
+  body.retro-mode .queue-panel,
+  body.retro-mode .modal,
+  body.retro-mode .sm-dialog,
+  body.retro-mode .poster-dialog,
+  body.retro-mode .tour-card,
+  body.retro-mode .atlas-map-wrap,
+  body.retro-mode .atlas-stat,
+  body.retro-mode .atlas-selected {
+    color: var(--text);
+    border-color: rgba(79,193,222,.38);
+    border-radius: 5px;
+    background-color: rgba(7,22,41,.98);
+    box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 1px rgba(255,255,255,.08);
+  }
+  body.retro-mode .library-panel { background: linear-gradient(155deg, rgba(12,39,63,.99), rgba(5,16,31,.99)); border-left-color: rgba(79,193,222,.5); }
+  body.retro-mode .library-header,
+  body.retro-mode .recommendations-head,
+  body.retro-mode .album-detail-header { border-color: rgba(90,202,228,.28); }
+  body.retro-mode .track-list li,
+  body.retro-mode .qp-row,
+  body.retro-mode .net-card,
+  body.retro-mode .album-card,
+  body.retro-mode .recommendation-card {
+    border: 1px solid rgba(78,170,203,.18);
+    border-radius: 4px;
+    background: linear-gradient(100deg, rgba(18,51,76,.48), rgba(6,22,40,.62));
+  }
+  body.retro-mode .track-list li:hover,
+  body.retro-mode .qp-row:hover,
+  body.retro-mode .net-card:hover,
+  body.retro-mode .album-card:hover,
+  body.retro-mode .recommendation-card:hover { background: linear-gradient(100deg, rgba(27,83,112,.72), rgba(8,31,51,.84)); border-color: rgba(54,230,255,.52); }
+  body.retro-mode .track-list li.active,
+  body.retro-mode .qp-row.qp-now,
+  body.retro-mode .net-card.net-playing,
+  body.retro-mode .album-card.active-album { background: linear-gradient(100deg, rgba(23,104,132,.58), rgba(9,39,63,.82)); border-color: rgba(54,230,255,.68); color: #eaffff; }
+  body.retro-mode .track-list img,
+  body.retro-mode .album-card img,
+  body.retro-mode .net-card img { border-radius: 3px; }
+  body.retro-mode .library-tabs,
+  body.retro-mode .net-providers { border: 1px solid rgba(91,192,218,.36); border-radius: 4px; background: rgba(3,16,30,.82); }
+  body.retro-mode .lib-tab,
+  body.retro-mode .net-chip { border-radius: 3px; color: #a9cfdf; }
+  body.retro-mode .lib-tab.active,
+  body.retro-mode .net-chip.active { color: #f1fdff; background: linear-gradient(180deg, rgba(43,143,176,.75), rgba(13,62,93,.86)); box-shadow: inset 0 1px rgba(255,255,255,.2); }
+  body.retro-mode .lib-search,
+  body.retro-mode .net-search,
+  body.retro-mode .sm-search { border: 1px solid rgba(83,197,224,.43); border-radius: 4px; background: rgba(3,17,32,.85); box-shadow: inset 0 1px 4px rgba(0,0,0,.35); }
+  body.retro-mode .net-head { background: rgba(8,25,44,.98); border-bottom-color: rgba(83,197,224,.3); }
+  body.retro-mode .net-genre { border: 1px solid rgba(91,205,231,.36); border-radius: 4px; box-shadow: inset 0 1px rgba(255,255,255,.18); }
+  body.retro-mode .net-btn,
+  body.retro-mode .lib-tool,
+  body.retro-mode .sm-btn,
+  body.retro-mode .sm-act,
+  body.retro-mode .sm-mini,
+  body.retro-mode .primary-btn,
+  body.retro-mode .ghost-btn,
+  body.retro-mode .modal-choice,
+  body.retro-mode .tour-back,
+  body.retro-mode .tour-next,
+  body.retro-mode .atlas-play,
+  body.retro-mode .recommendation-action {
+    border: 1px solid rgba(96,211,239,.44);
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(47,126,158,.72), rgba(10,44,72,.92));
+    color: #eafaff;
+    box-shadow: inset 0 1px rgba(255,255,255,.2);
+  }
+  body.retro-mode .net-btn:hover,
+  body.retro-mode .lib-tool:hover,
+  body.retro-mode .sm-btn:hover,
+  body.retro-mode .sm-act:hover,
+  body.retro-mode .primary-btn:hover,
+  body.retro-mode .ghost-btn:hover,
+  body.retro-mode .modal-choice:hover,
+  body.retro-mode .tour-back:hover,
+  body.retro-mode .tour-next:hover,
+  body.retro-mode .atlas-play:hover,
+  body.retro-mode .recommendation-action:hover { border-color: var(--retro-cyan); background: linear-gradient(180deg, rgba(57,165,194,.9), rgba(15,71,101,.96)); }
+  body.retro-mode input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  body.retro-mode select,
+  body.retro-mode textarea { color: #e8fbff; border-color: rgba(92,192,219,.46); border-radius: 4px; background-color: rgba(4,17,32,.92); }
+  body.retro-mode input::placeholder,
+  body.retro-mode textarea::placeholder { color: rgba(183,222,235,.52); }
+  body.retro-mode input[type="range"] { accent-color: var(--retro-cyan); }
+  body.retro-mode .switch .slider { border: 1px solid rgba(108,202,226,.4); border-radius: 4px; background: linear-gradient(180deg, #223e55, #0b1d30); }
+  body.retro-mode .switch input:checked + .slider { background: linear-gradient(180deg, #42eaff, #087da5); box-shadow: 0 0 10px rgba(54,230,255,.4); }
+  body.retro-mode .switch .slider:before { border-radius: 3px; background: linear-gradient(180deg, #f5fdff, #aac6d2); box-shadow: 0 1px 3px #000; }
+  body.retro-mode .settings-menu,
+  body.retro-mode .modal-dim,
+  body.retro-mode .poster-modal { background-color: rgba(1,8,18,.78); }
+  body.retro-mode .sound-atlas { background: radial-gradient(ellipse at 22% 12%, rgba(22,128,165,.2), transparent 42%), radial-gradient(ellipse at 82% 86%, rgba(194,43,145,.14), transparent 38%), rgba(4,14,28,.98); }
+  body.retro-mode .style-toast,
+  body.retro-mode .drop-hint { color: #e9fcff; border: 1px solid rgba(77,213,239,.62); border-radius: 4px; background: linear-gradient(145deg, rgba(13,48,73,.98), rgba(4,17,33,.99)); box-shadow: 0 0 22px rgba(54,230,255,.22), 0 16px 42px rgba(0,0,0,.5); }
+  body.retro-mode .mini-view { border-color: rgba(73,204,232,.62); background: linear-gradient(145deg, rgba(8,31,51,.98), rgba(3,13,26,.99)); }
+  body.retro-mode .mv-titlebar { color: #9dd9e9; background: linear-gradient(180deg, rgba(35,83,111,.78), rgba(8,28,47,.7)); }
+  body.retro-mode .mv-titlebar strong { color: #e8fbff; }
+  body.retro-mode :focus-visible { outline: 2px solid var(--retro-cyan); outline-offset: 2px; }
 </style>
 </head>
 <body>
