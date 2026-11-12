@@ -526,11 +526,11 @@
 
   /* Siatka albumów */
   .album-grid-wrap { flex:1; overflow-y:auto; padding:2px 4px 8px; }
-  .album-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .album-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(136px,160px)); justify-content:start; align-content:start; gap:10px; }
   .album-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:9px; cursor:pointer; transition:background .15s, border-color .15s; text-align:left; }
   .album-card:hover { background:rgba(255,255,255,.1); }
   .album-card.active-album { border-color:var(--accent); }
-  .album-card img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; background:#111; display:block; }
+  .album-card img { width:100%; max-width:144px; aspect-ratio:1; object-fit:cover; border-radius:6px; background:#111; display:block; }
   .album-card-name { font-size:13px; font-weight:600; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff; }
   .album-card-meta { font-size:11px; color:var(--text-muted); margin-top:2px; }
   .liked-cover .album-cover-edit { display: none; }
@@ -1519,7 +1519,7 @@
     pointer-events: none;
   }
   body.retro-mode .bottombar::before { content: "PULSAR  •  CLASSIC PLAYER"; }
-  body.retro-mode .bottombar.hidden { transform: translateY(calc(-100% - 32px)); }
+  body.retro-mode .bottombar.hidden { transform: none; opacity: 1; pointer-events: auto; }
   body.retro-mode .bb-left { grid-column: 1; grid-row: 1; gap: 9px; }
   body.retro-mode .bb-thumb { width: 42px; height: 42px; }
   body.retro-mode .bb-title { font: bold 12px Tahoma, Verdana, sans-serif; }
@@ -1533,17 +1533,17 @@
   body.retro-mode .seek-row { max-width: none; gap: 6px; }
   body.retro-mode .seek-bar { height: 7px; }
   body.retro-mode .player {
-    position: fixed; top: 164px; bottom: 22px; left: 24px; right: auto;
+    min-width: 0; position: fixed; top: 164px; bottom: 22px; left: 24px; right: auto;
     width: min(330px, calc(39vw - 28px)); min-height: 0; height: auto;
     justify-content: flex-start; align-items: center; gap: 7px;
-    overflow: auto; padding: 34px 18px 16px; text-align: center;
+    overflow-y: auto; overflow-x: clip; scrollbar-width: none; padding: 34px 18px 16px; text-align: center;
     border: 2px solid var(--retro-frame); border-radius: 6px;
     background: linear-gradient(145deg, rgba(18,43,64,.97), rgba(4,15,29,.98));
     box-shadow: inset 1px 1px rgba(255,255,255,.25), inset -1px -1px rgba(0,0,0,.65), 0 15px 34px rgba(0,0,0,.4);
     transition: none;
   }
   body.retro-mode .player::before { content: "NOW PLAYING  •  COVER DISPLAY"; }
-  body.retro-mode .player > .cover-wrap { flex: 0 0 auto; width: min(100%, 238px); height: auto; aspect-ratio: 1; }
+  body.retro-mode .player > .cover-wrap { flex: 0 0 auto; width: min(100%, 180px); height: auto; aspect-ratio: 1; }
   body.retro-mode .player .cover-wrap img { width: 100%; height: 100%; object-fit: cover; }
   body.retro-mode .player .track-title { max-width: 100%; margin-top: 7px; font-size: clamp(16px, 2vw, 20px); }
   body.retro-mode .player .track-artist { max-width: 100%; margin-top: 1px; font-size: 12px; }
@@ -1567,6 +1567,12 @@
   body.retro-mode .track-list li { min-height: 44px; padding: 6px; }
   body.retro-mode .album-card { padding: 7px; }
   body.retro-mode .album-card-art img { border-radius: 3px; }
+  body.retro-mode .album-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 136px)); justify-content: start; align-content: start; gap: 8px; }
+  body.retro-mode .album-card { width: 136px; max-width: 100%; padding: 7px; overflow: hidden; }
+  body.retro-mode .album-card-art { margin: -7px -7px 0; }
+  body.retro-mode .album-card-art img, body.retro-mode .album-card > img { display: block; width: 100%; height: 106px; max-height: 106px; aspect-ratio: 1; object-fit: cover; }
+  body.retro-mode .album-card-name { margin-top: 7px; font-size: 11px; }
+  body.retro-mode .album-card-meta { font-size: 9px; }
   body.retro-mode .volume-wrap { border: 1px solid rgba(142,197,219,.3); border-radius: 4px; background: rgba(4,17,29,.72); }
   body.retro-mode .playlist-menu,
   body.retro-mode .queue-panel { border: 2px solid var(--retro-frame); border-radius: 5px; background: linear-gradient(145deg, #143451, #061627); }
@@ -1589,6 +1595,85 @@
     body.retro-mode .player .empty-hint { display: none; }
   }
 
+  body.retro-mode .player::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  body.retro-mode .player { overflow-x: clip; scrollbar-width: none; }
+  body.retro-mode { --retro-cyan: #36e6ff; --retro-pink: #ff55c8; --retro-frame: #8297a5; --retro-accent: #36e6ff; --retro-accent2: #ff55c8; --retro-bg: #173c63; --retro-panel-a: #143451; --retro-panel-b: #061627; --retro-title-a: #557a98; --retro-title-b: #102b49; --retro-button-a: #2f7e9e; --retro-button-b: #0a2c48; --retro-radius: 5px; }
+  body.retro-mode[data-retro-theme="green"] { --retro-cyan:#8dff72; --retro-pink:#36e6ff; --retro-frame:#94b69a; --retro-accent:#8dff72; --retro-accent2:#36e6ff; --retro-bg:#1b503b; --retro-panel-a:#174635; --retro-panel-b:#071b17; --retro-title-a:#4b8a66; --retro-title-b:#123e2a; --retro-button-a:#348957; --retro-button-b:#0b3924; }
+  body.retro-mode[data-retro-theme="pink"] { --retro-cyan:#ff71cf; --retro-pink:#55eaff; --retro-frame:#c397bd; --retro-accent:#ff71cf; --retro-accent2:#55eaff; --retro-bg:#542759; --retro-panel-a:#482248; --retro-panel-b:#1b0b24; --retro-title-a:#a05290; --retro-title-b:#41183f; --retro-button-a:#a33f88; --retro-button-b:#481542; }
+  body.retro-mode[data-retro-theme="amber"] { --retro-cyan:#ffc653; --retro-pink:#ff6a42; --retro-frame:#c2a878; --retro-accent:#ffc653; --retro-accent2:#ff6a42; --retro-bg:#59432a; --retro-panel-a:#48351f; --retro-panel-b:#1b120a; --retro-title-a:#967343; --retro-title-b:#39250e; --retro-button-a:#a47731; --retro-button-b:#4b2c11; }
+  body.retro-mode[data-retro-theme="metal"] { --retro-cyan:#e7f0f6; --retro-pink:#9eb2c0; --retro-frame:#c4ccd2; --retro-accent:#e7f0f6; --retro-accent2:#9eb2c0; --retro-bg:#343b40; --retro-panel-a:#49535a; --retro-panel-b:#14191d; --retro-title-a:#aab4ba; --retro-title-b:#343b40; --retro-button-a:#89959c; --retro-button-b:#30383e; --retro-radius:2px; }
+  body.retro-mode[data-retro-theme="metal"] { background: radial-gradient(ellipse at 50% 15%, #6c767c, #2b3136 55%, #121619); }
+  body.retro-mode[data-retro-theme="metal"] .bottombar,
+  body.retro-mode[data-retro-theme="metal"] .player,
+  body.retro-mode[data-retro-theme="metal"] .library-panel,
+  body.retro-mode[data-retro-theme="metal"] .sm-dialog,
+  body.retro-mode[data-retro-theme="metal"] .modal { background: linear-gradient(145deg, #636e75, #252c31 48%, #12171a); box-shadow: inset 1px 1px rgba(255,255,255,.52), inset -1px -1px rgba(0,0,0,.72), 0 16px 36px rgba(0,0,0,.52); }
+  body.retro-mode[data-retro-theme="metal"] .bottombar::before,
+  body.retro-mode[data-retro-theme="metal"] .player::before,
+  body.retro-mode[data-retro-theme="metal"] .library-panel::before { color:#172027; background:linear-gradient(180deg,#e1e6e9,#87939a 48%,#c6cdd1); border-color:#eef3f5; }
+  body.retro-mode[data-retro-theme="metal"] .ctrl-btn:not(.play-main),
+  body.retro-mode[data-retro-theme="metal"] .bb-right .icon-btn,
+  body.retro-mode[data-retro-theme="metal"] .cover-control:not(.play-cover),
+  body.retro-mode[data-retro-theme="metal"] .net-btn,
+  body.retro-mode[data-retro-theme="metal"] .sm-btn,
+  body.retro-mode[data-retro-theme="metal"] .sm-act,
+  body.retro-mode[data-retro-theme="metal"] .lib-tool { color:#f4f7f8; background:linear-gradient(180deg,#87939a,#343d43); border-color:#c4cdd1; }
+  body.retro-mode[data-retro-theme="metal"] .cover-wrap { border-color:#e4eaed; box-shadow:0 0 0 3px rgba(205,216,222,.3),0 0 20px rgba(220,235,242,.25),0 28px 60px rgba(0,0,0,.72); }
+  body.retro-mode[data-retro-theme="metal"] .track-list li,
+  body.retro-mode[data-retro-theme="metal"] .album-card,
+  body.retro-mode[data-retro-theme="metal"] .net-card { background:linear-gradient(100deg,rgba(117,130,138,.22),rgba(13,19,23,.65)); border-color:rgba(207,220,226,.3); }
+  body.retro-mode[data-retro-theme="metal"] .album-card,
+  body.retro-mode[data-retro-theme="metal"] .sm-card,
+  body.retro-mode[data-retro-theme="metal"] .sm-select { border-radius:2px; }
+  body.retro-mode[data-retro-theme="metal"] .lib-tab.active,
+  body.retro-mode[data-retro-theme="metal"] .net-chip.active { color:#101519; background:linear-gradient(180deg,#e0e5e8,#89949a); }
+  body.retro-mode[data-retro-theme="metal"] .ctrl-btn.play-main,
+  body.retro-mode[data-retro-theme="metal"] .cover-control.play-cover { color:#12181d; background:linear-gradient(180deg,#f1f4f6,#8a969d); border-color:#f7fafb; box-shadow:inset 0 1px #fff,0 0 14px rgba(210,226,233,.4); }
+  body.retro-mode[data-retro-theme="green"] .bottombar,
+  body.retro-mode[data-retro-theme="green"] .player,
+  body.retro-mode[data-retro-theme="green"] .library-panel,
+  body.retro-mode[data-retro-theme="pink"] .bottombar,
+  body.retro-mode[data-retro-theme="pink"] .player,
+  body.retro-mode[data-retro-theme="pink"] .library-panel,
+  body.retro-mode[data-retro-theme="amber"] .bottombar,
+  body.retro-mode[data-retro-theme="amber"] .player,
+  body.retro-mode[data-retro-theme="amber"] .library-panel { background:linear-gradient(145deg,var(--retro-panel-a),var(--retro-panel-b)); border-color:var(--retro-frame); }
+  body.retro-mode[data-retro-theme="green"] .bottombar::before,
+  body.retro-mode[data-retro-theme="green"] .player::before,
+  body.retro-mode[data-retro-theme="green"] .library-panel::before,
+  body.retro-mode[data-retro-theme="pink"] .bottombar::before,
+  body.retro-mode[data-retro-theme="pink"] .player::before,
+  body.retro-mode[data-retro-theme="pink"] .library-panel::before,
+  body.retro-mode[data-retro-theme="amber"] .bottombar::before,
+  body.retro-mode[data-retro-theme="amber"] .player::before,
+  body.retro-mode[data-retro-theme="amber"] .library-panel::before { background:linear-gradient(90deg,var(--retro-title-a),var(--retro-title-b)); }
+  body.retro-mode[data-retro-theme="green"] .cover-wrap,
+  body.retro-mode[data-retro-theme="pink"] .cover-wrap,
+  body.retro-mode[data-retro-theme="amber"] .cover-wrap { border-color:var(--retro-accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--retro-accent) 28%,transparent),0 0 24px color-mix(in srgb,var(--retro-accent) 40%,transparent),0 28px 60px rgba(0,0,0,.72); }
+  body.retro-mode[data-retro-theme="green"] .ctrl-btn:not(.play-main),
+  body.retro-mode[data-retro-theme="green"] .bb-right .icon-btn,
+  body.retro-mode[data-retro-theme="green"] .cover-control:not(.play-cover),
+  body.retro-mode[data-retro-theme="pink"] .ctrl-btn:not(.play-main),
+  body.retro-mode[data-retro-theme="pink"] .bb-right .icon-btn,
+  body.retro-mode[data-retro-theme="pink"] .cover-control:not(.play-cover),
+  body.retro-mode[data-retro-theme="amber"] .ctrl-btn:not(.play-main),
+  body.retro-mode[data-retro-theme="amber"] .bb-right .icon-btn,
+  body.retro-mode[data-retro-theme="amber"] .cover-control:not(.play-cover) { border-color:color-mix(in srgb,var(--retro-accent) 48%,transparent); background:linear-gradient(180deg,var(--retro-button-a),var(--retro-button-b)); }
+  body.retro-mode[data-retro-theme="green"] .ctrl-btn.play-main,
+  body.retro-mode[data-retro-theme="green"] .cover-control.play-cover,
+  body.retro-mode[data-retro-theme="pink"] .ctrl-btn.play-main,
+  body.retro-mode[data-retro-theme="pink"] .cover-control.play-cover,
+  body.retro-mode[data-retro-theme="amber"] .ctrl-btn.play-main,
+  body.retro-mode[data-retro-theme="amber"] .cover-control.play-cover { border-color:var(--retro-accent); background:linear-gradient(180deg,var(--retro-accent),var(--retro-accent2)); color:#09131a; }
+  body.retro-mode[data-retro-theme="green"] .seek-fill,
+  body.retro-mode[data-retro-theme="pink"] .seek-fill,
+  body.retro-mode[data-retro-theme="amber"] .seek-fill { background:linear-gradient(90deg,var(--retro-accent),var(--retro-accent2)); }
+  body.retro-mode[data-retro-theme="green"] .track-list li,
+  body.retro-mode[data-retro-theme="green"] .album-card,
+  body.retro-mode[data-retro-theme="pink"] .track-list li,
+  body.retro-mode[data-retro-theme="pink"] .album-card,
+  body.retro-mode[data-retro-theme="amber"] .track-list li,
+  body.retro-mode[data-retro-theme="amber"] .album-card { border-color:color-mix(in srgb,var(--retro-accent) 22%,transparent); background:linear-gradient(100deg,color-mix(in srgb,var(--retro-panel-a) 75%,transparent),var(--retro-panel-b)); }
   /* Album accents must remain legible over album art and translucent surfaces. */
   :root { --accent-contrast: #10141b; }
   body:not(.retro-mode) .ctrl-btn:not(.play-main),
@@ -1995,7 +2080,7 @@
       <div class="sm-pane" data-pane="look">
         <h2 class="sm-pane-title">Wygląd</h2>
         <div class="sm-card"><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Język</span></div><select id="smLang" class="sm-select" aria-label="Język interfejsu"><option value="pl">Polski</option><option value="en">English</option><option value="es">Español</option></select></div></div>
-        <div class="sm-card"><h3 class="sm-cap">Styl</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Styl retro (lata 2000)</span><span class="sm-desc">Błyszczące granatowe panele, chromowane krawędzie i neonowe akcenty</span></div><label class="switch"><input type="checkbox" id="smRetroStyle"><span class="slider"></span></label></div></div>
+        <div class="sm-card"><h3 class="sm-cap">Styl</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Styl retro (lata 2000)</span><span class="sm-desc">Klasyczny układ odtwarzacza z osobnymi panelami playlisty i okładki</span></div><label class="switch"><input type="checkbox" id="smRetroStyle"><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Motyw retro</span><span class="sm-desc">Cztery warianty kolorystyczne oraz osobny motyw metaliczny</span></div><select id="smRetroTheme" class="sm-select" aria-label="Motyw retro"><option value="classic">Klasyczny niebieski</option><option value="green">Zielony neon</option><option value="pink">Neonowy róż</option><option value="amber">Bursztynowy</option><option value="metal">Metal / chrom</option></select></div></div>
         <div class="sm-card"><h3 class="sm-cap">Kolory interfejsu</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Dopasuj kolory do okładki</span><span class="sm-desc">Automatycznie dobiera akcenty i kolory wizualizacji z okładki albumu</span></div><label class="switch"><input type="checkbox" id="smAlbumColors" checked><span class="slider"></span></label></div><div class="sm-row sm-color-row"><div class="sm-txt"><span class="sm-lab">Kolory ręczne</span><span class="sm-desc">Działają, gdy automatyczne dopasowanie jest wyłączone</span></div><div class="sm-color-pickers"><label class="sm-color-control"><span>Główny</span><input type="color" id="smManualAccent" value="#39c5ff" aria-label="Kolor główny"></label><label class="sm-color-control"><span>Uzupełniający</span><input type="color" id="smManualSecondary" value="#ff5ca8" aria-label="Kolor uzupełniający"></label></div></div></div>
         <div class="sm-card"><h3 class="sm-cap">Tło</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Tło reakcyjne 3D</span><span class="sm-desc">Reaktywne tło GPU — pulsowanie w rytm basu i beatu</span></div><span class="sm-slot" id="sm3dSlot"><div class="reactive-toggle" title="Reaktywne tło GPU — pulsowanie w rytm basu i beatu"><label class="switch"><input type="checkbox" id="reactiveToggle"><span class="slider"></span></label><span class="toggle-label">3D</span></div></span></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Reakcja na muzykę (motywy tła)</span><span class="sm-desc">Kolory i światło tła reagują na dźwięk</span></div><label class="switch"><input type="checkbox" id="smAudioReact" checked><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Śledzenie myszy (ruch tła)</span><span class="sm-desc">Tło lekko podąża za kursorem</span></div><label class="switch"><input type="checkbox" id="smBgFollow" checked><span class="slider"></span></label></div></div>
       </div>
@@ -2057,6 +2142,13 @@
     if (!_savedLang){ try { localStorage.setItem('playerLang', CUR_LANG); } catch(e){} }
   } catch(e){ CUR_LANG = 'pl'; }
   var I18N_DICT = {
+    'Motyw retro': { en: 'Retro theme', es: 'Tema retro' },
+    'Cztery warianty kolorystyczne oraz osobny motyw metaliczny': { en: 'Four color variations plus a separate metallic theme', es: 'Cuatro variantes de color y un tema metálico independiente' },
+    'Klasyczny niebieski': { en: 'Classic blue', es: 'Azul clásico' },
+    'Zielony neon': { en: 'Neon green', es: 'Verde neón' },
+    'Neonowy róż': { en: 'Neon pink', es: 'Rosa neón' },
+    'Bursztynowy': { en: 'Amber', es: 'Ámbar' },
+    'Metal / chrom': { en: 'Metal / chrome', es: 'Metal / cromo' },
     'Kolory interfejsu': { en: 'Interface colors', es: 'Colores de interfaz' },
     'Dopasuj kolory do okładki': { en: 'Match colors to album cover', es: 'Adaptar los colores a la portada' },
     'Automatycznie dobiera akcenty i kolory wizualizacji z okładki albumu': { en: 'Automatically picks accent and visualizer colors from album artwork', es: 'Elige automáticamente los colores de acento y del visualizador de la portada' },
@@ -4642,7 +4734,7 @@
         if (activeAlbumId !== null){ activeAlbumId = null; rebuildQueue(); }
         loadTrack(i, { autoplay: true });
         renderLibrary();
-        closeLibrary();
+        if (!document.body.classList.contains('retro-mode')) closeLibrary();
       });
       trackListEl.appendChild(li);
     });
@@ -4844,7 +4936,7 @@
     queue = withShuffle ? shuffleIndices(idxs) : idxs.slice();
     loadTrack(queue[0], { autoplay: true });
     updateModeButtons();
-    closeLibrary();
+    if (!document.body.classList.contains('retro-mode')) closeLibrary();
   }
 
   /* ---------- Zaznaczanie / pasek akcji ---------- */
@@ -8300,6 +8392,18 @@
     return (v < 0 ? t('L ') : t('P ')) + Math.abs(v) + '%';
   }
   const smRetroStyleEl = document.getElementById('smRetroStyle');
+  const smRetroThemeEl = document.getElementById('smRetroTheme');
+  const RETRO_THEMES = ['classic', 'green', 'pink', 'amber', 'metal'];
+  function setRetroTheme(theme){
+    const chosen = RETRO_THEMES.indexOf(theme) >= 0 ? theme : 'classic';
+    document.body.dataset.retroTheme = chosen;
+    if (smRetroThemeEl) smRetroThemeEl.value = chosen;
+    try { localStorage.setItem('playerRetroTheme', chosen); } catch(e){}
+  }
+  let savedRetroTheme = 'classic';
+  try { savedRetroTheme = localStorage.getItem('playerRetroTheme') || 'classic'; } catch(e){}
+  setRetroTheme(savedRetroTheme);
+  if (smRetroThemeEl) smRetroThemeEl.addEventListener('change', function(){ setRetroTheme(smRetroThemeEl.value); });
   let retroOpenedLibraryForTheme = false;
   function setRetroStyle(enabled){
     const on = !!enabled;
@@ -9227,6 +9331,7 @@
     bottomBar.classList.remove('hidden');
     document.body.classList.remove('bar-hidden');
     clearTimeout(hideTimer);
+    if (document.body.classList.contains('retro-mode')) return;
     if (!audio.paused && !barHovered && !libraryPanel.classList.contains('open')){
       hideTimer = setTimeout(() => { 
         bottomBar.classList.add('hidden'); 
