@@ -3220,7 +3220,7 @@
 
   let tracks = [];
   let activeOnlineTrack = null, activeOnlineSession = null, onlinePlaybackToken = 0, onlinePlaybackLoading = false;
-  let onlinePlaybackGateState = null, onlinePlaybackWantPlay = true;
+  let onlinePlaybackGateState = null, onlinePlaybackWantPlay = true, onlinePlaybackStartedUrl = '';
   const ONLINE_PLAYBACK_GATE_SRC = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
   let albums = [];               // albumy trzymane w store 'playlists' (kompatybilność ze starszymi zapisami)
   let recommendationsEnabled = false;
@@ -5886,16 +5886,18 @@
   }
   function beginOnlinePlaybackGate(){
     if(!onlinePlaybackGateState){
-      onlinePlaybackGateState={src:audio.currentSrc||audio.getAttribute('src')||'',time:Number(audio.currentTime)||0,wasPlaying:!audio.paused,muted:audio.muted,loop:audio.loop};
+      onlinePlaybackGateState={src:audio.currentSrc||audio.getAttribute('src')||'',time:Number(audio.currentTime)||0,wasPlaying:!audio.paused,muted:audio.muted,loop:audio.loop,startedUrl:onlinePlaybackStartedUrl};
     }
     audio.muted=true;audio.loop=true;audio.src=ONLINE_PLAYBACK_GATE_SRC;audio.load();
     const gatePlay=audio.play();if(gatePlay&&gatePlay.catch)gatePlay.catch(function(){});
   }
-  function releaseOnlinePlaybackGate(restoreSource){
+  function releaseOnlinePlaybackGate(restoreSource,keepLoop){
     const previous=onlinePlaybackGateState;onlinePlaybackGateState=null;
     if(!previous)return;
-    audio.muted=previous.muted;audio.loop=previous.loop;
+    audio.muted=previous.muted;
+    if(restoreSource||!keepLoop)audio.loop=previous.loop;
     if(!restoreSource)return;
+    onlinePlaybackStartedUrl=previous.startedUrl||'';
     audio.pause();
     if(previous.src){
       audio.src=previous.src;audio.load();
@@ -5911,7 +5913,7 @@
       if(button){button.disabled=true;button.textContent=t('Ładuję…');}
     }else if(button){button.disabled=true;button.textContent=t('Ładuję…');}
     const token=++onlinePlaybackToken;
-    onlinePlaybackLoading=true;onlinePlaybackWantPlay=true;
+    onlinePlaybackLoading=true;onlinePlaybackWantPlay=true;onlinePlaybackStartedUrl='';
     window.__pulsarPendingPlay=false;
     try{
       ensureAudioContext();
@@ -5935,7 +5937,9 @@
       if(sessionIndex<0)sessionIndex=0;
       activeOnlineSession={kind:(session&&session.kind)||'single',items:items,index:sessionIndex};
       currentIndex=-1;recommendationNowId=id;netNowIdx=Number.isInteger(netIndex)?netIndex:-1;
-      releaseOnlinePlaybackGate(false);audio.loop=false;
+      // Keep the silent gate's loop active across the source handoff. A queued
+      // ended event from that gate must not be mistaken for a short YouTube stream.
+      releaseOnlinePlaybackGate(false,true);
       audio.crossOrigin='anonymous';
       audio.src=resolved.url;
       emptyHint.style.display='none';
@@ -6908,8 +6912,8 @@
     opts = opts || { autoplay: true };
     if (!tracks.length || index < 0 || index >= tracks.length) return;
     onlinePlaybackToken++;
-    if(onlinePlaybackGateState)releaseOnlinePlaybackGate(false);
-    onlinePlaybackLoading = false;onlinePlaybackWantPlay=false;
+    if(onlinePlaybackGateState){audio.pause();releaseOnlinePlaybackGate(false);}
+    onlinePlaybackLoading = false;onlinePlaybackWantPlay=false;onlinePlaybackStartedUrl='';
     activeOnlineTrack = null; activeOnlineSession = null; recommendationNowId = '';
     updateOnlinePlayerActions();
     audio.removeAttribute('crossorigin');
@@ -8099,6 +8103,7 @@
   audio.addEventListener('ended', () => {
     if(onlinePlaybackLoading)return;
     if (activeOnlineTrack){
+      if(!onlinePlaybackStartedUrl||onlinePlaybackStartedUrl!==activeOnlineTrack.streamUrl){netRenderPlayStates();return;}
       const expectedDuration=Number(activeOnlineTrack.durMs||0)/1000;
       if(expectedDuration>30&&audio.currentTime<expectedDuration*0.75){
         showToast(t('Strumień zakończył się przedwcześnie — spróbuj ponownie.'));
@@ -8114,7 +8119,10 @@
     nextTrack(true);
   });
   var decodeErrStreak = 0;
-  audio.addEventListener('playing', function(){ decodeErrStreak = 0; });
+  audio.addEventListener('playing', function(){
+    decodeErrStreak = 0;
+    if(!onlinePlaybackLoading&&activeOnlineTrack){audio.loop=false;onlinePlaybackStartedUrl=activeOnlineTrack.streamUrl||'';}
+  });
   /* Błąd dekodowania na Linuxie to najczęściej brak kodeków GStreamer
      (MP3/AAC wymagają-plugins-ugly / gst-libav). Zamiast cicho pomijać
      całą bibliotekę — informuj po drugim z rzędu błędzie i limituj skipy. */
