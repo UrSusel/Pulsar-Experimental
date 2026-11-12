@@ -3219,7 +3219,7 @@
   }
 
   let tracks = [];
-  let activeOnlineTrack = null, activeOnlineSession = null, onlinePlaybackToken = 0, onlinePlaybackLoading = false;
+  let activeOnlineTrack = null, activeOnlineSession = null, onlinePlaybackToken = 0;
   let albums = [];               // albumy trzymane w store 'playlists' (kompatybilność ze starszymi zapisami)
   let recommendationsEnabled = false;
   let recommendationHistory = [];
@@ -5890,15 +5890,9 @@
       if(button){button.disabled=true;button.textContent=t('Ładuję…');}
     }else if(button){button.disabled=true;button.textContent=t('Ładuję…');}
     const token=++onlinePlaybackToken;
-    onlinePlaybackLoading=true;
-    window.__pulsarPendingPlay=false;
     try{
       ensureAudioContext();
       if(!audio.paused)audio.pause();
-      // Cancel the previous local media load immediately. Otherwise a pending
-      // gesture retry can briefly restart its source while the stream resolves.
-      audio.removeAttribute('src');
-      audio.load();
       if(audioNet&&!audioNet.paused)netStopPreview();
       if(xf.active)cancelCrossfade();
       gaplessReset();
@@ -5907,9 +5901,9 @@
       else if(item.stream)resolved={url:item.stream,ext:item.ytExt||'m4a'};
       else resolved=await netYtStream(id);
       if(token!==onlinePlaybackToken)return;
-      if(!resolved||!resolved.url){onlinePlaybackLoading=false;netSetHintAction(bridgeHintHtml());showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));return;}
+      if(!resolved||!resolved.url){netSetHintAction(bridgeHintHtml());showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));return;}
       const art=String(item.art||ytThumbUrl(id));
-      activeOnlineTrack={id:'youtube:'+id,ytId:id,provider:'youtube',title:String(item.title||t('Utwór z YouTube')),artist:String(item.artist||'YouTube'),album:'YouTube',art:art,coverUrl:art,streamUrl:resolved.url,ytExt:resolved.ext||'',durMs:Number(item.durMs||0),netLink:item.link||('https://www.youtube.com/watch?v='+encodeURIComponent(id))};
+      activeOnlineTrack={id:'youtube:'+id,ytId:id,provider:'youtube',title:String(item.title||t('Utwór z YouTube')),artist:String(item.artist||'YouTube'),album:'YouTube',art:art,coverUrl:art,streamUrl:resolved.url,ytExt:resolved.ext||'',netLink:item.link||('https://www.youtube.com/watch?v='+encodeURIComponent(id))};
       const items=(session&&Array.isArray(session.items))?session.items.slice():[item];
       let sessionIndex=Number.isInteger(position)?position:items.findIndex(x=>String((x&&x.ytId)|| (x&&x.id))===id);
       if(sessionIndex<0)sessionIndex=0;
@@ -5923,17 +5917,14 @@
       highlightActiveInList();setMediaSessionMeta(activeOnlineTrack);updateOnlinePlayerActions();
       if(typeof renderQueuePanel==='function')renderQueuePanel();
       refreshLyrics(activeOnlineTrack);applyNorm();drawWaves();
-      onlinePlaybackLoading=false;
-      audio.load();
       const p=audio.play();
       if(p&&p.catch)p.catch(function(err){
-        if(token!==onlinePlaybackToken)return;
         if(err&&err.name==='NotAllowedError'){window.__pulsarPendingPlay=true;armAudioGesture();}
         else showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));
       });
       netRenderPlayStates();
-    }catch(e){if(token===onlinePlaybackToken){onlinePlaybackLoading=false;netSetHintAction(bridgeHintHtml());showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));}}
-    finally{if(button){button.disabled=false;if(token===onlinePlaybackToken)netRenderPlayStates();}}
+    }catch(e){if(token===onlinePlaybackToken){netSetHintAction(bridgeHintHtml());showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));}}
+    finally{if(button){button.disabled=false;netRenderPlayStates();}}
   }
   function playRecommendation(item,items,index,button){
     return playOnlineYoutube(recommendationAsNetResult(item),{kind:'recommendations',items:items},index,button,-1);
@@ -6886,7 +6877,6 @@
     opts = opts || { autoplay: true };
     if (!tracks.length || index < 0 || index >= tracks.length) return;
     onlinePlaybackToken++;
-    onlinePlaybackLoading = false;
     activeOnlineTrack = null; activeOnlineSession = null; recommendationNowId = '';
     updateOnlinePlayerActions();
     audio.removeAttribute('crossorigin');
@@ -8067,16 +8057,6 @@
     if ('mediaSession' in navigator) try{ navigator.mediaSession.playbackState = 'paused'; } catch(e){}
   });
   audio.addEventListener('ended', () => {
-    if (activeOnlineTrack){
-      const expectedDuration=Number(activeOnlineTrack.durMs||0)/1000;
-      if(expectedDuration>30&&audio.currentTime<expectedDuration*0.75){
-        showToast(t('Strumień zakończył się przedwcześnie — spróbuj ponownie.'));
-        netRenderPlayStates();return;
-      }
-      if(repeatMode===2){audio.currentTime=0;audio.play().catch(function(){});return;}
-      if(activeOnlineSession&&activeOnlineSession.items&&activeOnlineSession.items.length>1)nextTrack(true);
-      return;
-    }
     if (sleepEndTrack){ sleepEndTrack = false; sleepFading = false; try { audio.volume = currentVolume; } catch(e){} updateSleepUi(); showToast(t('Sleep timer: dobranoc')); return; }
     if (repeatMode === 2){ audio.currentTime = 0; audio.play().catch(() => {}); return; }
     if (xf.active){ promoteCrossfaded(); return; }
@@ -8088,8 +8068,6 @@
      (MP3/AAC wymagają-plugins-ugly / gst-libav). Zamiast cicho pomijać
      całą bibliotekę — informuj po drugim z rzędu błędzie i limituj skipy. */
   audio.addEventListener('error', function(){
-    if(onlinePlaybackLoading)return;
-    if(activeOnlineTrack){audio.pause();showToast(t('Nie udało się odtworzyć strumienia — spróbuj zapisać plik.'));netRenderPlayStates();return;}
     var e = audio.error;
     if (e && (e.code === 3 || e.code === 4)){
       decodeErrStreak++;

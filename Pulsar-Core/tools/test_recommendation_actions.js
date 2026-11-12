@@ -14,12 +14,6 @@ for (const platform of ['Linux', 'Windows']) {
   const playback = html.match(/async function playOnlineYoutube\([\s\S]*?\n  function playRecommendation\(/);
   assert.ok(playback, `${platform}: shared main-player handler exists`);
   assert.match(playback[0], /audio\.src=resolved\.url/, `${platform}: YouTube streams use the main audio element`);
-  assert.match(playback[0], /onlinePlaybackLoading=true[\s\S]*window\.__pulsarPendingPlay=false/, `${platform}: pending local gesture retries are cancelled before stream resolution`);
-  assert.match(playback[0], /audio\.removeAttribute\('src'\);\s*audio\.load\(\)/, `${platform}: previous local audio is cancelled before the online stream resolves`);
-  assert.match(html, /audio\.addEventListener\('error',[\s\S]{0,220}if\(onlinePlaybackLoading\)return;[\s\S]{0,160}if\(activeOnlineTrack\)/, `${platform}: stream errors do not skip into or restart local tracks`);
-  assert.match(html, /audio\.addEventListener\('ended',[\s\S]{0,260}if \(activeOnlineTrack\)/, `${platform}: online end handling is isolated from local repeat behavior`);
-  assert.match(html, /expectedDuration>30&&audio\.currentTime<expectedDuration\*0\.75/, `${platform}: truncated YouTube streams are not looped back to the beginning`);
-  assert.match(playback[0], /if\(token!==onlinePlaybackToken\)return/, `${platform}: stale play promises cannot affect a newer selection`);
   assert.match(playback[0], /currentIndex=-1/, `${platform}: online playback stays out of the local library`);
   assert.match(playback[0], /setCover\(activeOnlineTrack\.coverUrl\)/, `${platform}: online artwork is shown in the player`);
   assert.doesNotMatch(playback[0], /tracks\.push|persistTrack\(|toggleFav\(/, `${platform}: playing an online track does not save or favourite it`);
