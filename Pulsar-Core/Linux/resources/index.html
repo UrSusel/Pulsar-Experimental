@@ -3165,7 +3165,7 @@
         { r: 30, g: 60, b: 120 }, { r: 90, g: 40, b: 140 }, { r: 40, g: 120, b: 150 },
         { r: 140, g: 60, b: 160 }, { r: 50, g: 70, b: 130 }
       ];
-      let time = 0, last = performance.now(), originX = 0.5, originY = 0.5;
+      let time = 0, last = performance.now(), lastFrame = 0, originX = 0.5, originY = 0.5;
 
       function accentFallback(i){
         const a = currentAccent;
@@ -3181,7 +3181,9 @@
 
       return {
         resize(){
-          const dpr = Math.min(window.devicePixelRatio || 1, 1.75) * 0.72;
+          const maxPixels = 1280 * 720;
+          const viewportPixels = Math.max(1, window.innerWidth * window.innerHeight);
+          const dpr = Math.min(window.devicePixelRatio || 1, 1.5, Math.sqrt(maxPixels / viewportPixels));
           const w = Math.max(2, Math.round(window.innerWidth * dpr));
           const h = Math.max(2, Math.round(window.innerHeight * dpr));
           if (ambient3dCanvas.width !== w || ambient3dCanvas.height !== h){
@@ -3192,6 +3194,8 @@
         },
         render(){
           const now = performance.now();
+          if(now-lastFrame<1000/30)return;
+          lastFrame=now;
           let dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
           last = now;
           time += dt * (audio.paused ? 0.45 : 1) * (1 + moodBass * 0.35);
@@ -6985,10 +6989,11 @@
     highlightActiveInList();
     setMediaSessionMeta(track);
 
-    await ensureTrackMeta(track);
+    if (opts.autoplay) tryPlayWithGesture();
+    try { await ensureTrackMeta(track); }
+    catch(e){ console.warn('Nie udało się odczytać metadanych utworu:', e); }
     scheduleAnalysis(track, true); applyNorm(); drawWaves();
     refreshLyrics(track);
-    if (opts.autoplay){ tryPlayWithGesture(); }
   }
 
   function nextTrack(auto){
