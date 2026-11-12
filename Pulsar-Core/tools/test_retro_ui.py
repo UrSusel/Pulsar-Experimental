@@ -52,8 +52,8 @@ def check(platform: str) -> None:
     require("grid-template-columns:repeat(auto-fill,minmax(136px,160px))" in source and
             "max-width:144px" in source,
             f"{platform}: album artwork cards are not constrained to a compact size")
-    require("body.retro-mode .volume-wrap { position: absolute; left: 50%; top: 41px;" in source,
-            f"{platform}: retro volume control is not centered inside its deck")
+    require("body.retro-mode .cover-display-stack .volume-wrap { position:relative; left:auto; top:auto;" in source,
+            f"{platform}: retro volume control is not positioned beneath the track metadata")
     require("body.retro-mode .library-toolbar { display:grid; grid-template-columns:repeat(auto-fit,minmax(108px,1fr));" in source,
             f"{platform}: retro library toolbar remains oversized")
     require("body.retro-mode .bpm-chip { display: none !important; }" in source,
@@ -70,6 +70,18 @@ def check(platform: str) -> None:
     require("body.retro-mode .cover-display-stack > #coverWrap { position:relative !important;" in source and
             "visibility:visible !important;" in source,
             f"{platform}: cover art can disappear when retro lyrics are enabled")
+    volume_markup = source.find('class="volume-wrap"', stack_markup)
+    stack_end = source.find('\n    </div>\n\n    <div class="center-seek-row"', stack_markup)
+    require(stack_markup < source.find('id="trackArtist"', stack_markup) < volume_markup < stack_end,
+            f"{platform}: volume control is not under the current track information")
+    require("function syncRetroVolumeDock()" in source and
+            "retroVolumeWrap.parentElement !== destination" in source and
+            "document.body.dataset.retroLayout !== 'winamp'" in source,
+            f"{platform}: volume control does not move between classic, Winamp, and normal layouts")
+    require("body.retro-mode .cover-display-stack .volume-wrap { position:relative; left:auto; top:auto;" in source and
+            "body.retro-mode .cover-display-stack .vol-bar { position:relative; flex:1 1 auto; width:auto;" in source and
+            "body.retro-mode .cover-display-stack .vol-bar .seek-fill { top:0; height:100%; border-radius:4px;" in source,
+            f"{platform}: retro volume is not boxed and positioned beneath the metadata")
     require('body.retro-mode[data-retro-layout="winamp"] .cover-display-stack { display:none !important; }' in source,
             f"{platform}: cover/lyrics stack overflows the compact Winamp deck")
     require('data-retro-layout="winamp"' in source and 'id="smRetroLayoutWinamp"' in source,
