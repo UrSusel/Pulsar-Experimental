@@ -963,6 +963,20 @@
   .sm-lab { font-size: 13.5px; color: #fff; }
   .sm-desc { font-size: 11.5px; line-height: 1.35; color: rgba(255,255,255,.5); }
   .sm-desc-top { margin-bottom: 4px; }
+  /* Optional early-2000s skin: glossy navy panels, sharp chrome edges and neon accents. */
+  body.retro-mode { font-family: Tahoma, Verdana, Arial, sans-serif; --retro-cyan: #36f4ff; --retro-pink: #ff54c8; }
+  body.retro-mode .sm-dialog { border: 2px solid #438da8; border-radius: 5px; background: linear-gradient(145deg, rgba(10,30,54,.98), rgba(4,10,24,.99)); box-shadow: 0 0 0 1px rgba(54,244,255,.22), 0 24px 70px rgba(0,0,0,.8), inset 0 1px rgba(255,255,255,.15); }
+  body.retro-mode .sm-side { background: linear-gradient(180deg, rgba(27,66,100,.72), rgba(5,20,39,.8)); border-right-color: rgba(91,205,232,.35); }
+  body.retro-mode .sm-card { border: 1px solid rgba(75,190,222,.32); border-radius: 4px; background: linear-gradient(150deg, rgba(27,65,91,.42), rgba(4,17,35,.58)); box-shadow: inset 0 1px rgba(255,255,255,.08); }
+  body.retro-mode .sm-cap { color: #79d8ed; }
+  body.retro-mode .sm-tab { border-radius: 3px; }
+  body.retro-mode .sm-tab.active { background: linear-gradient(180deg, rgba(39,156,196,.42), rgba(14,67,106,.45)); box-shadow: inset 0 0 0 1px rgba(91,224,255,.3), inset 3px 0 0 var(--retro-cyan); }
+  body.retro-mode .sm-select, body.retro-mode .sm-search { border-radius: 3px; border-color: rgba(84,205,231,.45); background: linear-gradient(180deg, rgba(29,58,82,.94), rgba(8,22,39,.96)); }
+  body.retro-mode .sm-btn, body.retro-mode .sm-act { border-radius: 3px; border: 1px solid rgba(113,224,255,.42); background: linear-gradient(180deg, rgba(51,133,166,.6), rgba(12,48,78,.82)); box-shadow: inset 0 1px rgba(255,255,255,.2); }
+  body.retro-mode .cover-wrap { filter: drop-shadow(0 0 18px rgba(54,244,255,.2)); }
+  body.retro-mode .ctrl-btn.play-main.playing { background: linear-gradient(180deg, #ff73d5, #a3229a); box-shadow: 0 0 18px rgba(255,84,200,.36); }
+  body.retro-mode .seek-fill { background: linear-gradient(90deg, var(--retro-cyan), var(--retro-pink)); }
+  body.retro-mode .ambient-bg-container { filter: saturate(1.12) hue-rotate(-5deg); }
   .sm-slot { flex: 0 0 auto; display: inline-flex; }
   .sm-slot-hidden { display: none !important; }
   .sm-slot .icon-btn { width: 36px; height: 30px; }
@@ -1658,6 +1672,7 @@
       <div class="sm-pane" data-pane="look">
         <h2 class="sm-pane-title">Wygląd</h2>
         <div class="sm-card"><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Język</span></div><select id="smLang" class="sm-select" aria-label="Język interfejsu"><option value="pl">Polski</option><option value="en">English</option><option value="es">Español</option></select></div></div>
+        <div class="sm-card"><h3 class="sm-cap">Styl</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Styl retro (lata 2000)</span><span class="sm-desc">Błyszczące granatowe panele, chromowane krawędzie i neonowe akcenty</span></div><label class="switch"><input type="checkbox" id="smRetroStyle"><span class="slider"></span></label></div></div>
         <div class="sm-card"><h3 class="sm-cap">Tło</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Tło reakcyjne 3D</span><span class="sm-desc">Reaktywne tło GPU — pulsowanie w rytm basu i beatu</span></div><span class="sm-slot" id="sm3dSlot"><div class="reactive-toggle" title="Reaktywne tło GPU — pulsowanie w rytm basu i beatu"><label class="switch"><input type="checkbox" id="reactiveToggle"><span class="slider"></span></label><span class="toggle-label">3D</span></div></span></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Reakcja na muzykę (motywy tła)</span><span class="sm-desc">Kolory i światło tła reagują na dźwięk</span></div><label class="switch"><input type="checkbox" id="smAudioReact" checked><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Śledzenie myszy (ruch tła)</span><span class="sm-desc">Tło lekko podąża za kursorem</span></div><label class="switch"><input type="checkbox" id="smBgFollow" checked><span class="slider"></span></label></div></div>
       </div>
       <div class="sm-pane" data-pane="lib">
@@ -1718,6 +1733,11 @@
     if (!_savedLang){ try { localStorage.setItem('playerLang', CUR_LANG); } catch(e){} }
   } catch(e){ CUR_LANG = 'pl'; }
   var I18N_DICT = {
+    'Styl': { en: 'Style', es: 'Estilo' },
+    'Styl retro (lata 2000)': { en: 'Retro style (2000s)', es: 'Estilo retro (años 2000)' },
+    'Błyszczące granatowe panele, chromowane krawędzie i neonowe akcenty': { en: 'Glossy navy panels, chrome edges and neon accents', es: 'Paneles azul marino brillantes, bordes cromados y acentos de neón' },
+    'Styl retro: wł.': { en: 'Retro style: on', es: 'Estilo retro: activado' },
+    'Styl retro: wył.': { en: 'Retro style: off', es: 'Estilo retro: desactivado' },
     'Panel zasobnika w stylu Pulsara': { en: 'Pulsar-style tray panel', es: 'Panel de bandeja al estilo de Pulsar' },
     'Ikona w zasobniku otwiera ciemny panel z okładką i przyciskami zamiast zwykłego menu Windows': { en: 'The tray icon opens a dark panel with the cover and buttons instead of the plain Windows menu', es: 'El icono de la bandeja abre un panel oscuro con la portada y botones en lugar del menú normal de Windows' },
     'Zmiana wyglądu zasobnika zadziała w pełni po ponownym uruchomieniu Pulsara': { en: 'The tray change fully applies after restarting Pulsar', es: 'El cambio de la bandeja se aplicará por completo al reiniciar Pulsar' },
@@ -2829,7 +2849,7 @@
   }
 
   /* ---------- Style wizualizacji ---------- */
-  const VISUAL_MODES = ['Aura okładki', 'Płynny marmur', 'Gwiezdny pył', 'Płynne kulki', 'Kalejdoskop', 'Świetliki', 'Fale', 'Tusz w wodzie', 'Pulsar'];
+  const VISUAL_MODES = ['Aura okładki', 'Płynny marmur', 'Gwiezdny pył', 'Płynne kulki', 'Kalejdoskop', 'Świetliki', 'Fale', 'Tusz w wodzie'];
   let visualMode = 0;
   try {
     const visualRevision = Number(localStorage.getItem('ambientVisualRevision') || 0);
@@ -7883,6 +7903,21 @@
     if (v === 0) return t('środek');
     return (v < 0 ? t('L ') : t('P ')) + Math.abs(v) + '%';
   }
+  const smRetroStyleEl = document.getElementById('smRetroStyle');
+  function setRetroStyle(enabled){
+    const on = !!enabled;
+    retroStyleOn = on;
+    document.body.classList.toggle('retro-mode', on);
+    if (smRetroStyleEl) smRetroStyleEl.checked = on;
+    try { localStorage.setItem('playerRetroStyle', on ? '1' : '0'); } catch(e){}
+  }
+  let retroStyleOn = false;
+  try { retroStyleOn = localStorage.getItem('playerRetroStyle') === '1'; } catch(e){}
+  setRetroStyle(retroStyleOn);
+  if (smRetroStyleEl) smRetroStyleEl.addEventListener('change', function(){
+    setRetroStyle(smRetroStyleEl.checked);
+    showToast(t(retroStyleOn ? 'Styl retro: wł.' : 'Styl retro: wył.'));
+  });
   const smLangEl = document.getElementById('smLang');
   if (smLangEl){
     smLangEl.value = CUR_LANG;
