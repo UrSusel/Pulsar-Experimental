@@ -11,11 +11,12 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /vec2 p = \(uv - uOrigin\) \* vec2\(aspect, 1\.0\) \* 2\.5/, `${platform}: shader coordinates radiate from the supplied origin`);
   assert.match(html, /vec2 wq = \(uv - uOrigin\) \* vec2\(aspect, 1\.0\)/, `${platform}: wave mode is anchored to the album too`);
   assert.match(html, /length\(\(uv - uOrigin\) \* vec2\(aspect, 1\.0\)/, `${platform}: vignette follows the album center`);
-  assert.match(html, /float sourceRing = exp\(-abs\(sourceR - pulseR\)/, `${platform}: every visual style includes an outward pulse ring`);
-  assert.match(html, /float spec = texture2D\(uSpectrum, vec2\(abs\(a\) \* 0\.31830989, 0\.5\)\)\.r;/, `${platform}: the default halo maps the live spectrum continuously around the cover`);
-  assert.match(html, /float ringRadius = 0\.54 \+ spec \* \(0\.12 \+ uBass \* 0\.14\) \+ uBeat \* 0\.05;/, `${platform}: the spectral ring breathes to bass and beats`);
-  assert.match(html, /float pulseRadius = 0\.58 \+ fract\(uTime \* 0\.06\) \* 2\.15;/, `${platform}: soft pulses expand outward from the album`);
-  assert.match(html, /float rayField = rays \* exp\(-abs\(r - ringRadius - 0\.11\) \* 5\.0\)/, `${platform}: fine rays stay attached to the album halo`);
+  assert.match(html, /float shellRadius = 0\.83 \+ petals \* 0\.105/, `${platform}: the new default scene forms an irregular album halo, not a circular equalizer`);
+  assert.match(html, /float silk = exp\(-abs\(folds\) \* 10\.0\) \* exp\(-abs\(shellDelta\) \* 3\.2\);/, `${platform}: layered silk folds add moving depth behind the artwork`);
+  assert.match(html, /float pulseWarp = 0\.12 \* sin\(a \* 3\.0 \+ field \* 3\.0\)/, `${platform}: outward pulses follow the organic halo instead of perfect circles`);
+  assert.match(html, /float sourceBloom = exp\(-sourceR \* 2\.5\);/, `${platform}: the old universal hard pulse ring is removed`);
+  assert.match(html, /const visualRevision = Number\(localStorage\.getItem\('ambientVisualRevision'\) \|\| 0\);/, `${platform}: existing users are switched to the redesigned visualizer once`);
+  assert.match(html, /localStorage\.setItem\('ambientVisualMode', '0'\)/, `${platform}: the redesign becomes the selected style on upgrade`);
   assert.match(html, /vec3 lifted = c \/ max\(m, 0\.28\) \* 0\.82;/, `${platform}: extracted cover colors keep their natural saturation`);
   assert.match(html, /const coverRect=coverWrap\.getBoundingClientRect\(\)/, `${platform}: origin follows the live album-cover position`);
   assert.match(html, /originX\+=\(targetOriginX-originX\)\*originEase/, `${platform}: the origin follows cover motion smoothly`);
