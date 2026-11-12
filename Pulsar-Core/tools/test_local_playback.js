@@ -15,6 +15,12 @@ for (const platform of ['Linux', 'Windows']) {
     `${platform}: local audio starts in the click activation before metadata work can consume it`);
   assert.match(loadTrack[1], /try \{ await ensureTrackMeta\(track\); \}\s*catch\(e\)/,
     `${platform}: a metadata failure does not prevent playback or reject the track load`);
+  assert.match(html, /const isLinux=\/Linux\/i\.test\(navigator\.platform \|\| navigator\.userAgent \|\| ''\);/,
+    `${platform}: Linux decoder failures are detected from the runtime platform`);
+  assert.match(html, /Linux\/WebKit nie obsłużył pliku \(format lub kodek\)/,
+    `${platform}: Linux users get an actionable WebKit/GStreamer diagnosis`);
+  assert.match(html, /showToast\(detail,10000\)/,
+    `${platform}: the codec diagnosis remains visible long enough to read`);
 
   assert.match(html, /const maxPixels = 1280 \* 720;/,
     `${platform}: the GPU visualizer has a fixed pixel budget on high-DPI displays`);
