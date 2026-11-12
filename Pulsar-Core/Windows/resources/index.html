@@ -1601,11 +1601,11 @@
 
   body.retro-mode .player::-webkit-scrollbar { display: none; width: 0; height: 0; }
   body.retro-mode .player { overflow-x: clip; scrollbar-width: none; }
-  body.retro-mode { --retro-cyan: #36e6ff; --retro-pink: #ff55c8; --retro-frame: #8297a5; --retro-accent: #36e6ff; --retro-accent2: #ff55c8; --retro-bg: #173c63; --retro-panel-a: #143451; --retro-panel-b: #061627; --retro-title-a: #557a98; --retro-title-b: #102b49; --retro-button-a: #2f7e9e; --retro-button-b: #0a2c48; --retro-radius: 5px; }
-  body.retro-mode[data-retro-theme="green"] { --retro-cyan:#8dff72; --retro-pink:#36e6ff; --retro-frame:#94b69a; --retro-accent:#8dff72; --retro-accent2:#36e6ff; --retro-bg:#1b503b; --retro-panel-a:#174635; --retro-panel-b:#071b17; --retro-title-a:#4b8a66; --retro-title-b:#123e2a; --retro-button-a:#348957; --retro-button-b:#0b3924; }
-  body.retro-mode[data-retro-theme="pink"] { --retro-cyan:#ff71cf; --retro-pink:#55eaff; --retro-frame:#c397bd; --retro-accent:#ff71cf; --retro-accent2:#55eaff; --retro-bg:#542759; --retro-panel-a:#482248; --retro-panel-b:#1b0b24; --retro-title-a:#a05290; --retro-title-b:#41183f; --retro-button-a:#a33f88; --retro-button-b:#481542; }
-  body.retro-mode[data-retro-theme="amber"] { --retro-cyan:#ffc653; --retro-pink:#ff6a42; --retro-frame:#c2a878; --retro-accent:#ffc653; --retro-accent2:#ff6a42; --retro-bg:#59432a; --retro-panel-a:#48351f; --retro-panel-b:#1b120a; --retro-title-a:#967343; --retro-title-b:#39250e; --retro-button-a:#a47731; --retro-button-b:#4b2c11; }
-  body.retro-mode[data-retro-theme="metal"] { --retro-cyan:#e7f0f6; --retro-pink:#9eb2c0; --retro-frame:#c4ccd2; --retro-accent:#e7f0f6; --retro-accent2:#9eb2c0; --retro-bg:#343b40; --retro-panel-a:#49535a; --retro-panel-b:#14191d; --retro-title-a:#aab4ba; --retro-title-b:#343b40; --retro-button-a:#89959c; --retro-button-b:#30383e; --retro-radius:2px; }
+  body.retro-mode { --retro-cyan: #36e6ff; --retro-pink: #ff55c8; --accent: #36e6ff; --accent-rgb: 54,230,255; --accent-contrast: #061019; --retro-frame: #8297a5; --retro-accent: #36e6ff; --retro-accent2: #ff55c8; --retro-bg: #173c63; --retro-panel-a: #143451; --retro-panel-b: #061627; --retro-title-a: #557a98; --retro-title-b: #102b49; --retro-button-a: #2f7e9e; --retro-button-b: #0a2c48; --retro-radius: 5px; }
+  body.retro-mode[data-retro-theme="green"] { --retro-cyan:#8dff72; --retro-pink:#36e6ff; --accent:#8dff72; --accent-rgb:141,255,114; --accent-contrast:#071207; --retro-frame:#94b69a; --retro-accent:#8dff72; --retro-accent2:#36e6ff; --retro-bg:#1b503b; --retro-panel-a:#174635; --retro-panel-b:#071b17; --retro-title-a:#4b8a66; --retro-title-b:#123e2a; --retro-button-a:#348957; --retro-button-b:#0b3924; }
+  body.retro-mode[data-retro-theme="pink"] { --retro-cyan:#ff71cf; --retro-pink:#55eaff; --accent:#ff71cf; --accent-rgb:255,113,207; --accent-contrast:#1a0714; --retro-frame:#c397bd; --retro-accent:#ff71cf; --retro-accent2:#55eaff; --retro-bg:#542759; --retro-panel-a:#482248; --retro-panel-b:#1b0b24; --retro-title-a:#a05290; --retro-title-b:#41183f; --retro-button-a:#a33f88; --retro-button-b:#481542; }
+  body.retro-mode[data-retro-theme="amber"] { --retro-cyan:#ffc653; --retro-pink:#ff6a42; --accent:#ffc653; --accent-rgb:255,198,83; --accent-contrast:#1b1102; --retro-frame:#c2a878; --retro-accent:#ffc653; --retro-accent2:#ff6a42; --retro-bg:#59432a; --retro-panel-a:#48351f; --retro-panel-b:#1b120a; --retro-title-a:#967343; --retro-title-b:#39250e; --retro-button-a:#a47731; --retro-button-b:#4b2c11; }
+  body.retro-mode[data-retro-theme="metal"] { --retro-cyan:#e7f0f6; --retro-pink:#9eb2c0; --accent:#c4ccd2; --accent-rgb:196,204,210; --accent-contrast:#101519; --retro-frame:#c4ccd2; --retro-accent:#e7f0f6; --retro-accent2:#9eb2c0; --retro-bg:#343b40; --retro-panel-a:#49535a; --retro-panel-b:#14191d; --retro-title-a:#aab4ba; --retro-title-b:#343b40; --retro-button-a:#89959c; --retro-button-b:#30383e; --retro-radius:2px; }
   body.retro-mode[data-retro-theme="metal"] { background: radial-gradient(ellipse at 50% 15%, #6c767c, #2b3136 55%, #121619); }
   body.retro-mode[data-retro-theme="metal"] .bottombar,
   body.retro-mode[data-retro-theme="metal"] .player,
@@ -1678,6 +1678,156 @@
   body.retro-mode[data-retro-theme="pink"] .album-card,
   body.retro-mode[data-retro-theme="amber"] .track-list li,
   body.retro-mode[data-retro-theme="amber"] .album-card { border-color:color-mix(in srgb,var(--retro-accent) 22%,transparent); background:linear-gradient(100deg,color-mix(in srgb,var(--retro-panel-a) 75%,transparent),var(--retro-panel-b)); }
+  body.retro-mode[data-retro-theme="classic"] .bottombar,
+  body.retro-mode[data-retro-theme="classic"] .player,
+  body.retro-mode[data-retro-theme="classic"] .library-panel,
+  body.retro-mode[data-retro-theme="green"] .bottombar,
+  body.retro-mode[data-retro-theme="green"] .player,
+  body.retro-mode[data-retro-theme="green"] .library-panel,
+  body.retro-mode[data-retro-theme="pink"] .bottombar,
+  body.retro-mode[data-retro-theme="pink"] .player,
+  body.retro-mode[data-retro-theme="pink"] .library-panel,
+  body.retro-mode[data-retro-theme="amber"] .bottombar,
+  body.retro-mode[data-retro-theme="amber"] .player,
+  body.retro-mode[data-retro-theme="amber"] .library-panel { border-color:var(--retro-frame); }
+  body.retro-mode[data-retro-theme="classic"] .ctrl-btn.play-main,
+  body.retro-mode[data-retro-theme="classic"] .cover-control.play-cover,
+  body.retro-mode[data-retro-theme="classic"] .lib-tab.active,
+  body.retro-mode[data-retro-theme="classic"] .switch input:checked + .slider,
+  body.retro-mode[data-retro-theme="green"] .ctrl-btn.play-main,
+  body.retro-mode[data-retro-theme="green"] .cover-control.play-cover,
+  body.retro-mode[data-retro-theme="green"] .lib-tab.active,
+  body.retro-mode[data-retro-theme="green"] .switch input:checked + .slider,
+  body.retro-mode[data-retro-theme="pink"] .ctrl-btn.play-main,
+  body.retro-mode[data-retro-theme="pink"] .cover-control.play-cover,
+  body.retro-mode[data-retro-theme="pink"] .lib-tab.active,
+  body.retro-mode[data-retro-theme="pink"] .switch input:checked + .slider,
+  body.retro-mode[data-retro-theme="amber"] .ctrl-btn.play-main,
+  body.retro-mode[data-retro-theme="amber"] .cover-control.play-cover,
+  body.retro-mode[data-retro-theme="amber"] .lib-tab.active,
+  body.retro-mode[data-retro-theme="amber"] .switch input:checked + .slider { border-color:var(--retro-accent); background:linear-gradient(180deg,var(--retro-accent),var(--retro-accent2)); color:#09131a; }
+  body.retro-mode[data-retro-theme="classic"] .ctrl-btn:not(.play-main):hover,
+  body.retro-mode[data-retro-theme="classic"] .bb-right .icon-btn:hover,
+  body.retro-mode[data-retro-theme="classic"] .cover-control:not(.play-cover):hover,
+  body.retro-mode[data-retro-theme="classic"] .lib-tool:hover,
+  body.retro-mode[data-retro-theme="green"] .ctrl-btn:not(.play-main):hover,
+  body.retro-mode[data-retro-theme="green"] .bb-right .icon-btn:hover,
+  body.retro-mode[data-retro-theme="green"] .cover-control:not(.play-cover):hover,
+  body.retro-mode[data-retro-theme="green"] .lib-tool:hover,
+  body.retro-mode[data-retro-theme="pink"] .ctrl-btn:not(.play-main):hover,
+  body.retro-mode[data-retro-theme="pink"] .bb-right .icon-btn:hover,
+  body.retro-mode[data-retro-theme="pink"] .cover-control:not(.play-cover):hover,
+  body.retro-mode[data-retro-theme="pink"] .lib-tool:hover,
+  body.retro-mode[data-retro-theme="amber"] .ctrl-btn:not(.play-main):hover,
+  body.retro-mode[data-retro-theme="amber"] .bb-right .icon-btn:hover,
+  body.retro-mode[data-retro-theme="amber"] .cover-control:not(.play-cover):hover,
+  body.retro-mode[data-retro-theme="amber"] .lib-tool:hover { border-color:var(--retro-accent); color:var(--retro-accent); box-shadow:0 0 10px color-mix(in srgb,var(--retro-accent) 30%,transparent); }
+  body.retro-mode[data-retro-theme="classic"] .track-list li.active,
+  body.retro-mode[data-retro-theme="classic"] .album-card.active-album,
+  body.retro-mode[data-retro-theme="green"] .track-list li.active,
+  body.retro-mode[data-retro-theme="green"] .album-card.active-album,
+  body.retro-mode[data-retro-theme="pink"] .track-list li.active,
+  body.retro-mode[data-retro-theme="pink"] .album-card.active-album,
+  body.retro-mode[data-retro-theme="amber"] .track-list li.active,
+  body.retro-mode[data-retro-theme="amber"] .album-card.active-album { border-color:color-mix(in srgb,var(--retro-accent) 75%,transparent); background:linear-gradient(100deg,color-mix(in srgb,var(--retro-accent) 25%,var(--retro-panel-a)),var(--retro-panel-b)); color:#f4ffff; }
+  body.retro-mode[data-retro-theme="classic"] .cover-wrap,
+  body.retro-mode[data-retro-theme="green"] .cover-wrap,
+  body.retro-mode[data-retro-theme="pink"] .cover-wrap,
+  body.retro-mode[data-retro-theme="amber"] .cover-wrap { border-color:var(--retro-accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--retro-accent) 24%,transparent),0 0 22px color-mix(in srgb,var(--retro-accent) 38%,transparent),0 28px 60px rgba(0,0,0,.72); }
+  body.retro-mode[data-retro-theme="classic"] .seek-fill,
+  body.retro-mode[data-retro-theme="classic"] .seek-thumb,
+  body.retro-mode[data-retro-theme="green"] .seek-fill,
+  body.retro-mode[data-retro-theme="green"] .seek-thumb,
+  body.retro-mode[data-retro-theme="pink"] .seek-fill,
+  body.retro-mode[data-retro-theme="pink"] .seek-thumb,
+  body.retro-mode[data-retro-theme="amber"] .seek-fill,
+  body.retro-mode[data-retro-theme="amber"] .seek-thumb { background:linear-gradient(90deg,var(--retro-accent),var(--retro-accent2)); border-color:var(--retro-accent); box-shadow:0 0 8px color-mix(in srgb,var(--retro-accent) 45%,transparent); }
+  body.retro-mode[data-retro-theme="classic"] .bottombar::before,
+  body.retro-mode[data-retro-theme="classic"] .player::before,
+  body.retro-mode[data-retro-theme="classic"] .library-panel::before,
+  body.retro-mode[data-retro-theme="green"] .bottombar::before,
+  body.retro-mode[data-retro-theme="green"] .player::before,
+  body.retro-mode[data-retro-theme="green"] .library-panel::before,
+  body.retro-mode[data-retro-theme="pink"] .bottombar::before,
+  body.retro-mode[data-retro-theme="pink"] .player::before,
+  body.retro-mode[data-retro-theme="pink"] .library-panel::before,
+  body.retro-mode[data-retro-theme="amber"] .bottombar::before,
+  body.retro-mode[data-retro-theme="amber"] .player::before,
+  body.retro-mode[data-retro-theme="amber"] .library-panel::before { background:linear-gradient(90deg,var(--retro-title-a),var(--retro-title-b)); }
+
+  /* Retro control deck alignment and compact Winamp-inspired playlist mode. */
+  body.retro-mode .volume-wrap { position: absolute; left: 50%; top: 41px; z-index: 2; width: 132px; margin: 0; transform: translateX(-50%); }
+  body.retro-mode .library-toolbar { display:grid; grid-template-columns:repeat(auto-fit,minmax(108px,1fr)); gap:5px; padding:0 4px 7px; }
+  body.retro-mode .library-toolbar .lib-tool { min-width:0; min-height:27px; padding:5px 6px; overflow:hidden; text-overflow:ellipsis; font-size:10px; border-radius:3px; }
+  body.retro-mode .bpm-chip { display: none !important; }
+  .sm-retro-layouts { display:flex; flex:0 0 auto; gap:5px; }
+  .sm-retro-layout-btn { min-width:112px; padding:7px 11px; border:1px solid rgba(125,205,230,.38); border-radius:4px; color:#b7d8e4; background:linear-gradient(180deg,rgba(20,51,73,.95),rgba(6,19,33,.98)); font:600 11px Tahoma,Verdana,sans-serif; cursor:pointer; transition:background .15s,border-color .15s,color .15s,box-shadow .15s; }
+  .sm-retro-layout-btn[aria-pressed="true"] { color:#08131a; border-color:var(--accent); background:linear-gradient(180deg,var(--accent),var(--accent)); box-shadow:0 0 10px rgba(var(--accent-rgb),.32); }
+  .sm-retro-layout-btn:hover { border-color:var(--accent); color:#fff; }
+  body.retro-mode .sm-retro-layout-btn[aria-pressed="true"] { color:#07131a; border-color:var(--retro-accent); background:linear-gradient(180deg,var(--retro-accent),var(--retro-accent2)); box-shadow:0 0 10px color-mix(in srgb,var(--retro-accent) 35%,transparent); }
+  body.retro-mode .sm-retro-layout-btn:hover { border-color:var(--retro-accent); color:#fff; }
+  body.retro-mode[data-retro-layout="winamp"] { background-color:#09090d; background-image:radial-gradient(ellipse at 50% 0%,rgba(80,45,8,.28),transparent 60%),repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px); }
+  body.retro-mode[data-retro-layout="winamp"] .ambient-bg-container { opacity:.52; filter:saturate(1.24) contrast(1.08) brightness(.62); }
+  body.retro-mode[data-retro-layout="winamp"] .player { display:none; }
+  body.retro-mode[data-retro-layout="winamp"] .bottombar { left:24px; top:24px; right:auto; bottom:auto; width:min(390px,calc(100vw - 48px)); min-height:0; height:176px; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:36px 43px 23px 18px; gap:4px; padding:23px 10px 10px; border:2px solid var(--retro-frame); border-radius:3px; background:linear-gradient(180deg,#47505c 0%,#252933 20%,#10131a 100%); box-shadow:inset 1px 1px rgba(255,255,255,.48),inset -1px -1px rgba(0,0,0,.8),0 12px 30px rgba(0,0,0,.72); }
+  body.retro-mode[data-retro-layout="winamp"] .bottombar::before { content:"PULSAR • WINAMP CLASSIC"; height:14px; background:linear-gradient(90deg,#747b89,#283248 45%,#171c28); color:#f5f6fa; border-color:#aab3c3; font-size:9px; letter-spacing:.06em; }
+  body.retro-mode[data-retro-layout="winamp"] .bb-left { grid-column:1; grid-row:1; gap:7px; min-width:0; }
+  body.retro-mode[data-retro-layout="winamp"] .bb-thumb { width:30px; height:30px; border:1px solid #aab3c3; }
+  body.retro-mode[data-retro-layout="winamp"] .bb-title { color:#8cff8c; font:700 12px 'Courier New',monospace; }
+  body.retro-mode[data-retro-layout="winamp"] .bb-artist { color:#b7c2d3; font:10px 'Courier New',monospace; margin-top:1px; }
+  body.retro-mode[data-retro-layout="winamp"] .bb-center,
+  body.retro-mode[data-retro-layout="winamp"] .bb-right { display:contents; }
+  body.retro-mode[data-retro-layout="winamp"] .controls { grid-column:1; grid-row:2; justify-content:center; gap:7px; }
+  body.retro-mode[data-retro-layout="winamp"] .ctrl-btn:not(.play-main) { width:26px; height:24px; border:1px solid #7d8999; border-radius:2px; color:#e7ebf2; background:linear-gradient(180deg,#737e8e,#303743); box-shadow:inset 0 1px rgba(255,255,255,.42); }
+  body.retro-mode[data-retro-layout="winamp"] .ctrl-btn.play-main { width:29px; height:25px; border:1px solid var(--retro-accent); border-radius:3px; background:linear-gradient(180deg,var(--retro-accent),var(--retro-accent2)); color:#10151b; }
+  body.retro-mode[data-retro-layout="winamp"] .ctrl-btn svg { width:15px; height:15px; }
+  body.retro-mode[data-retro-layout="winamp"] .volume-wrap { position:static; grid-column:1; grid-row:3; justify-self:center; transform:none; width:144px; height:20px; gap:5px; margin:0; padding:2px 5px; border:1px solid #657080; border-radius:2px; background:linear-gradient(180deg,#171b24,#303744); }
+  body.retro-mode[data-retro-layout="winamp"] .volume-wrap .icon-btn { width:20px; height:17px; color:#e8edf6; }
+  body.retro-mode[data-retro-layout="winamp"] .vol-bar { height:5px; background:#10131b; border:1px solid #566071; }
+  body.retro-mode[data-retro-layout="winamp"] .vol-bar .seek-fill { background:linear-gradient(90deg,#48e96d,#52c8f0); }
+  body.retro-mode[data-retro-layout="winamp"] .bb-right > .icon-btn:not(#libraryBtn):not(#settingsBtn) { display:none; }
+  body.retro-mode[data-retro-layout="winamp"] .bb-right > #libraryBtn,
+  body.retro-mode[data-retro-layout="winamp"] .bb-right > #settingsBtn { position:absolute; z-index:3; top:22px; width:24px; height:22px; }
+  body.retro-mode[data-retro-layout="winamp"] .bb-right > #libraryBtn { right:8px; }
+  body.retro-mode[data-retro-layout="winamp"] .bb-right > #settingsBtn { right:35px; }
+  body.retro-mode[data-retro-layout="winamp"] .seek-row { grid-column:1; grid-row:4; width:100%; max-width:none; gap:5px; }
+  body.retro-mode[data-retro-layout="winamp"] .seek-row .time { min-width:30px; font:9px 'Courier New',monospace; color:#c1c9d5; }
+  body.retro-mode[data-retro-layout="winamp"] .seek-bar { height:6px; border:1px solid #606b7c; border-radius:1px; background:#11151c; }
+  body.retro-mode[data-retro-layout="winamp"] .seek-fill { background:linear-gradient(90deg,#40ec71,#36d8d2); }
+  body.retro-mode[data-retro-layout="winamp"] .library-panel { position:fixed; top:211px; left:24px; right:auto; bottom:20px; width:min(390px,calc(100vw - 48px)); height:auto; padding:24px 8px 8px; border:2px solid var(--retro-frame); border-radius:3px; background:linear-gradient(180deg,#1d222d,#090b10 40%); box-shadow:inset 1px 1px rgba(255,255,255,.35),inset -1px -1px rgba(0,0,0,.85),0 12px 30px rgba(0,0,0,.68); transform:translateY(calc(100% + 30px)); backdrop-filter:none; -webkit-backdrop-filter:none; }
+  body.retro-mode[data-retro-layout="winamp"] .library-panel::before { content:"WINAMP PLAYLIST EDITOR"; background:linear-gradient(90deg,#737c8b,#202735 52%,#151a24); border-color:#929baa; }
+  body.retro-mode[data-retro-layout="winamp"] .library-panel.open { transform:translateY(0); }
+  body.retro-mode[data-retro-layout="winamp"] .library-header { min-height:25px; margin:0 0 6px; padding:0 2px; }
+  body.retro-mode[data-retro-layout="winamp"] .library-header h2 { color:#96ff8c; font:700 11px 'Courier New',monospace; }
+  body.retro-mode[data-retro-layout="winamp"] .library-header .icon-btn { width:22px; height:22px; }
+  body.retro-mode[data-retro-layout="winamp"] .library-tabs { gap:3px; padding:2px; border:1px solid #536173; border-radius:2px; background:#10151e; }
+  body.retro-mode[data-retro-layout="winamp"] .lib-tab { padding:4px 7px; border-radius:1px; font-size:9px; }
+  body.retro-mode[data-retro-layout="winamp"] .library-toolbar { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; padding:0 0 5px; }
+  body.retro-mode[data-retro-layout="winamp"] .library-toolbar .lib-tool { min-width:0; padding:4px 3px; overflow:hidden; text-overflow:ellipsis; font-size:9px; }
+  body.retro-mode[data-retro-layout="winamp"] .library-toolbar #soundAtlasBtn,
+  body.retro-mode[data-retro-layout="winamp"] .library-toolbar #enrichBtn,
+  body.retro-mode[data-retro-layout="winamp"] .library-toolbar #dedupeBtn { display:none; }
+  body.retro-mode[data-retro-layout="winamp"] .track-list { gap:0; padding:0 2px; }
+  body.retro-mode[data-retro-layout="winamp"] .track-list li { min-height:22px; gap:7px; padding:2px 5px; border:0; border-radius:0; color:#85f783; background:transparent; font:10px 'Courier New',monospace; }
+  body.retro-mode[data-retro-layout="winamp"] .track-list li:hover,
+  body.retro-mode[data-retro-layout="winamp"] .track-list li.active { color:#c1ffbd; background:rgba(121,255,112,.11); }
+  body.retro-mode[data-retro-layout="winamp"] .track-list img { width:16px; height:16px; border-radius:0; }
+  body.retro-mode[data-retro-layout="winamp"] .track-meta { flex-direction:row; align-items:center; flex:1; gap:7px; }
+  body.retro-mode[data-retro-layout="winamp"] .track-meta .t-title { max-width:65%; color:inherit; font:inherit; }
+  body.retro-mode[data-retro-layout="winamp"] .track-meta .t-artist { flex:1; color:#a0b49f; font:9px 'Courier New',monospace; }
+  body.retro-mode[data-retro-layout="winamp"] .track-list .mini-act { display:none; }
+  body.retro-mode[data-retro-layout="winamp"] .lib-subhead { gap:5px; margin:0 0 5px; padding:0; }
+  body.retro-mode[data-retro-layout="winamp"] .lib-search { min-height:24px; }
+  body.retro-mode[data-retro-layout="winamp"] .lib-search input { padding:4px 7px; font-size:10px; }
+  body.retro-mode[data-retro-layout="winamp"] .album-grid { grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; }
+  body.retro-mode[data-retro-layout="winamp"] .album-card { width:auto; max-width:110px; padding:5px; }
+  body.retro-mode[data-retro-layout="winamp"] .album-card-art img,
+  body.retro-mode[data-retro-layout="winamp"] .album-card > img { height:78px; max-height:78px; }
+  @media (max-width:620px) {
+    body.retro-mode[data-retro-layout="winamp"] .bottombar { left:10px; top:10px; width:min(390px,calc(100vw - 20px)); }
+    body.retro-mode[data-retro-layout="winamp"] .library-panel { left:10px; right:10px; bottom:10px; top:199px; width:auto; }
+  }
+
   /* Album accents must remain legible over album art and translucent surfaces. */
   :root { --accent-contrast: #10141b; }
   body:not(.retro-mode) .ctrl-btn:not(.play-main),
@@ -2084,7 +2234,7 @@
       <div class="sm-pane" data-pane="look">
         <h2 class="sm-pane-title">Wygląd</h2>
         <div class="sm-card"><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Język</span></div><select id="smLang" class="sm-select" aria-label="Język interfejsu"><option value="pl">Polski</option><option value="en">English</option><option value="es">Español</option></select></div></div>
-        <div class="sm-card"><h3 class="sm-cap">Styl</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Styl retro (lata 2000)</span><span class="sm-desc">Klasyczny układ odtwarzacza z osobnymi panelami playlisty i okładki</span></div><label class="switch"><input type="checkbox" id="smRetroStyle"><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Motyw retro</span><span class="sm-desc">Cztery warianty kolorystyczne oraz osobny motyw metaliczny</span></div><select id="smRetroTheme" class="sm-select" aria-label="Motyw retro"><option value="classic">Klasyczny niebieski</option><option value="green">Zielony neon</option><option value="pink">Neonowy róż</option><option value="amber">Bursztynowy</option><option value="metal">Metal / chrom</option></select></div></div>
+        <div class="sm-card"><h3 class="sm-cap">Styl</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Styl retro (lata 2000)</span><span class="sm-desc">Układ odtwarzacza i biblioteki w stylu klasycznych odtwarzaczy</span></div><label class="switch"><input type="checkbox" id="smRetroStyle"><span class="slider"></span></label></div><div class="sm-row sm-retro-layout-row"><div class="sm-txt"><span class="sm-lab">Układ retro</span><span class="sm-desc">Wybierz osobne panele Pulsara albo kompaktowy układ Winampa</span></div><div class="sm-retro-layouts" role="group" aria-label="Układ retro"><button type="button" class="sm-retro-layout-btn" id="smRetroLayoutClassic" data-retro-layout="classic" aria-pressed="false">Pulsar Classic</button><button type="button" class="sm-retro-layout-btn" id="smRetroLayoutWinamp" data-retro-layout="winamp" aria-pressed="false">Winamp</button></div></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Motyw retro</span><span class="sm-desc">Cztery warianty kolorystyczne oraz osobny motyw metaliczny</span></div><select id="smRetroTheme" class="sm-select" aria-label="Motyw retro"><option value="classic">Klasyczny niebieski</option><option value="green">Zielony neon</option><option value="pink">Neonowy róż</option><option value="amber">Bursztynowy</option><option value="metal">Metal / chrom</option></select></div></div>
         <div class="sm-card"><h3 class="sm-cap">Kolory interfejsu</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Dopasuj kolory do okładki</span><span class="sm-desc">Automatycznie dobiera akcenty i kolory wizualizacji z okładki albumu</span></div><label class="switch"><input type="checkbox" id="smAlbumColors" checked><span class="slider"></span></label></div><div class="sm-row sm-color-row"><div class="sm-txt"><span class="sm-lab">Kolory ręczne</span><span class="sm-desc">Działają, gdy automatyczne dopasowanie jest wyłączone</span></div><div class="sm-color-pickers"><label class="sm-color-control"><span>Główny</span><input type="color" id="smManualAccent" value="#39c5ff" aria-label="Kolor główny"></label><label class="sm-color-control"><span>Uzupełniający</span><input type="color" id="smManualSecondary" value="#ff5ca8" aria-label="Kolor uzupełniający"></label></div></div></div>
         <div class="sm-card"><h3 class="sm-cap">Tło</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Tło reakcyjne 3D</span><span class="sm-desc">Reaktywne tło GPU — pulsowanie w rytm basu i beatu</span></div><span class="sm-slot" id="sm3dSlot"><div class="reactive-toggle" title="Reaktywne tło GPU — pulsowanie w rytm basu i beatu"><label class="switch"><input type="checkbox" id="reactiveToggle"><span class="slider"></span></label><span class="toggle-label">3D</span></div></span></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Reakcja na muzykę (motywy tła)</span><span class="sm-desc">Kolory i światło tła reagują na dźwięk</span></div><label class="switch"><input type="checkbox" id="smAudioReact" checked><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Śledzenie myszy (ruch tła)</span><span class="sm-desc">Tło lekko podąża za kursorem</span></div><label class="switch"><input type="checkbox" id="smBgFollow" checked><span class="slider"></span></label></div></div>
       </div>
@@ -2146,6 +2296,11 @@
     if (!_savedLang){ try { localStorage.setItem('playerLang', CUR_LANG); } catch(e){} }
   } catch(e){ CUR_LANG = 'pl'; }
   var I18N_DICT = {
+    'Układ retro': { en: 'Retro layout', es: 'Diseño retro' },
+    'Układ odtwarzacza i biblioteki w stylu klasycznych odtwarzaczy': { en: 'A classic player-style layout for the player and library', es: 'Diseño clásico para el reproductor y la biblioteca' },
+    'Wybierz osobne panele Pulsara albo kompaktowy układ Winampa': { en: 'Choose separate Pulsar panels or the compact Winamp layout', es: 'Elige paneles Pulsar separados o el diseño compacto de Winamp' },
+    'Pulsar Classic': { en: 'Pulsar Classic', es: 'Pulsar clásico' },
+    'Winamp': { en: 'Winamp', es: 'Winamp' },
     'Motyw retro': { en: 'Retro theme', es: 'Tema retro' },
     'Cztery warianty kolorystyczne oraz osobny motyw metaliczny': { en: 'Four color variations plus a separate metallic theme', es: 'Cuatro variantes de color y un tema metálico independiente' },
     'Klasyczny niebieski': { en: 'Classic blue', es: 'Azul clásico' },
@@ -8394,7 +8549,33 @@
   }
   const smRetroStyleEl = document.getElementById('smRetroStyle');
   const smRetroThemeEl = document.getElementById('smRetroTheme');
+  const smRetroLayoutButtons = Array.from(document.querySelectorAll('[data-retro-layout]'));
   const RETRO_THEMES = ['classic', 'green', 'pink', 'amber', 'metal'];
+  function setRetroLayout(layout){
+    const chosen = layout === 'winamp' ? 'winamp' : 'classic';
+    document.body.dataset.retroLayout = chosen;
+    smRetroLayoutButtons.forEach(function(button){
+      const active = button.dataset.retroLayout === chosen;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    try { localStorage.setItem('playerRetroLayout', chosen); } catch(e){}
+  }
+  let savedRetroLayout = 'classic';
+  try { savedRetroLayout = localStorage.getItem('playerRetroLayout') || 'classic'; } catch(e){}
+  setRetroLayout(savedRetroLayout);
+  smRetroLayoutButtons.forEach(function(button){
+    button.addEventListener('click', function(){
+      setRetroLayout(button.dataset.retroLayout);
+      if (smRetroStyleEl && !smRetroStyleEl.checked){
+        setRetroStyle(true);
+        smRetroStyleEl.checked = true;
+      } else if (libraryPanel && !libraryPanel.classList.contains('open')) {
+        openLibrary();
+      }
+      showToast(t(button.dataset.retroLayout === 'winamp' ? 'Winamp' : 'Pulsar Classic'));
+    });
+  });
   function setRetroTheme(theme){
     const chosen = RETRO_THEMES.indexOf(theme) >= 0 ? theme : 'classic';
     document.body.dataset.retroTheme = chosen;

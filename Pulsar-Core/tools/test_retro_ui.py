@@ -52,6 +52,23 @@ def check(platform: str) -> None:
     require("grid-template-columns:repeat(auto-fill,minmax(136px,160px))" in source and
             "max-width:144px" in source,
             f"{platform}: album artwork cards are not constrained to a compact size")
+    require("body.retro-mode .volume-wrap { position: absolute; left: 50%; top: 41px;" in source,
+            f"{platform}: retro volume control is not centered inside its deck")
+    require("body.retro-mode .library-toolbar { display:grid; grid-template-columns:repeat(auto-fit,minmax(108px,1fr));" in source,
+            f"{platform}: retro library toolbar remains oversized")
+    require("body.retro-mode .bpm-chip { display: none !important; }" in source,
+            f"{platform}: BPM badge remains visible in retro mode")
+    require('data-retro-layout="winamp"' in source and 'id="smRetroLayoutWinamp"' in source,
+            f"{platform}: Winamp layout option is missing")
+    require('id="smRetroLayoutClassic"' in source and
+            "localStorage.setItem('playerRetroLayout', chosen)" in source,
+            f"{platform}: retro layout options are not persisted")
+    require("body.retro-mode[data-retro-layout=\"winamp\"] .library-panel { position:fixed; top:211px;" in source,
+            f"{platform}: Winamp playlist is not compactly docked under its player")
+    for theme, accent in (("green", "--accent:#8dff72"), ("pink", "--accent:#ff71cf"),
+                          ("amber", "--accent:#ffc653"), ("metal", "--accent:#c4ccd2")):
+        require(f'data-retro-theme="{theme}"' in source and accent in source,
+                f"{platform}: {theme} theme does not propagate its color through the UI")
     print(f"{platform}: retro layout/theme regressions passed")
 
 
