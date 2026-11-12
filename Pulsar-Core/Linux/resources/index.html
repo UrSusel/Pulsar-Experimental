@@ -8299,10 +8299,21 @@
     return (v < 0 ? t('L ') : t('P ')) + Math.abs(v) + '%';
   }
   const smRetroStyleEl = document.getElementById('smRetroStyle');
+  let retroOpenedLibraryForTheme = false;
   function setRetroStyle(enabled){
     const on = !!enabled;
+    const wasOn = document.body.classList.contains('retro-mode');
     retroStyleOn = on;
     document.body.classList.toggle('retro-mode', on);
+    if (on && !wasOn && libraryPanel && !libraryPanel.classList.contains('open')){
+      retroOpenedLibraryForTheme = true;
+      setTimeout(function(){
+        if (retroStyleOn && retroOpenedLibraryForTheme && !libraryPanel.classList.contains('open')) openLibrary();
+      }, 0);
+    } else if (!on && wasOn && retroOpenedLibraryForTheme){
+      retroOpenedLibraryForTheme = false;
+      if (libraryPanel && libraryPanel.classList.contains('open')) closeLibrary();
+    }
     if (smRetroStyleEl) smRetroStyleEl.checked = on;
     try { localStorage.setItem('playerRetroStyle', on ? '1' : '0'); } catch(e){}
   }
