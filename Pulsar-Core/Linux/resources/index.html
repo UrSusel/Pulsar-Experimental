@@ -2873,6 +2873,7 @@
       'uniform float uHigh;',
       'uniform float uBeat;',
       'uniform vec2 uPointer;',
+      'uniform vec2 uOrigin;',
       'uniform int uMode;',
       'uniform vec3 uCol0;',
       'uniform vec3 uCol1;',
@@ -2922,8 +2923,8 @@
       'void main(){',
       '  vec2 uv = gl_FragCoord.xy / uRes;',
       '  float aspect = uRes.x / max(uRes.y, 1.0);',
-      '  vec2 p = (uv - 0.5) * vec2(aspect, 1.0) * 2.5;',
-      '  p += uPointer * 0.16;',
+      '  vec2 p = (uv - uOrigin) * vec2(aspect, 1.0) * 2.5;',
+      '  p += uPointer * 0.06;',
       '  float t = uTime * 0.055;',
       '  float energy = uBass + uBeat * 0.8;',
       '  vec3 col = vec3(0.0);',
@@ -3030,7 +3031,7 @@
       '      }',
       '    }',
       '  } else if (uMode == 6){',
-      '    vec2 wq = (uv - 0.5) * vec2(aspect, 1.0) + vec2(0.0, 0.5);',
+      '    vec2 wq = (uv - uOrigin) * vec2(aspect, 1.0) + vec2(0.0, 0.5);',
       '    float lines = 0.0;',
       '    for (int i = 0; i < 7; i++){',
       '      float fi = float(i);',
@@ -3074,11 +3075,17 @@
       '    colP += pop(paletteMix(0.25)) * step(0.985 - uHigh * 0.12, st) * smoothstep(0.4, 1.2, r) * uHigh * 1.2;',
       '    col = colP;',
       '  }',
+      '  float sourceR = length(p);',
+      '  float pulseR = 0.12 + fract(uTime * 0.075) * 2.55;',
+      '  float sourceRing = exp(-abs(sourceR - pulseR) * (20.0 + uHigh * 12.0));',
+      '  float sourceCore = exp(-sourceR * (3.6 - uBass * 1.1));',
+      '  col += pop(paletteMix(0.72 + uBass * 0.12)) * sourceRing * (0.1 + uBass * 0.16 + uBeat * 0.24);',
+      '  col += pop(paletteMix(0.94)) * sourceCore * (0.06 + uBass * 0.1 + uBeat * 0.2);',
       '  col *= 1.0 + 0.42 * uBeat;',
       '  col = aces(col * 1.32);',
       '  float lum = dot(col, vec3(0.299, 0.587, 0.114));',
       '  col = mix(vec3(lum), col, 1.18);',
-      '  float vig = 1.0 - smoothstep(0.5, 1.85, length((uv - 0.5) * vec2(aspect, 1.0) * 1.75));',
+      '  float vig = 1.0 - smoothstep(0.5, 1.85, length((uv - uOrigin) * vec2(aspect, 1.0) * 1.75));',
       '  col *= 0.42 + 0.58 * vig;',
       '  float grain = hash21(uv * uRes + fract(uTime) * 91.7) - 0.5;',
       '  col += grain * 0.028;',
@@ -3119,7 +3126,7 @@
       gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
       const U = {};
-      ['uRes', 'uTime', 'uBass', 'uMid', 'uHigh', 'uBeat', 'uPointer', 'uMode', 'uCol0', 'uCol1', 'uCol2', 'uCol3', 'uCol4', 'uSpectrum'].forEach(function(name){
+      ['uRes', 'uTime', 'uBass', 'uMid', 'uHigh', 'uBeat', 'uPointer', 'uOrigin', 'uMode', 'uCol0', 'uCol1', 'uCol2', 'uCol3', 'uCol4', 'uSpectrum'].forEach(function(name){
         U[name] = gl.getUniformLocation(program, name);
       });
 
@@ -3140,7 +3147,7 @@
         { r: 30, g: 60, b: 120 }, { r: 90, g: 40, b: 140 }, { r: 40, g: 120, b: 150 },
         { r: 140, g: 60, b: 160 }, { r: 50, g: 70, b: 130 }
       ];
-      let time = 0, last = performance.now();
+      let time = 0, last = performance.now(), originX = 0.5, originY = 0.5;
 
       function accentFallback(i){
         const a = currentAccent;
@@ -3170,6 +3177,16 @@
           let dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
           last = now;
           time += dt * (audio.paused ? 0.45 : 1) * (1 + moodBass * 0.35);
+          let targetOriginX=0.5,targetOriginY=0.5;
+          if(coverWrap&&coverWrap.getClientRects().length){
+            const coverRect=coverWrap.getBoundingClientRect();
+            if(coverRect.width>2&&coverRect.height>2){
+              targetOriginX=Math.max(0,Math.min(1,(coverRect.left+coverRect.width*0.5)/Math.max(1,window.innerWidth)));
+              targetOriginY=Math.max(0,Math.min(1,1-(coverRect.top+coverRect.height*0.5)/Math.max(1,window.innerHeight)));
+            }
+          }
+          const originEase=Math.min(1,dt*8);
+          originX+=(targetOriginX-originX)*originEase;originY+=(targetOriginY-originY)*originEase;
 
           for (let i = 0; i < 5; i++){
             const target = coverPalette.length ? coverPalette[i % coverPalette.length] : accentFallback(i);
@@ -3187,6 +3204,7 @@
           gl.uniform1f(U.uHigh, Math.min(1, moodHigh * 1.8));
           gl.uniform1f(U.uBeat, beatPulse);
           gl.uniform2f(U.uPointer, pointerPos.x, pointerPos.y);
+          gl.uniform2f(U.uOrigin, originX, originY);
           gl.uniform1i(U.uMode, visualMode);
           if (specTex && U.uSpectrum){
             for (let si = 0; si < SPEC_N; si++){
