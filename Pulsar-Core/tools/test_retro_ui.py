@@ -76,21 +76,25 @@ def check(platform: str) -> None:
             f"{platform}: volume control is not under the current track information")
     require("function syncRetroVolumeDock()" in source and
             "retroVolumeWrap.parentElement !== destination" in source and
-            "document.body.dataset.retroLayout !== 'winamp'" in source,
-            f"{platform}: volume control does not move between classic, Winamp, and normal layouts")
+            "document.body.dataset.retroLayout !== 'compact'" in source,
+            f"{platform}: volume control does not move between classic, Compact Retro, and normal layouts")
     require("body.retro-mode .cover-display-stack .volume-wrap { position:relative; left:auto; top:auto;" in source and
             "body.retro-mode .cover-display-stack .vol-bar { position:relative; flex:1 1 auto; width:auto;" in source and
             "body.retro-mode .cover-display-stack .vol-bar .seek-fill { top:0; height:100%; border-radius:4px;" in source,
             f"{platform}: retro volume is not boxed and positioned beneath the metadata")
-    require('body.retro-mode[data-retro-layout="winamp"] .cover-display-stack { display:none !important; }' in source,
-            f"{platform}: cover/lyrics stack overflows the compact Winamp deck")
-    require('data-retro-layout="winamp"' in source and 'id="smRetroLayoutWinamp"' in source,
-            f"{platform}: Winamp layout option is missing")
+    require('body.retro-mode[data-retro-layout="compact"] .cover-display-stack { display:none !important; }' in source,
+            f"{platform}: cover/lyrics stack overflows the compact retro deck")
+    require('data-retro-layout="compact"' in source and 'id="smRetroLayoutCompact"' in source and
+            '>Compact Retro</button>' in source,
+            f"{platform}: Compact Retro layout option is missing")
+    legacy_brand = "win" + "amp"
+    require(legacy_brand not in source.lower(),
+            f"{platform}: legacy third-party product branding remains in the retro layout")
     require('id="smRetroLayoutClassic"' in source and
-            "localStorage.setItem('playerRetroLayout', chosen)" in source,
+            "localStorage.setItem('playerRetroLayoutV2', chosen)" in source,
             f"{platform}: retro layout options are not persisted")
-    require("body.retro-mode[data-retro-layout=\"winamp\"] .library-panel { position:fixed; top:211px;" in source,
-            f"{platform}: Winamp playlist is not compactly docked under its player")
+    require("body.retro-mode[data-retro-layout=\"compact\"] .library-panel { position:fixed; top:211px;" in source,
+            f"{platform}: Compact Retro playlist is not compactly docked under its player")
     for theme, accent in (("green", "--accent:#8dff72"), ("pink", "--accent:#ff71cf"),
                           ("amber", "--accent:#ffc653"), ("metal", "--accent:#c4ccd2")):
         require(f'data-retro-theme="{theme}"' in source and accent in source,

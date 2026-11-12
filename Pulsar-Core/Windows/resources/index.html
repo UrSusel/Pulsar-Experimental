@@ -1755,7 +1755,7 @@
   body.retro-mode[data-retro-theme="amber"] .player::before,
   body.retro-mode[data-retro-theme="amber"] .library-panel::before { background:linear-gradient(90deg,var(--retro-title-a),var(--retro-title-b)); }
 
-  /* Retro control deck alignment and compact Winamp-inspired playlist mode. */
+  /* Retro control deck alignment and compact retro playlist mode. */
   body.retro-mode .cover-display-stack .volume-wrap { position:relative; left:auto; top:auto; right:auto; bottom:auto; z-index:2; display:flex; align-items:center; gap:8px; width:min(78%,220px); min-height:34px; margin:4px auto 6px; padding:5px 9px; transform:none; border:1px solid color-mix(in srgb,var(--retro-accent) 48%,#7d8d99); border-radius:5px; background:linear-gradient(180deg,color-mix(in srgb,var(--retro-panel-a) 88%,#526575),color-mix(in srgb,var(--retro-panel-b) 92%,#070e16)); box-shadow:inset 0 1px rgba(255,255,255,.24),inset 0 -1px rgba(0,0,0,.7),0 2px 6px rgba(0,0,0,.3); box-sizing:border-box; }
   body.retro-mode .cover-display-stack .volume-wrap .icon-btn { flex:0 0 24px; width:24px; height:22px; border:1px solid color-mix(in srgb,var(--retro-accent) 38%,#8794a0); border-radius:3px; background:linear-gradient(180deg,var(--retro-button-a),var(--retro-button-b)); color:#eefbff; box-shadow:inset 0 1px rgba(255,255,255,.22); }
   body.retro-mode .cover-display-stack .vol-bar { position:relative; flex:1 1 auto; width:auto; min-width:0; height:9px; border:1px solid rgba(171,203,220,.48); border-radius:5px; background:linear-gradient(180deg,#08131c,#142330); overflow:hidden; box-sizing:border-box; }
@@ -1770,66 +1770,66 @@
   .sm-retro-layout-btn:hover { border-color:var(--accent); color:#fff; }
   body.retro-mode .sm-retro-layout-btn[aria-pressed="true"] { color:#07131a; border-color:var(--retro-accent); background:linear-gradient(180deg,var(--retro-accent),var(--retro-accent2)); box-shadow:0 0 10px color-mix(in srgb,var(--retro-accent) 35%,transparent); }
   body.retro-mode .sm-retro-layout-btn:hover { border-color:var(--retro-accent); color:#fff; }
-  body.retro-mode[data-retro-layout="winamp"] { background-color:#09090d; background-image:radial-gradient(ellipse at 50% 0%,rgba(80,45,8,.28),transparent 60%),repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px); }
-  body.retro-mode[data-retro-layout="winamp"] .ambient-bg-container { opacity:.52; filter:saturate(1.24) contrast(1.08) brightness(.62); }
-  body.retro-mode[data-retro-layout="winamp"] .player { display:none; }
-  body.retro-mode[data-retro-layout="winamp"] .bottombar { left:24px; top:24px; right:auto; bottom:auto; width:min(390px,calc(100vw - 48px)); min-height:0; height:176px; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:36px 43px 23px 18px; gap:4px; padding:23px 10px 10px; border:2px solid var(--retro-frame); border-radius:3px; background:linear-gradient(180deg,#47505c 0%,#252933 20%,#10131a 100%); box-shadow:inset 1px 1px rgba(255,255,255,.48),inset -1px -1px rgba(0,0,0,.8),0 12px 30px rgba(0,0,0,.72); }
-  body.retro-mode[data-retro-layout="winamp"] .bottombar::before { content:"PULSAR • WINAMP CLASSIC"; height:14px; background:linear-gradient(90deg,#747b89,#283248 45%,#171c28); color:#f5f6fa; border-color:#aab3c3; font-size:9px; letter-spacing:.06em; }
-  body.retro-mode[data-retro-layout="winamp"] .bb-left { grid-column:1; grid-row:1; gap:7px; min-width:0; }
-  body.retro-mode[data-retro-layout="winamp"] .bb-thumb { width:30px; height:30px; border:1px solid #aab3c3; }
-  body.retro-mode[data-retro-layout="winamp"] .bb-title { color:#8cff8c; font:700 12px 'Courier New',monospace; }
-  body.retro-mode[data-retro-layout="winamp"] .bb-artist { color:#b7c2d3; font:10px 'Courier New',monospace; margin-top:1px; }
-  body.retro-mode[data-retro-layout="winamp"] .bb-center,
-  body.retro-mode[data-retro-layout="winamp"] .bb-right { display:contents; }
-  body.retro-mode[data-retro-layout="winamp"] .controls { grid-column:1; grid-row:2; justify-content:center; gap:7px; }
-  body.retro-mode[data-retro-layout="winamp"] .ctrl-btn:not(.play-main) { width:26px; height:24px; border:1px solid #7d8999; border-radius:2px; color:#e7ebf2; background:linear-gradient(180deg,#737e8e,#303743); box-shadow:inset 0 1px rgba(255,255,255,.42); }
-  body.retro-mode[data-retro-layout="winamp"] .ctrl-btn.play-main { width:29px; height:25px; border:1px solid var(--retro-accent); border-radius:3px; background:linear-gradient(180deg,var(--retro-accent),var(--retro-accent2)); color:#10151b; }
-  body.retro-mode[data-retro-layout="winamp"] .ctrl-btn svg { width:15px; height:15px; }
-  body.retro-mode[data-retro-layout="winamp"] .volume-wrap { position:static; grid-column:1; grid-row:3; justify-self:center; transform:none; width:144px; height:20px; gap:5px; margin:0; padding:2px 5px; border:1px solid #657080; border-radius:2px; background:linear-gradient(180deg,#171b24,#303744); }
-  body.retro-mode[data-retro-layout="winamp"] .volume-wrap .icon-btn { width:20px; height:17px; color:#e8edf6; }
-  body.retro-mode[data-retro-layout="winamp"] .vol-bar { height:5px; background:#10131b; border:1px solid #566071; }
-  body.retro-mode[data-retro-layout="winamp"] .vol-bar .seek-fill { background:linear-gradient(90deg,#48e96d,#52c8f0); }
-  body.retro-mode[data-retro-layout="winamp"] .bb-right > .icon-btn:not(#libraryBtn):not(#settingsBtn) { display:none; }
-  body.retro-mode[data-retro-layout="winamp"] .bb-right > #libraryBtn,
-  body.retro-mode[data-retro-layout="winamp"] .bb-right > #settingsBtn { position:absolute; z-index:3; top:22px; width:24px; height:22px; }
-  body.retro-mode[data-retro-layout="winamp"] .bb-right > #libraryBtn { right:8px; }
-  body.retro-mode[data-retro-layout="winamp"] .bb-right > #settingsBtn { right:35px; }
-  body.retro-mode[data-retro-layout="winamp"] .seek-row { grid-column:1; grid-row:4; width:100%; max-width:none; gap:5px; }
-  body.retro-mode[data-retro-layout="winamp"] .seek-row .time { min-width:30px; font:9px 'Courier New',monospace; color:#c1c9d5; }
-  body.retro-mode[data-retro-layout="winamp"] .seek-bar { height:6px; border:1px solid #606b7c; border-radius:1px; background:#11151c; }
-  body.retro-mode[data-retro-layout="winamp"] .seek-fill { background:linear-gradient(90deg,#40ec71,#36d8d2); }
-  body.retro-mode[data-retro-layout="winamp"] .library-panel { position:fixed; top:211px; left:24px; right:auto; bottom:20px; width:min(390px,calc(100vw - 48px)); height:auto; padding:24px 8px 8px; border:2px solid var(--retro-frame); border-radius:3px; background:linear-gradient(180deg,#1d222d,#090b10 40%); box-shadow:inset 1px 1px rgba(255,255,255,.35),inset -1px -1px rgba(0,0,0,.85),0 12px 30px rgba(0,0,0,.68); transform:translateY(calc(100% + 30px)); backdrop-filter:none; -webkit-backdrop-filter:none; }
-  body.retro-mode[data-retro-layout="winamp"] .library-panel::before { content:"WINAMP PLAYLIST EDITOR"; background:linear-gradient(90deg,#737c8b,#202735 52%,#151a24); border-color:#929baa; }
-  body.retro-mode[data-retro-layout="winamp"] .library-panel.open { transform:translateY(0); }
-  body.retro-mode[data-retro-layout="winamp"] .library-header { min-height:25px; margin:0 0 6px; padding:0 2px; }
-  body.retro-mode[data-retro-layout="winamp"] .library-header h2 { color:#96ff8c; font:700 11px 'Courier New',monospace; }
-  body.retro-mode[data-retro-layout="winamp"] .library-header .icon-btn { width:22px; height:22px; }
-  body.retro-mode[data-retro-layout="winamp"] .library-tabs { gap:3px; padding:2px; border:1px solid #536173; border-radius:2px; background:#10151e; }
-  body.retro-mode[data-retro-layout="winamp"] .lib-tab { padding:4px 7px; border-radius:1px; font-size:9px; }
-  body.retro-mode[data-retro-layout="winamp"] .library-toolbar { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; padding:0 0 5px; }
-  body.retro-mode[data-retro-layout="winamp"] .library-toolbar .lib-tool { min-width:0; padding:4px 3px; overflow:hidden; text-overflow:ellipsis; font-size:9px; }
-  body.retro-mode[data-retro-layout="winamp"] .library-toolbar #soundAtlasBtn,
-  body.retro-mode[data-retro-layout="winamp"] .library-toolbar #enrichBtn,
-  body.retro-mode[data-retro-layout="winamp"] .library-toolbar #dedupeBtn { display:none; }
-  body.retro-mode[data-retro-layout="winamp"] .track-list { gap:0; padding:0 2px; }
-  body.retro-mode[data-retro-layout="winamp"] .track-list li { min-height:22px; gap:7px; padding:2px 5px; border:0; border-radius:0; color:#85f783; background:transparent; font:10px 'Courier New',monospace; }
-  body.retro-mode[data-retro-layout="winamp"] .track-list li:hover,
-  body.retro-mode[data-retro-layout="winamp"] .track-list li.active { color:#c1ffbd; background:rgba(121,255,112,.11); }
-  body.retro-mode[data-retro-layout="winamp"] .track-list img { width:16px; height:16px; border-radius:0; }
-  body.retro-mode[data-retro-layout="winamp"] .track-meta { flex-direction:row; align-items:center; flex:1; gap:7px; }
-  body.retro-mode[data-retro-layout="winamp"] .track-meta .t-title { max-width:65%; color:inherit; font:inherit; }
-  body.retro-mode[data-retro-layout="winamp"] .track-meta .t-artist { flex:1; color:#a0b49f; font:9px 'Courier New',monospace; }
-  body.retro-mode[data-retro-layout="winamp"] .track-list .mini-act { display:none; }
-  body.retro-mode[data-retro-layout="winamp"] .lib-subhead { gap:5px; margin:0 0 5px; padding:0; }
-  body.retro-mode[data-retro-layout="winamp"] .lib-search { min-height:24px; }
-  body.retro-mode[data-retro-layout="winamp"] .lib-search input { padding:4px 7px; font-size:10px; }
-  body.retro-mode[data-retro-layout="winamp"] .album-grid { grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; }
-  body.retro-mode[data-retro-layout="winamp"] .album-card { width:auto; max-width:110px; padding:5px; }
-  body.retro-mode[data-retro-layout="winamp"] .album-card-art img,
-  body.retro-mode[data-retro-layout="winamp"] .album-card > img { height:78px; max-height:78px; }
+  body.retro-mode[data-retro-layout="compact"] { background-color:#09090d; background-image:radial-gradient(ellipse at 50% 0%,rgba(80,45,8,.28),transparent 60%),repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px); }
+  body.retro-mode[data-retro-layout="compact"] .ambient-bg-container { opacity:.52; filter:saturate(1.24) contrast(1.08) brightness(.62); }
+  body.retro-mode[data-retro-layout="compact"] .player { display:none; }
+  body.retro-mode[data-retro-layout="compact"] .bottombar { left:24px; top:24px; right:auto; bottom:auto; width:min(390px,calc(100vw - 48px)); min-height:0; height:176px; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:36px 43px 23px 18px; gap:4px; padding:23px 10px 10px; border:2px solid var(--retro-frame); border-radius:3px; background:linear-gradient(180deg,#47505c 0%,#252933 20%,#10131a 100%); box-shadow:inset 1px 1px rgba(255,255,255,.48),inset -1px -1px rgba(0,0,0,.8),0 12px 30px rgba(0,0,0,.72); }
+  body.retro-mode[data-retro-layout="compact"] .bottombar::before { content:"PULSAR • RETRO COMPACT"; height:14px; background:linear-gradient(90deg,#747b89,#283248 45%,#171c28); color:#f5f6fa; border-color:#aab3c3; font-size:9px; letter-spacing:.06em; }
+  body.retro-mode[data-retro-layout="compact"] .bb-left { grid-column:1; grid-row:1; gap:7px; min-width:0; }
+  body.retro-mode[data-retro-layout="compact"] .bb-thumb { width:30px; height:30px; border:1px solid #aab3c3; }
+  body.retro-mode[data-retro-layout="compact"] .bb-title { color:#8cff8c; font:700 12px 'Courier New',monospace; }
+  body.retro-mode[data-retro-layout="compact"] .bb-artist { color:#b7c2d3; font:10px 'Courier New',monospace; margin-top:1px; }
+  body.retro-mode[data-retro-layout="compact"] .bb-center,
+  body.retro-mode[data-retro-layout="compact"] .bb-right { display:contents; }
+  body.retro-mode[data-retro-layout="compact"] .controls { grid-column:1; grid-row:2; justify-content:center; gap:7px; }
+  body.retro-mode[data-retro-layout="compact"] .ctrl-btn:not(.play-main) { width:26px; height:24px; border:1px solid #7d8999; border-radius:2px; color:#e7ebf2; background:linear-gradient(180deg,#737e8e,#303743); box-shadow:inset 0 1px rgba(255,255,255,.42); }
+  body.retro-mode[data-retro-layout="compact"] .ctrl-btn.play-main { width:29px; height:25px; border:1px solid var(--retro-accent); border-radius:3px; background:linear-gradient(180deg,var(--retro-accent),var(--retro-accent2)); color:#10151b; }
+  body.retro-mode[data-retro-layout="compact"] .ctrl-btn svg { width:15px; height:15px; }
+  body.retro-mode[data-retro-layout="compact"] .volume-wrap { position:static; grid-column:1; grid-row:3; justify-self:center; transform:none; width:144px; height:20px; gap:5px; margin:0; padding:2px 5px; border:1px solid #657080; border-radius:2px; background:linear-gradient(180deg,#171b24,#303744); }
+  body.retro-mode[data-retro-layout="compact"] .volume-wrap .icon-btn { width:20px; height:17px; color:#e8edf6; }
+  body.retro-mode[data-retro-layout="compact"] .vol-bar { height:5px; background:#10131b; border:1px solid #566071; }
+  body.retro-mode[data-retro-layout="compact"] .vol-bar .seek-fill { background:linear-gradient(90deg,#48e96d,#52c8f0); }
+  body.retro-mode[data-retro-layout="compact"] .bb-right > .icon-btn:not(#libraryBtn):not(#settingsBtn) { display:none; }
+  body.retro-mode[data-retro-layout="compact"] .bb-right > #libraryBtn,
+  body.retro-mode[data-retro-layout="compact"] .bb-right > #settingsBtn { position:absolute; z-index:3; top:22px; width:24px; height:22px; }
+  body.retro-mode[data-retro-layout="compact"] .bb-right > #libraryBtn { right:8px; }
+  body.retro-mode[data-retro-layout="compact"] .bb-right > #settingsBtn { right:35px; }
+  body.retro-mode[data-retro-layout="compact"] .seek-row { grid-column:1; grid-row:4; width:100%; max-width:none; gap:5px; }
+  body.retro-mode[data-retro-layout="compact"] .seek-row .time { min-width:30px; font:9px 'Courier New',monospace; color:#c1c9d5; }
+  body.retro-mode[data-retro-layout="compact"] .seek-bar { height:6px; border:1px solid #606b7c; border-radius:1px; background:#11151c; }
+  body.retro-mode[data-retro-layout="compact"] .seek-fill { background:linear-gradient(90deg,#40ec71,#36d8d2); }
+  body.retro-mode[data-retro-layout="compact"] .library-panel { position:fixed; top:211px; left:24px; right:auto; bottom:20px; width:min(390px,calc(100vw - 48px)); height:auto; padding:24px 8px 8px; border:2px solid var(--retro-frame); border-radius:3px; background:linear-gradient(180deg,#1d222d,#090b10 40%); box-shadow:inset 1px 1px rgba(255,255,255,.35),inset -1px -1px rgba(0,0,0,.85),0 12px 30px rgba(0,0,0,.68); transform:translateY(calc(100% + 30px)); backdrop-filter:none; -webkit-backdrop-filter:none; }
+  body.retro-mode[data-retro-layout="compact"] .library-panel::before { content:"RETRO COMPACT PLAYLIST EDITOR"; background:linear-gradient(90deg,#737c8b,#202735 52%,#151a24); border-color:#929baa; }
+  body.retro-mode[data-retro-layout="compact"] .library-panel.open { transform:translateY(0); }
+  body.retro-mode[data-retro-layout="compact"] .library-header { min-height:25px; margin:0 0 6px; padding:0 2px; }
+  body.retro-mode[data-retro-layout="compact"] .library-header h2 { color:#96ff8c; font:700 11px 'Courier New',monospace; }
+  body.retro-mode[data-retro-layout="compact"] .library-header .icon-btn { width:22px; height:22px; }
+  body.retro-mode[data-retro-layout="compact"] .library-tabs { gap:3px; padding:2px; border:1px solid #536173; border-radius:2px; background:#10151e; }
+  body.retro-mode[data-retro-layout="compact"] .lib-tab { padding:4px 7px; border-radius:1px; font-size:9px; }
+  body.retro-mode[data-retro-layout="compact"] .library-toolbar { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; padding:0 0 5px; }
+  body.retro-mode[data-retro-layout="compact"] .library-toolbar .lib-tool { min-width:0; padding:4px 3px; overflow:hidden; text-overflow:ellipsis; font-size:9px; }
+  body.retro-mode[data-retro-layout="compact"] .library-toolbar #soundAtlasBtn,
+  body.retro-mode[data-retro-layout="compact"] .library-toolbar #enrichBtn,
+  body.retro-mode[data-retro-layout="compact"] .library-toolbar #dedupeBtn { display:none; }
+  body.retro-mode[data-retro-layout="compact"] .track-list { gap:0; padding:0 2px; }
+  body.retro-mode[data-retro-layout="compact"] .track-list li { min-height:22px; gap:7px; padding:2px 5px; border:0; border-radius:0; color:#85f783; background:transparent; font:10px 'Courier New',monospace; }
+  body.retro-mode[data-retro-layout="compact"] .track-list li:hover,
+  body.retro-mode[data-retro-layout="compact"] .track-list li.active { color:#c1ffbd; background:rgba(121,255,112,.11); }
+  body.retro-mode[data-retro-layout="compact"] .track-list img { width:16px; height:16px; border-radius:0; }
+  body.retro-mode[data-retro-layout="compact"] .track-meta { flex-direction:row; align-items:center; flex:1; gap:7px; }
+  body.retro-mode[data-retro-layout="compact"] .track-meta .t-title { max-width:65%; color:inherit; font:inherit; }
+  body.retro-mode[data-retro-layout="compact"] .track-meta .t-artist { flex:1; color:#a0b49f; font:9px 'Courier New',monospace; }
+  body.retro-mode[data-retro-layout="compact"] .track-list .mini-act { display:none; }
+  body.retro-mode[data-retro-layout="compact"] .lib-subhead { gap:5px; margin:0 0 5px; padding:0; }
+  body.retro-mode[data-retro-layout="compact"] .lib-search { min-height:24px; }
+  body.retro-mode[data-retro-layout="compact"] .lib-search input { padding:4px 7px; font-size:10px; }
+  body.retro-mode[data-retro-layout="compact"] .album-grid { grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; }
+  body.retro-mode[data-retro-layout="compact"] .album-card { width:auto; max-width:110px; padding:5px; }
+  body.retro-mode[data-retro-layout="compact"] .album-card-art img,
+  body.retro-mode[data-retro-layout="compact"] .album-card > img { height:78px; max-height:78px; }
   @media (max-width:620px) {
-    body.retro-mode[data-retro-layout="winamp"] .bottombar { left:10px; top:10px; width:min(390px,calc(100vw - 20px)); }
-    body.retro-mode[data-retro-layout="winamp"] .library-panel { left:10px; right:10px; bottom:10px; top:199px; width:auto; }
+    body.retro-mode[data-retro-layout="compact"] .bottombar { left:10px; top:10px; width:min(390px,calc(100vw - 20px)); }
+    body.retro-mode[data-retro-layout="compact"] .library-panel { left:10px; right:10px; bottom:10px; top:199px; width:auto; }
   }
 
   .player > .center-seek-row { order:1; }
@@ -1850,7 +1850,7 @@
   body.retro-mode .player > .center-seek-row { order:1; }
   body.retro-mode .cover-display-stack > .track-title { position:relative; left:auto !important; order:2; display:block !important; visibility:visible !important; margin:2px 0 0; max-width:100%; }
   body.retro-mode .cover-display-stack > .track-artist { position:relative; left:auto !important; order:3; display:block !important; visibility:visible !important; margin:0 0 2px; max-width:100%; }
-  body.retro-mode[data-retro-layout="winamp"] .cover-display-stack { display:none !important; }
+  body.retro-mode[data-retro-layout="compact"] .cover-display-stack { display:none !important; }
 
 
   /* Album accents must remain legible over album art and translucent surfaces. */
@@ -2255,7 +2255,7 @@
       <div class="sm-pane" data-pane="look">
         <h2 class="sm-pane-title">Wygląd</h2>
         <div class="sm-card"><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Język</span></div><select id="smLang" class="sm-select" aria-label="Język interfejsu"><option value="pl">Polski</option><option value="en">English</option><option value="es">Español</option></select></div></div>
-        <div class="sm-card"><h3 class="sm-cap">Styl</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Styl retro (lata 2000)</span><span class="sm-desc">Układ odtwarzacza i biblioteki w stylu klasycznych odtwarzaczy</span></div><label class="switch"><input type="checkbox" id="smRetroStyle"><span class="slider"></span></label></div><div class="sm-row sm-retro-layout-row"><div class="sm-txt"><span class="sm-lab">Układ retro</span><span class="sm-desc">Wybierz osobne panele Pulsara albo kompaktowy układ Winampa</span></div><div class="sm-retro-layouts" role="group" aria-label="Układ retro"><button type="button" class="sm-retro-layout-btn" id="smRetroLayoutClassic" data-retro-layout="classic" aria-pressed="false">Pulsar Classic</button><button type="button" class="sm-retro-layout-btn" id="smRetroLayoutWinamp" data-retro-layout="winamp" aria-pressed="false">Winamp</button></div></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Motyw retro</span><span class="sm-desc">Cztery warianty kolorystyczne oraz osobny motyw metaliczny</span></div><select id="smRetroTheme" class="sm-select" aria-label="Motyw retro"><option value="classic">Klasyczny niebieski</option><option value="green">Zielony neon</option><option value="pink">Neonowy róż</option><option value="amber">Bursztynowy</option><option value="metal">Metal / chrom</option></select></div></div>
+        <div class="sm-card"><h3 class="sm-cap">Styl</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Styl retro (lata 2000)</span><span class="sm-desc">Układ odtwarzacza i biblioteki w stylu klasycznych odtwarzaczy</span></div><label class="switch"><input type="checkbox" id="smRetroStyle"><span class="slider"></span></label></div><div class="sm-row sm-retro-layout-row"><div class="sm-txt"><span class="sm-lab">Układ retro</span><span class="sm-desc">Wybierz osobne panele Pulsara albo kompaktowy układ retro</span></div><div class="sm-retro-layouts" role="group" aria-label="Układ retro"><button type="button" class="sm-retro-layout-btn" id="smRetroLayoutClassic" data-retro-layout="classic" aria-pressed="false">Pulsar Classic</button><button type="button" class="sm-retro-layout-btn" id="smRetroLayoutCompact" data-retro-layout="compact" aria-pressed="false">Compact Retro</button></div></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Motyw retro</span><span class="sm-desc">Cztery warianty kolorystyczne oraz osobny motyw metaliczny</span></div><select id="smRetroTheme" class="sm-select" aria-label="Motyw retro"><option value="classic">Klasyczny niebieski</option><option value="green">Zielony neon</option><option value="pink">Neonowy róż</option><option value="amber">Bursztynowy</option><option value="metal">Metal / chrom</option></select></div></div>
         <div class="sm-card"><h3 class="sm-cap">Kolory interfejsu</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Dopasuj kolory do okładki</span><span class="sm-desc">Automatycznie dobiera akcenty i kolory wizualizacji z okładki albumu</span></div><label class="switch"><input type="checkbox" id="smAlbumColors" checked><span class="slider"></span></label></div><div class="sm-row sm-color-row"><div class="sm-txt"><span class="sm-lab">Kolory ręczne</span><span class="sm-desc">Działają, gdy automatyczne dopasowanie jest wyłączone</span></div><div class="sm-color-pickers"><label class="sm-color-control"><span>Główny</span><input type="color" id="smManualAccent" value="#39c5ff" aria-label="Kolor główny"></label><label class="sm-color-control"><span>Uzupełniający</span><input type="color" id="smManualSecondary" value="#ff5ca8" aria-label="Kolor uzupełniający"></label></div></div></div>
         <div class="sm-card"><h3 class="sm-cap">Tło</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Tło reakcyjne 3D</span><span class="sm-desc">Reaktywne tło GPU — pulsowanie w rytm basu i beatu</span></div><span class="sm-slot" id="sm3dSlot"><div class="reactive-toggle" title="Reaktywne tło GPU — pulsowanie w rytm basu i beatu"><label class="switch"><input type="checkbox" id="reactiveToggle"><span class="slider"></span></label><span class="toggle-label">3D</span></div></span></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Reakcja na muzykę (motywy tła)</span><span class="sm-desc">Kolory i światło tła reagują na dźwięk</span></div><label class="switch"><input type="checkbox" id="smAudioReact" checked><span class="slider"></span></label></div><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Śledzenie myszy (ruch tła)</span><span class="sm-desc">Tło lekko podąża za kursorem</span></div><label class="switch"><input type="checkbox" id="smBgFollow" checked><span class="slider"></span></label></div></div>
       </div>
@@ -2319,9 +2319,9 @@
   var I18N_DICT = {
     'Układ retro': { en: 'Retro layout', es: 'Diseño retro' },
     'Układ odtwarzacza i biblioteki w stylu klasycznych odtwarzaczy': { en: 'A classic player-style layout for the player and library', es: 'Diseño clásico para el reproductor y la biblioteca' },
-    'Wybierz osobne panele Pulsara albo kompaktowy układ Winampa': { en: 'Choose separate Pulsar panels or the compact Winamp layout', es: 'Elige paneles Pulsar separados o el diseño compacto de Winamp' },
+    'Wybierz osobne panele Pulsara albo kompaktowy układ retro': { en: 'Choose separate Pulsar panels or the compact retro layout', es: 'Elige los paneles Pulsar separados o el diseño retro compacto' },
     'Pulsar Classic': { en: 'Pulsar Classic', es: 'Pulsar clásico' },
-    'Winamp': { en: 'Winamp', es: 'Winamp' },
+    'Compact Retro': { en: 'Compact Retro', es: 'Compact Retro' },
     'Motyw retro': { en: 'Retro theme', es: 'Tema retro' },
     'Cztery warianty kolorystyczne oraz osobny motyw metaliczny': { en: 'Four color variations plus a separate metallic theme', es: 'Cuatro variantes de color y un tema metálico independiente' },
     'Klasyczny niebieski': { en: 'Classic blue', es: 'Azul clásico' },
@@ -8577,12 +8577,12 @@
   const retroCoverStack = document.getElementById('coverDisplayStack');
   function syncRetroVolumeDock(){
     if (!retroVolumeWrap || !retroVolumeHome || !retroCoverStack) return;
-    const classicRetroDock = document.body.classList.contains('retro-mode') && document.body.dataset.retroLayout !== 'winamp';
+    const classicRetroDock = document.body.classList.contains('retro-mode') && document.body.dataset.retroLayout !== 'compact';
     const destination = classicRetroDock ? retroCoverStack : retroVolumeHome;
     if (retroVolumeWrap.parentElement !== destination) destination.appendChild(retroVolumeWrap);
   }
   function setRetroLayout(layout){
-    const chosen = layout === 'winamp' ? 'winamp' : 'classic';
+    const chosen = layout === 'compact' ? 'compact' : 'classic';
     document.body.dataset.retroLayout = chosen;
     syncRetroVolumeDock();
     smRetroLayoutButtons.forEach(function(button){
@@ -8590,10 +8590,10 @@
       button.classList.toggle('active', active);
       button.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
-    try { localStorage.setItem('playerRetroLayout', chosen); } catch(e){}
+    try { localStorage.setItem('playerRetroLayoutV2', chosen); } catch(e){}
   }
   let savedRetroLayout = 'classic';
-  try { savedRetroLayout = localStorage.getItem('playerRetroLayout') || 'classic'; } catch(e){}
+  try { savedRetroLayout = localStorage.getItem('playerRetroLayoutV2') || 'classic'; } catch(e){}
   setRetroLayout(savedRetroLayout);
   smRetroLayoutButtons.forEach(function(button){
     button.addEventListener('click', function(){
@@ -8604,7 +8604,7 @@
       } else if (libraryPanel && !libraryPanel.classList.contains('open')) {
         openLibrary();
       }
-      showToast(t(button.dataset.retroLayout === 'winamp' ? 'Winamp' : 'Pulsar Classic'));
+      showToast(t(button.dataset.retroLayout === 'compact' ? 'Compact Retro' : 'Pulsar Classic'));
     });
   });
   function setRetroTheme(theme){
