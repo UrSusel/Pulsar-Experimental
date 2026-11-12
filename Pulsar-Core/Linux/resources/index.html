@@ -1824,17 +1824,22 @@
     body.retro-mode[data-retro-layout="winamp"] .library-panel { left:10px; right:10px; bottom:10px; top:199px; width:auto; }
   }
 
-  /* In the retro cover-display window, synced lyrics belong directly beneath the artwork. */
-  body.retro-mode .lyrics-box,
-  body.retro-mode.lyrics-side .lyrics-box { position:relative; inset:auto; left:auto; top:auto; transform:none; width:100%; max-width:100%; flex:0 0 auto; max-height:min(25vh,220px); margin:5px 0 0; padding:5px 2px; z-index:1; border:1px solid color-mix(in srgb,var(--retro-accent) 28%,transparent); border-radius:3px; background:linear-gradient(180deg,color-mix(in srgb,var(--retro-panel-a) 66%,transparent),color-mix(in srgb,var(--retro-panel-b) 82%,transparent)); -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 8%,#000 92%,transparent 100%); mask-image:linear-gradient(180deg,transparent 0,#000 8%,#000 92%,transparent 100%); }
-  body.retro-mode .lyrics-box .lyrics-line,
-  body.retro-mode.lyrics-side .lyrics-box .lyrics-line { padding:4px 7px; margin:1px 0; color:color-mix(in srgb,var(--retro-accent) 48%,#eef7ff); font:11px/1.4 Tahoma,Verdana,sans-serif; border-radius:2px; }
-  body.retro-mode .lyrics-box .lyrics-line.active,
-  body.retro-mode.lyrics-side .lyrics-box .lyrics-line.active { color:#f4ffff; font-size:13px; text-shadow:0 0 9px color-mix(in srgb,var(--retro-accent) 65%,transparent); }
-  body.retro-mode .lyrics-box .lyrics-empty,
-  body.retro-mode.lyrics-side .lyrics-box .lyrics-empty { padding:7px 4px; color:color-mix(in srgb,var(--retro-accent) 54%,#dae5ed); font:10px/1.4 Tahoma,Verdana,sans-serif; }
-  body.retro-mode[data-retro-layout="winamp"] .lyrics-box,
-  body.retro-mode[data-retro-layout="winamp"].lyrics-side .lyrics-box { display:none !important; }
+  /* Keep the cover and lyrics in one normal-flow stack: lyrics must never sit on top of or replace the album. */
+  .cover-display-stack { display:contents; }
+  body.retro-mode .cover-display-stack { position:relative; display:flex; flex:0 0 auto; flex-direction:column; align-items:center; align-self:stretch; gap:5px; width:100%; min-width:0; order:0; }
+  body.retro-mode .cover-display-stack > #coverWrap { position:relative !important; inset:auto !important; left:auto !important; top:auto !important; right:auto !important; bottom:auto !important; display:block !important; flex:0 0 auto !important; width:min(100%,180px) !important; height:auto !important; aspect-ratio:1; margin:0 auto; transform:none; visibility:visible !important; }
+  body.retro-mode .cover-display-stack > #coverWrap > #coverImg { display:block !important; width:100%; height:100%; object-fit:cover; opacity:1 !important; visibility:visible !important; }
+  body.retro-mode .cover-display-stack > #lyricsBox,
+  body.retro-mode.lyrics-side .cover-display-stack > #lyricsBox { position:static !important; inset:auto !important; left:auto !important; top:auto !important; right:auto !important; bottom:auto !important; transform:none !important; display:block; flex:0 0 auto; align-self:stretch; order:1; width:100%; max-width:100%; max-height:min(25vh,220px); margin:0; padding:5px 2px; z-index:auto; border:1px solid color-mix(in srgb,var(--retro-accent) 28%,transparent); border-radius:3px; background:linear-gradient(180deg,color-mix(in srgb,var(--retro-panel-a) 66%,transparent),color-mix(in srgb,var(--retro-panel-b) 82%,transparent)); -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 8%,#000 92%,transparent 100%); mask-image:linear-gradient(180deg,transparent 0,#000 8%,#000 92%,transparent 100%); }
+  body.retro-mode .cover-display-stack > #lyricsBox[hidden] { display:none !important; }
+  body.retro-mode .cover-display-stack .lyrics-line { padding:4px 7px; margin:1px 0; color:color-mix(in srgb,var(--retro-accent) 48%,#eef7ff); font:11px/1.4 Tahoma,Verdana,sans-serif; border-radius:2px; }
+  body.retro-mode .cover-display-stack .lyrics-line.active { color:#f4ffff; font-size:13px; text-shadow:0 0 9px color-mix(in srgb,var(--retro-accent) 65%,transparent); }
+  body.retro-mode .cover-display-stack .lyrics-empty { padding:7px 4px; color:color-mix(in srgb,var(--retro-accent) 54%,#dae5ed); font:10px/1.4 Tahoma,Verdana,sans-serif; }
+  body.retro-mode .player > .center-seek-row { order:1; }
+  body.retro-mode .player > .track-title { position:relative; left:auto !important; order:2; display:block !important; visibility:visible !important; }
+  body.retro-mode .player > .track-artist { position:relative; left:auto !important; order:3; display:block !important; visibility:visible !important; }
+  body.retro-mode[data-retro-layout="winamp"] .cover-display-stack { display:none !important; }
+
 
   /* Album accents must remain legible over album art and translucent surfaces. */
   :root { --accent-contrast: #10141b; }
@@ -1921,6 +1926,7 @@
   <div class="vignette"></div>
 
   <main class="player">
+    <div class="cover-display-stack" id="coverDisplayStack">
     <div class="cover-wrap reactive" id="coverWrap">
       <img id="coverImg" alt="Okładka utworu" draggable="false">
       <button class="fullscreen-btn" id="fullscreenBtn" aria-label="Tryb pełnoekranowy" title="Tryb pełnoekranowy"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -1953,6 +1959,7 @@
     
     <!-- Centralny pasek postępu pokazujący się gdy dolny się chowa -->
     <div class="lyrics-box" id="lyricsBox" hidden></div>
+    </div>
 
     <div class="center-seek-row" id="centerSeekRow">
       <span class="time" id="centerCurTime">0:00</span>

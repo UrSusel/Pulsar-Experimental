@@ -58,10 +58,20 @@ def check(platform: str) -> None:
             f"{platform}: retro library toolbar remains oversized")
     require("body.retro-mode .bpm-chip { display: none !important; }" in source,
             f"{platform}: BPM badge remains visible in retro mode")
-    require("body.retro-mode.lyrics-side .lyrics-box { position:relative; inset:auto; left:auto; top:auto; transform:none;" in source,
-            f"{platform}: retro lyrics remain detached from the cover display")
-    require('body.retro-mode[data-retro-layout="winamp"] .lyrics-box' in source,
-            f"{platform}: lyrics overflow into the compact Winamp deck")
+    stack_markup = source.find('<div class="cover-display-stack" id="coverDisplayStack">')
+    require(stack_markup >= 0 and
+            stack_markup < source.find('id="coverWrap"', stack_markup) <
+            source.find('id="lyricsBox"', stack_markup) <
+            source.find('id="centerSeekRow"', stack_markup),
+            f"{platform}: cover art and lyrics are not arranged in a single vertical stack")
+    require("body.retro-mode .cover-display-stack > #lyricsBox," in source and
+            "position:static !important;" in source,
+            f"{platform}: retro lyrics can overlay the cover art")
+    require("body.retro-mode .cover-display-stack > #coverWrap { position:relative !important;" in source and
+            "visibility:visible !important;" in source,
+            f"{platform}: cover art can disappear when retro lyrics are enabled")
+    require('body.retro-mode[data-retro-layout="winamp"] .cover-display-stack { display:none !important; }' in source,
+            f"{platform}: cover/lyrics stack overflows the compact Winamp deck")
     require('data-retro-layout="winamp"' in source and 'id="smRetroLayoutWinamp"' in source,
             f"{platform}: Winamp layout option is missing")
     require('id="smRetroLayoutClassic"' in source and
