@@ -22,6 +22,8 @@ def check(platform: str) -> None:
             f"{platform}: theme selection is not applied to the document")
     require("body.retro-mode { --retro-cyan:" in source,
             f"{platform}: missing classic retro theme styling")
+    require('body.retro-mode:not([data-retro-layout="compact"]) #fullscreenBtn { display:none !important; }' in source,
+            f"{platform}: fullscreen button is still visible in Pulsar Classic")
     for theme in THEMES - {"classic"}:
         require(f'data-retro-theme="{theme}"' in source,
                 f"{platform}: missing retro theme styling for {theme}")
