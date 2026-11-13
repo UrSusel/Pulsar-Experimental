@@ -110,11 +110,20 @@ def check(platform: str) -> None:
     require("document.body.classList.add('three-d-mode');" in source and
             "localStorage.setItem('threeDMode', 'true')" in source,
             f"{platform}: the Compact Retro 3D button does not enable the GPU background itself")
-    require('@media (min-width:1100px)' in source and
-            'body.retro-mode:not([data-retro-layout="compact"]) .player { left:50%; right:auto;' in source and
-            'body.retro-mode.fullscreen-mode .player { left:auto; right:auto; transform:none;' in source and
-            'body.retro-mode.fullscreen-mode .bottombar { display:none !important; }' in source,
-            f"{platform}: maximized/fullscreen Pulsar Classic is not centered and scaled for the viewport")
+    require('body.retro-mode:not([data-retro-layout="compact"]) .player { left:50%;' not in source and
+            'position: fixed; top: 164px; bottom: 22px; left: 24px; right: auto;' in source and
+            'width: min(330px, calc(39vw - 28px))' in source,
+            f"{platform}: the original non-fullscreen Classic player placement was not restored")
+    require('body.retro-mode.fullscreen-mode .bottombar { display:none !important; }' in source and
+            'body.retro-mode.fullscreen-mode .player > .center-seek-row { left:auto !important;' in source and
+            'body.retro-mode.fullscreen-mode .ambient-3d-canvas { z-index:0; }' in source,
+            f"{platform}: fullscreen Classic still shows the dock, shifts the seek bar, or hides the 3D canvas")
+    fullscreen = re.search(r"function setFullscreen\(on\)\{([\s\S]*?)\n  \}", source)
+    require(fullscreen is not None and
+            'if (entering && retroStyleOn && !threeDMode && ambientVisual)' in fullscreen.group(1) and
+            "document.body.classList.add('three-d-mode')" in fullscreen.group(1) and
+            'fullscreenForcedThreeD' in fullscreen.group(1),
+            f"{platform}: Classic full-screen does not temporarily enable and restore its 3D background")
     for theme, accent in (("green", "--accent:#8dff72"), ("pink", "--accent:#ff71cf"),
                           ("amber", "--accent:#ffc653"), ("metal", "--accent:#c4ccd2")):
         require(f'data-retro-theme="{theme}"' in source and accent in source,
