@@ -95,6 +95,18 @@ def check(platform: str) -> None:
             f"{platform}: retro layout options are not persisted")
     require("body.retro-mode[data-retro-layout=\"compact\"] .library-panel { position:fixed; top:211px;" in source,
             f"{platform}: Compact Retro playlist is not compactly docked under its player")
+    require(".bb-left { grid-column:1; grid-row:1; gap:7px; min-width:0; padding-right:114px; }" in source and
+            "body.retro-mode[data-retro-layout=\"compact\"] .bb-meta { flex:1 1 0; width:0; min-width:0; }" in source,
+            f"{platform}: Compact Retro track title does not reserve space for the top-right buttons")
+    require('id="retroWallpaperBtn"' in source and
+            "function setRetroWallpaper(wallpaper)" in source and
+            "localStorage.setItem('playerRetroWallpaper', chosen.id)" in source,
+            f"{platform}: independent desktop wallpaper control is missing or not persisted")
+    require('body.retro-mode[data-retro-wallpaper="grid"] .retro-wallpaper-layer' in source and
+            'body.retro-mode[data-retro-background="grid"] .ambient-bg-container' in source,
+            f"{platform}: desktop wallpaper and ambient/filter background are not controlled separately")
+    require('right:89px; width:24px; height:22px;' in source,
+            f"{platform}: independent wallpaper button is not placed alongside the compact toolbar buttons")
     for theme, accent in (("green", "--accent:#8dff72"), ("pink", "--accent:#ff71cf"),
                           ("amber", "--accent:#ffc653"), ("metal", "--accent:#c4ccd2")):
         require(f'data-retro-theme="{theme}"' in source and accent in source,
