@@ -98,15 +98,23 @@ def check(platform: str) -> None:
     require(".bb-left { grid-column:1; grid-row:1; gap:7px; min-width:0; padding-right:114px; }" in source and
             "body.retro-mode[data-retro-layout=\"compact\"] .bb-meta { flex:1 1 0; width:0; min-width:0; }" in source,
             f"{platform}: Compact Retro track title does not reserve space for the top-right buttons")
-    require('id="retroWallpaperBtn"' in source and
-            "function setRetroWallpaper(wallpaper)" in source and
-            "localStorage.setItem('playerRetroWallpaper', chosen.id)" in source,
-            f"{platform}: independent desktop wallpaper control is missing or not persisted")
-    require('body.retro-mode[data-retro-wallpaper="grid"] .retro-wallpaper-layer' in source and
-            'body.retro-mode[data-retro-background="grid"] .ambient-bg-container' in source,
-            f"{platform}: desktop wallpaper and ambient/filter background are not controlled separately")
-    require('right:89px; width:24px; height:22px;' in source,
-            f"{platform}: independent wallpaper button is not placed alongside the compact toolbar buttons")
+    require('id="retroWallpaperBtn"' not in source and 'retro-wallpaper-layer' not in source,
+            f"{platform}: the mistaken desktop-screen button is still present")
+    require('not(#ambientStyleBtn)' in source and
+            'body.retro-mode[data-retro-layout="compact"] .bb-right > #ambientStyleBtn' in source and
+            'right:89px; width:24px; height:22px;' in source,
+            f"{platform}: Compact Retro does not expose the 3D visual-style button")
+    require("const compactRetro = document.body.classList.contains('retro-mode') && document.body.dataset.retroLayout === 'compact';" in source and
+            "threeDMode || compactRetro" in source,
+            f"{platform}: the 3D style button is unavailable while Compact Retro is active")
+    require("document.body.classList.add('three-d-mode');" in source and
+            "localStorage.setItem('threeDMode', 'true')" in source,
+            f"{platform}: the Compact Retro 3D button does not enable the GPU background itself")
+    require('@media (min-width:1100px)' in source and
+            'body.retro-mode:not([data-retro-layout="compact"]) .player { left:50%; right:auto;' in source and
+            'body.retro-mode.fullscreen-mode .player { left:auto; right:auto; transform:none;' in source and
+            'body.retro-mode.fullscreen-mode .bottombar { display:none !important; }' in source,
+            f"{platform}: maximized/fullscreen Pulsar Classic is not centered and scaled for the viewport")
     for theme, accent in (("green", "--accent:#8dff72"), ("pink", "--accent:#ff71cf"),
                           ("amber", "--accent:#ffc653"), ("metal", "--accent:#c4ccd2")):
         require(f'data-retro-theme="{theme}"' in source and accent in source,
