@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""Regression checks for the cross-platform retro player layout and controls."""
+from pathlib import Path
+import re
+
+ROOT = Path(__file__).resolve().parents[2]
+THEMES = {"classic", "green", "pink", "amber", "metal"}
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise AssertionError(message)
+
+
+def check(platform: str) -> None:
+    source = (ROOT / "Pulsar-Core" / platform / "resources" / "index.html").read_text(encoding="utf-8")
+
+    require('id="smRetroTheme"' in source, f"{platform}: theme selector is missing")
+    require("localStorage.setItem('playerRetroTheme', chosen)" in source,
+            f"{platform}: selected theme is not persisted")
+    require("document.body.dataset.retroTheme = chosen" in source,
+            f"{platform}: theme selection is not applied to the document")
+    require("body.retro-mode { --retro-cyan:" in source,
+            f"{platform}: missing classic retro theme styling")
+    for theme in THEMES - {"classic"}:
+        require(f'data-retro-theme="{theme}"' in source,
+                f"{platform}: missing retro theme styling for {theme}")
+
+    retro_tick = re.search(r"function resetHideTimer\(\)\s*\{(.*?)\n  \}", source, re.S)
+    require(retro_tick is not None and
+            "if (document.body.classList.contains('retro-mode')) return;" in retro_tick.group(1),
+            f"{platform}: retro playback bar can still be auto-hidden")
+    require("body.retro-mode .bottombar.hidden { transform: none; opacity: 1; pointer-events: auto; }" in source,
+            f"{platform}: retro control bar hidden styling is not overridden")
+
+    track_click = re.search(
+        r"li\.addEventListener\('click', \(\) => \{(.*?)\n      \}\);\n      trackListEl\.appendChild\(li\);",
+        source, re.S)
+    require(track_click is not None and
+            "if (!document.body.classList.contains('retro-mode')) closeLibrary();" in track_click.group(1),
+            f"{platform}: selecting a track closes the retro library")
+    album_play = re.search(r"function playAlbumFrom\(album, withShuffle\)\s*\{(.*?)\n  \}", source, re.S)
+    require(album_play is not None and
+            "if (!document.body.classList.contains('retro-mode')) closeLibrary();" in album_play.group(1),
+            f"{platform}: playing an album closes the retro library")
+
+    require("overflow-x: clip" in source and
+            "body.retro-mode .player::-webkit-scrollbar { display: none; width: 0; height: 0; }" in source,
+            f"{platform}: cover display can show a horizontal scrollbar")
+    require("width: min(100%, 180px)" in source,
+            f"{platform}: retro cover display artwork is not compact")
+    require("grid-template-columns:repeat(auto-fill,minmax(136px,160px))" in source and
+            "max-width:144px" in source,
+            f"{platform}: album artwork cards are not constrained to a compact size")
+    require("body.retro-mode .cover-display-stack .volume-wrap { position:relative; left:auto; top:auto;" in source,
+            f"{platform}: retro volume control is not positioned beneath the track metadata")
+    require("body.retro-mode .library-toolbar { display:grid; grid-template-columns:repeat(auto-fit,minmax(108px,1fr));" in source,
+            f"{platform}: retro library toolbar remains oversized")
+    require("body.retro-mode .bpm-chip { display: none !important; }" in source,
+            f"{platform}: BPM badge remains visible in retro mode")
+    stack_markup = source.find('<div class="cover-display-stack" id="coverDisplayStack">')
+    require(stack_markup >= 0 and
+            stack_markup < source.find('id="coverWrap"', stack_markup) <
+            source.find('id="lyricsBox"', stack_markup) <
+            source.find('id="centerSeekRow"', stack_markup),
+            f"{platform}: cover art and lyrics are not arranged in a single vertical stack")
+    require("body.retro-mode .cover-display-stack > #lyricsBox," in source and
+            "position:static !important;" in source,
+            f"{platform}: retro lyrics can overlay the cover art")
+    require("body.retro-mode .cover-display-stack > #coverWrap { position:relative !important;" in source and
+            "visibility:visible !important;" in source,
+            f"{platform}: cover art can disappear when retro lyrics are enabled")
+    volume_markup = source.find('class="volume-wrap"', stack_markup)
+    stack_end = source.find('\n    </div>\n\n    <div class="center-seek-row"', stack_markup)
+    require(stack_markup < source.find('id="trackArtist"', stack_markup) < volume_markup < stack_end,
+            f"{platform}: volume control is not under the current track information")
+    require("function syncRetroVolumeDock()" in source and
+            "retroVolumeWrap.parentElement !== destination" in source and
+            "document.body.dataset.retroLayout !== 'compact'" in source,
+            f"{platform}: volume control does not move between classic, Compact Retro, and normal layouts")
+    require("body.retro-mode .cover-display-stack .volume-wrap { position:relative; left:auto; top:auto;" in source and
+            "body.retro-mode .cover-display-stack .vol-bar { position:relative; flex:1 1 auto; width:auto;" in source and
+            "body.retro-mode .cover-display-stack .vol-bar .seek-fill { top:0; height:100%; border-radius:4px;" in source,
+            f"{platform}: retro volume is not boxed and positioned beneath the metadata")
+    require('body.retro-mode[data-retro-layout="compact"] .cover-display-stack { display:none !important; }' in source,
+            f"{platform}: cover/lyrics stack overflows the compact retro deck")
+    require('data-retro-layout="compact"' in source and 'id="smRetroLayoutCompact"' in source and
+            '>Compact Retro</button>' in source,
+            f"{platform}: Compact Retro layout option is missing")
+    legacy_brand = "win" + "amp"
+    require(legacy_brand not in source.lower(),
+            f"{platform}: legacy third-party product branding remains in the retro layout")
+    require('id="smRetroLayoutClassic"' in source and
+            "localStorage.setItem('playerRetroLayoutV2', chosen)" in source,
+            f"{platform}: retro layout options are not persisted")
+    require("body.retro-mode[data-retro-layout=\"compact\"] .library-panel { position:fixed; top:211px;" in source,
+            f"{platform}: Compact Retro playlist is not compactly docked under its player")
+    for theme, accent in (("green", "--accent:#8dff72"), ("pink", "--accent:#ff71cf"),
+                          ("amber", "--accent:#ffc653"), ("metal", "--accent:#c4ccd2")):
+        require(f'data-retro-theme="{theme}"' in source and accent in source,
+                f"{platform}: {theme} theme does not propagate its color through the UI")
+    print(f"{platform}: retro layout/theme regressions passed")
+
+
+if __name__ == "__main__":
+    for target in ("Linux", "Windows"):
+        check(target)

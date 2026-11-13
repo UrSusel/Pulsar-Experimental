@@ -30,7 +30,7 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(loadTrack[1], /audio\.src = sourceUrl;\s*audio\.load\(\);/,
     `${platform}: local playback explicitly reloads the media pipeline`);
   assert.match(loadTrack[1], /audio\.addEventListener\('loadedmetadata', localTrackMetadataHandler\);/,
-    `${platform}: new local metadata is tracked before playback position updates`);
+    `${platform}: local timeline readiness follows metadata for the selected source`);
   assert.ok(loadTrack[1].indexOf('localTrackMetadataReady = true;') < loadTrack[1].indexOf('audio.currentTime = 0'),
     `${platform}: any position reset occurs only after new-source metadata`);
   assert.match(html, /audio\.duration && \(activeOnlineTrack \|\| localTrackMetadataReady\) && !seeking/,

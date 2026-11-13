@@ -7734,8 +7734,7 @@
       audio.removeEventListener('loadedmetadata', localTrackMetadataHandler);
       localTrackMetadataHandler = null;
       localTrackMetadataReady = true;
-      // Only seek after this source's duration is known; seeking during source
-      // replacement can make WebKitGTK/GStreamer request data past the old EOF.
+      // Wait for this source's duration before resetting a stale playback position.
       if (audio.currentTime > 0.05) try { audio.currentTime = 0; } catch(e){}
     };
     audio.addEventListener('loadedmetadata', localTrackMetadataHandler);
@@ -8316,7 +8315,6 @@
         if (completed || done || token !== xfPromoteToken || !sourceIsReady()) return;
         completed = true;
         audio.removeEventListener('loadedmetadata', onMeta);
-        currentLocalAudioUrl = src;
         localTrackMetadataReady = true;
         callback();
       };
