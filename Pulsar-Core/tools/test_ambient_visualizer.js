@@ -12,10 +12,12 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /vec2 wq = \(uv - uOrigin\) \* vec2\(aspect, 1\.0\)/, `${platform}: wave mode is anchored to the album too`);
   assert.match(html, /length\(\(uv - uOrigin\) \* vec2\(aspect, 1\.0\)/, `${platform}: vignette follows the album center`);
   assert.match(html, /float shellRadius = 0\.83 \+ petals \* 0\.105/, `${platform}: the new default scene forms an irregular album halo, not a circular equalizer`);
-  assert.match(html, /float broadband = clamp\(max\(uBass, max\(uMid, uHigh\)\) \* 1\.25, 0\.0, 1\.0\);/, `${platform}: a broadband floor keeps quieter frequency regions responsive`);
-  assert.match(html, /float spec = mix\(texture2D\(uSpectrum, vec2\(abs\(sin\(a \+ uTime \* 0\.65\)\), 0\.5\)\)\.r, broadband, 0\.28\);/, `${platform}: the halo keeps locally varied, rotating frequency response`);
-  assert.match(html, /float specA = mix\(texture2D\(uSpectrum, vec2\(abs\(sin\(ang \+ uTime \* 0\.65\)\), 0\.5\)\)\.r, broadband, 0\.28\);/, `${platform}: radial rays stay locally varied instead of pulsing together`);
-  assert.match(html, /float shellRadius = 0\.83 \+ petals \* 0\.105 \+ \(spec - 0\.25\) \* 0\.22 \+ uBass \* 0\.025 \+ uBeat \* 0\.012;/, `${platform}: global beat movement is restrained so audio detail deforms the halo locally`);
+  assert.match(html, /float band = abs\(a\) \* 0\.31830989;/, `${platform}: the default visualizer keeps its original fixed angular spectrum layout`);
+  assert.match(html, /float spec = clamp\(texture2D\(uSpectrum, vec2\(band, 0\.5\)\)\.r \* \(1\.0 \+ band \* 0\.75\) \+ uHigh \* band \* 1\.4, 0\.0, 1\.0\);/, `${platform}: the quieter high-frequency side gets an audio-driven local boost`);
+  assert.match(html, /float mir = abs\(mod\(ang \+ 3\.14159265, 6\.2831853\) - 3\.14159265\) \/ 3\.14159265;/, `${platform}: the radial mode does not rotate its angular mapping`);
+  assert.match(html, /float specA = clamp\(texture2D\(uSpectrum, vec2\(mir \* 0\.62 \+ 0\.02, 0\.5\)\)\.r \* \(1\.0 \+ mir \* 0\.75\) \+ uHigh \* mir \* 1\.4, 0\.0, 1\.0\);/, `${platform}: radial rays boost high frequencies without time-based rotation`);
+  assert.doesNotMatch(html, /abs\(sin\(a \+ uTime|sin\(ang \+ uTime/, `${platform}: audio spectrum mapping does not rotate independently of the music`);
+  assert.match(html, /float shellRadius = 0\.83 \+ petals \* 0\.105 \+ \(spec - 0\.25\) \* 0\.22 \+ uBass \* 0\.12 \+ uBeat \* 0\.04;/, `${platform}: the original bass/beat-driven shell movement is preserved`);
   assert.match(html, /float silk = exp\(-abs\(folds\) \* 10\.0\) \* exp\(-abs\(shellDelta\) \* 3\.2\);/, `${platform}: layered silk folds add moving depth behind the artwork`);
   assert.match(html, /float pulseWarp = 0\.12 \* sin\(a \* 3\.0 \+ field \* 3\.0\)/, `${platform}: outward pulses follow the organic halo instead of perfect circles`);
   assert.match(html, /float sourceBloom = exp\(-sourceR \* 2\.5\);/, `${platform}: the old universal hard pulse ring is removed`);
