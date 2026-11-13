@@ -28,5 +28,12 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /const coverRect=coverWrap\.getBoundingClientRect\(\)/, `${platform}: origin follows the live album-cover position`);
   assert.match(html, /originX\+=\(targetOriginX-originX\)\*originEase/, `${platform}: the origin follows cover motion smoothly`);
   assert.match(html, /gl\.uniform2f\(U\.uOrigin, originX, originY\)/, `${platform}: cover center is sent to the GPU each frame`);
+  assert.match(html, /const RETRO_VISUAL_MODES = \['Siatka wektorowa', 'Plazma retro', 'Oscyloskop retro'\];/, `${platform}: Retro exposes exactly three dedicated visualizer presets`);
+  assert.match(html, /ambientStyleBtn\.hidden = !\(Boolean\(ambientVisual\) && \(threeDMode \|\| retroMode\)\);/, `${platform}: the Retro preset control is available in either Retro layout only`);
+  assert.match(html, /localStorage\.setItem\('ambientRetroVisualMode', String\(retroVisualModeIndex\)\)/, `${platform}: selected Retro preset is remembered separately from standard styles`);
+  assert.match(html, /if \(uMode == 8\)/, `${platform}: Retro vector grid shader branch exists`);
+  assert.match(html, /else if \(uMode == 9\)/, `${platform}: Retro plasma shader branch exists`);
+  assert.match(html, /else if \(uMode == 10\)/, `${platform}: Retro oscilloscope shader branch exists`);
+  assert.match(html, /if \(on && !wasOn\) visualMode = VISUAL_MODES\.length \+ retroVisualModeIndex;\s*else if \(!on && wasOn\) visualMode = normalVisualMode;/, `${platform}: switching Retro on/off restores the corresponding standard visualizer`);
   console.log(`${platform}: album-centered visualizer checks passed`);
 }

@@ -2682,6 +2682,10 @@
     'Świetliki': { en: 'Fireflies', es: 'Luciérnagas' },
     'Fale': { en: 'Waves', es: 'Olas' },
     'Tusz w wodzie': { en: 'Ink in water', es: 'Tinta en el agua' },
+    'Siatka wektorowa': { en: 'Retro vector grid', es: 'Cuadrícula vectorial retro' },
+    'Plazma retro': { en: 'Retro plasma', es: 'Plasma retro' },
+    'Oscyloskop retro': { en: 'Retro oscilloscope', es: 'Osciloscopio retro' },
+    'Tło 3D retro: ': { en: 'Retro 3D background: ', es: 'Fondo 3D retro: ' },
     'Pulsar': { en: 'Pulsar', es: 'Púlsar' },
     'Motyw: ': { en: 'Theme: ', es: 'Tema: ' },
     'Sleep timer wyłączony': { en: 'Sleep timer off', es: 'Temporizador apagado' },
@@ -3503,17 +3507,23 @@
 
   /* ---------- Style wizualizacji ---------- */
   const VISUAL_MODES = ['Aura okładki', 'Płynny marmur', 'Gwiezdny pył', 'Płynne kulki', 'Kalejdoskop', 'Świetliki', 'Fale', 'Tusz w wodzie'];
+  const RETRO_VISUAL_MODES = ['Siatka wektorowa', 'Plazma retro', 'Oscyloskop retro'];
   let visualMode = 0;
+  let normalVisualMode = 0;
+  let retroVisualModeIndex = 0;
   try {
     const visualRevision = Number(localStorage.getItem('ambientVisualRevision') || 0);
     if (visualRevision < 2){
       visualMode = 0;
+      normalVisualMode = 0;
       localStorage.setItem('ambientVisualMode', '0');
       localStorage.setItem('ambientVisualRevision', '2');
     }else{
       const vm = Number(localStorage.getItem('ambientVisualMode'));
-      if (vm >= 0 && vm < VISUAL_MODES.length) visualMode = vm;
+      if (vm >= 0 && vm < VISUAL_MODES.length){ visualMode = vm; normalVisualMode = vm; }
     }
+    const retroVm = Number(localStorage.getItem('ambientRetroVisualMode'));
+    if (retroVm >= 0 && retroVm < RETRO_VISUAL_MODES.length) retroVisualModeIndex = retroVm;
   } catch(e){}
   let styleToastTimer = null;
   function animSwap(el, cls){
@@ -3536,19 +3546,27 @@
     clearTimeout(styleToastTimer);
     styleToastTimer = setTimeout(() => el.classList.remove('show'), Math.max(1600, Number(duration) || 1600));
   }
-  function flashStyleToast(){ showToast('✦ ' + t(VISUAL_MODES[visualMode])); }
+  function activeVisualModeName(){
+    return document.body.classList.contains('retro-mode')
+      ? RETRO_VISUAL_MODES[retroVisualModeIndex]
+      : VISUAL_MODES[normalVisualMode];
+  }
+  function flashStyleToast(){ showToast('✦ ' + t(activeVisualModeName())); }
   function updateStyleBtn(){
     if (!ambientStyleBtn) return;
-    const styleLabel = t('Styl wizualizacji: ') + t(VISUAL_MODES[visualMode]) + t(' — kliknij, aby zmienić');
+    const retroMode = document.body.classList.contains('retro-mode');
+    const stylePrefix = retroMode ? 'Tło 3D retro: ' : 'Styl wizualizacji: ';
+    const styleLabel = t(stylePrefix) + t(activeVisualModeName()) + t(' — kliknij, aby zmienić');
     ambientStyleBtn.title = styleLabel;
     ambientStyleBtn.setAttribute('aria-label', styleLabel);
-    const compactRetro = document.body.classList.contains('retro-mode') && document.body.dataset.retroLayout === 'compact';
-    ambientStyleBtn.hidden = !(Boolean(ambientVisual) && (threeDMode || compactRetro));
+    ambientStyleBtn.hidden = !(Boolean(ambientVisual) && (threeDMode || retroMode));
   }
   if (ambientStyleBtn) ambientStyleBtn.addEventListener('click', function(){
     if (!ambientVisual) return;
-    // Compact Retro keeps this control available: turn on the GPU background
-    // here rather than forcing users to leave the layout for Settings first.
+    const retroMode = document.body.classList.contains('retro-mode');
+    const was3DEnabled = threeDMode;
+    // Retro layouts expose their own three GPU backgrounds; the first click
+    // enables 3D without skipping the first preset.
     if (!threeDMode){
       threeDMode = true;
       document.body.classList.add('three-d-mode');
@@ -3556,8 +3574,15 @@
       ambientVisual.resize();
       try { localStorage.setItem('threeDMode', 'true'); } catch(e){}
     }
-    visualMode = (visualMode + 1) % VISUAL_MODES.length;
-    try { localStorage.setItem('ambientVisualMode', String(visualMode)); } catch(e){}
+    if (retroMode){
+      if (was3DEnabled) retroVisualModeIndex = (retroVisualModeIndex + 1) % RETRO_VISUAL_MODES.length;
+      visualMode = VISUAL_MODES.length + retroVisualModeIndex;
+      try { localStorage.setItem('ambientRetroVisualMode', String(retroVisualModeIndex)); } catch(e){}
+    }else{
+      normalVisualMode = (normalVisualMode + 1) % VISUAL_MODES.length;
+      visualMode = normalVisualMode;
+      try { localStorage.setItem('ambientVisualMode', String(normalVisualMode)); } catch(e){}
+    }
     updateStyleBtn();
     flashStyleToast();
   });
@@ -3786,6 +3811,45 @@
       '    vec3 colI = base + pop(paletteMix(0.45 + 0.35 * f2)) * edgeB * 0.5;',
       '    colI += pop(paletteMix(fract(f2 + 0.15))) * pow(ink, 3.0) * 0.4;',
       '    col = mix(colI, pop(paletteMix(0.8)) * 0.22, pow(max(1.0 - length(p) * 0.9, 0.0), 2.4) * 0.3);',
+      '  } else if (uMode == 8){',
+      '    vec2 s = (uv - 0.5) * vec2(aspect, 1.0);',
+      '    float floorY = s.y + 0.2;',
+      '    float groundWave = sin(s.x * 2.4 + uTime * 0.45) * (0.012 + uBass * 0.04) + sin(s.x * 4.8 - uTime * 0.3) * uMid * 0.012;',
+      '    float depth = min(24.0, 0.32 / max(0.025, -floorY + groundWave));',
+      '    float gridX = abs(fract(s.x * depth * 2.3 + 0.5) - 0.5);',
+      '    float gridZ = abs(fract(depth * 1.45 - uTime * (0.36 + uBass * 0.55) + 0.5) - 0.5);',
+      '    float floorMask = 1.0 - smoothstep(-0.04, 0.08, floorY);',
+      '    float grid = 1.0 - smoothstep(0.012, 0.055, min(gridX, gridZ));',
+      '    float horizon = exp(-abs(floorY) * 18.0);',
+      '    col = pop(paletteMix(fract(0.12 + depth * 0.08))) * (0.025 + grid * floorMask * (0.3 + uBass * 0.8 + uBeat * 0.3));',
+      '    col += pop(paletteMix(0.78)) * horizon * (0.05 + uMid * 0.25 + uBeat * 0.3);',
+      '  } else if (uMode == 9){',
+      '    vec2 s = (uv - 0.5) * vec2(aspect, 1.0) * 2.0;',
+      '    float p1 = sin(s.x * 2.4 + uTime * 0.36 + uBass * 1.4);',
+      '    float p2 = cos(s.y * 3.1 - uTime * 0.28 + uMid * 1.8);',
+      '    float p3 = sin((s.x + s.y) * 2.2 + uTime * 0.22 + uHigh * 1.6);',
+      '    float field = p1 + p2 + p3;',
+      '    float fill = 0.5 + 0.5 * sin(field * 1.15 + uBeat * 0.8);',
+      '    float contour = pow(max(1.0 - abs(sin(field * 1.7)), 0.0), 7.0);',
+      '    float scanline = 0.92 + 0.08 * sin(uv.y * uRes.y * 0.32);',
+      '    col = pop(paletteMix(fract(0.08 + fill * 0.72))) * (0.1 + fill * 0.28 + uMid * 0.22);',
+      '    col += pop(paletteMix(0.82)) * contour * (0.25 + uHigh * 0.75 + uBeat * 0.35);',
+      '    col *= scanline;',
+      '  } else if (uMode == 10){',
+      '    vec2 s = (uv - 0.5) * vec2(aspect * 2.0, 2.0);',
+      '    for (int i = 0; i < 3; i++){',
+      '      float fi = float(i);',
+      '      float band = i == 0 ? uBass : (i == 1 ? uMid : uHigh);',
+      '      float amp = 0.025 + band * 0.14 + uBeat * 0.035;',
+      '      float phase = uTime * (0.42 + fi * 0.11) + fi * 1.7;',
+      '      float wave = 0.72 * sin(s.x * (3.2 + fi * 1.15) + phase) + 0.28 * sin(s.x * (6.5 + fi * 0.7) - phase * 1.3);',
+      '      float y = (fi - 1.0) * 0.42 + wave * amp;',
+      '      float distToTrace = abs(s.y - y);',
+      '      float core = exp(-distToTrace * 115.0);',
+      '      float glow = exp(-distToTrace * 24.0);',
+      '      col += pop(paletteMix(0.12 + fi * 0.28)) * (core * (0.45 + band * 1.7 + uBeat * 0.45) + glow * 0.12);',
+      '    }',
+      '    col *= 0.94 + 0.06 * sin(uv.y * uRes.y * 0.3);',
       '  } else {',
       '    float r = length(p);',
       '    float ang = atan(p.y, p.x);',
@@ -8754,6 +8818,8 @@
     const wasOn = document.body.classList.contains('retro-mode');
     retroStyleOn = on;
     document.body.classList.toggle('retro-mode', on);
+    if (on && !wasOn) visualMode = VISUAL_MODES.length + retroVisualModeIndex;
+    else if (!on && wasOn) visualMode = normalVisualMode;
     updateStyleBtn();
     if (retroBgBtn) retroBgBtn.hidden = !on;
     syncRetroVolumeDock();
@@ -10937,7 +11003,7 @@ window.__pulsarSyncApply = async function (plan) {
     cycleRepeat, toggleShuffle, nextTrack: () => nextTrack(false), prevTrack, loadIndex: i => loadTrack(i, { autoplay: true }),
     __bgMouse: { on: () => bgFollowMouse, set: v => setBgFollowMouse(v), pos: () => ({ x: pointerPos.x, y: pointerPos.y }) },
     extractVividColor, __getPalette: () => coverPalette.slice(),
-    visualModes: () => VISUAL_MODES.slice(),
+    visualModes: () => document.body.classList.contains('retro-mode') ? RETRO_VISUAL_MODES.slice() : VISUAL_MODES.slice(),
     __queue: {
       list: () => queue.slice(), upcoming: () => { const pos = queue.indexOf(currentIndex); return pos < 0 ? [] : queue.slice(pos + 1); },
       move: queueMove, render: renderQueuePanel, panelOpen: () => !!queuePanelEl && !queuePanelEl.hidden
@@ -10969,7 +11035,11 @@ window.__pulsarSyncApply = async function (plan) {
       for: i => { const t = tracks[i]; const a = t && analysisCache.get(t.id); return a ? { dur: a.dur || 0, silences: (a.silences || []).map(x => x.slice()) } : null; },
       inject: (i, segs) => { const t = tracks[i]; if (!t) return false; const a = analysisCache.get(t.id); const rec = a || { peaks: new Float32Array(600).fill(0.5), rms: 0.2, peak: 0.9, norm: 1 }; rec.silences = segs; rec.dur = rec.dur || 180; analysisCache.set(t.id, rec); drawWaves(); return true; }
     },
-    setVisualMode: i => { if (i >= 0 && i < VISUAL_MODES.length){ visualMode = i; try { localStorage.setItem('ambientVisualMode', String(i)); } catch(e){} updateStyleBtn(); } },
+    setVisualMode: i => {
+      if (document.body.classList.contains('retro-mode')){
+        if (i >= 0 && i < RETRO_VISUAL_MODES.length){ retroVisualModeIndex = i; visualMode = VISUAL_MODES.length + i; try { localStorage.setItem('ambientRetroVisualMode', String(i)); } catch(e){} updateStyleBtn(); }
+      }else if (i >= 0 && i < VISUAL_MODES.length){ normalVisualMode = i; visualMode = i; try { localStorage.setItem('ambientVisualMode', String(i)); } catch(e){} updateStyleBtn(); }
+    },
     paletteVars: () => { const out = []; for (let i = 0; i < 5; i++) out.push(document.documentElement.style.getPropertyValue('--pal-' + i + '-rgb')); return out; },
     __lib: {
       dupGroups: () => findDupGroups().length,
