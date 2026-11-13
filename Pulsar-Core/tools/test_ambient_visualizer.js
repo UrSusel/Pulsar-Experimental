@@ -12,8 +12,8 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /vec2 wq = \(uv - uOrigin\) \* vec2\(aspect, 1\.0\)/, `${platform}: wave mode is anchored to the album too`);
   assert.match(html, /length\(\(uv - uOrigin\) \* vec2\(aspect, 1\.0\)/, `${platform}: vignette follows the album center`);
   assert.match(html, /float shellRadius = 0\.83 \+ petals \* 0\.105/, `${platform}: the new default scene forms an irregular album halo, not a circular equalizer`);
-  assert.match(html, /float spec = texture2D\(uSpectrum, vec2\(abs\(sin\(a\)\), 0\.5\)\)\.r;/, `${platform}: default halo spectrum mapping is horizontally symmetric`);
-  assert.match(html, /float mir = abs\(sin\(ang\)\);/, `${platform}: final spectrum mode uses the same balanced left/right mapping`);
+  assert.match(html, /float spec = clamp\(max\(uBass, max\(uMid, uHigh\)\) \* 1\.25, 0\.0, 1\.0\);/, `${platform}: default halo uses a position-independent broadband response`);
+  assert.match(html, /float specA = clamp\(max\(uBass, max\(uMid, uHigh\)\) \* 1\.25, 0\.0, 1\.0\);/, `${platform}: radial rays use the same broadband response in every direction`);
   assert.match(html, /float silk = exp\(-abs\(folds\) \* 10\.0\) \* exp\(-abs\(shellDelta\) \* 3\.2\);/, `${platform}: layered silk folds add moving depth behind the artwork`);
   assert.match(html, /float pulseWarp = 0\.12 \* sin\(a \* 3\.0 \+ field \* 3\.0\)/, `${platform}: outward pulses follow the organic halo instead of perfect circles`);
   assert.match(html, /float sourceBloom = exp\(-sourceR \* 2\.5\);/, `${platform}: the old universal hard pulse ring is removed`);

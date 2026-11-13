@@ -3646,7 +3646,8 @@
       '    float field = fbm(p * 0.58 + vec2(t * 0.11, -t * 0.07));',
       '    float warp = fbm(p * 1.25 + vec2(-t * 0.13, t * 0.09) + field * 0.45);',
       // Use a symmetric angular lookup so left/right lobes receive the same frequency bins.
-      '    float spec = texture2D(uSpectrum, vec2(abs(sin(a)), 0.5)).r;',
+      // Drive every direction from the same broadband level, not a position-specific FFT bin.
+      '    float spec = clamp(max(uBass, max(uMid, uHigh)) * 1.25, 0.0, 1.0);',
       '    float petals = sin(a * 3.0 + field * 3.5 - t * 0.45) + 0.42 * sin(a * 7.0 - warp * 3.0 + t * 0.3);',
       '    float shellRadius = 0.83 + petals * 0.105 + (spec - 0.25) * 0.22 + uBass * 0.12 + uBeat * 0.04;',
       '    float shellDelta = r - shellRadius;',
@@ -3784,8 +3785,8 @@
       '  } else {',
       '    float r = length(p);',
       '    float ang = atan(p.y, p.x);',
-      '    float mir = abs(sin(ang));',
-      '    float specA = texture2D(uSpectrum, vec2(mir * 0.62 + 0.02, 0.5)).r;',
+      // Keep the radial ink rays equally reactive around the whole circle.
+      '    float specA = clamp(max(uBass, max(uMid, uHigh)) * 1.25, 0.0, 1.0);',
       '    float specR = texture2D(uSpectrum, vec2(min(0.99, r * 0.85), 0.5)).r;',
       '    vec3 colP = vec3(0.004, 0.005, 0.012);',
       '    float ray = pow(specA, 1.6) * exp(-r * (1.9 - uBass * 0.9));',
