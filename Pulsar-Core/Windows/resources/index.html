@@ -3652,8 +3652,8 @@
       '    float band = abs(a) * 0.31830989;',
       // High-frequency bins naturally carry less energy; boost them in place without rotating the spectrum map.
       '    float spec = clamp(texture2D(uSpectrum, vec2(band, 0.5)).r * (1.0 + band * 0.75) + uHigh * band * 1.4, 0.0, 1.0);',
-      '    float petals = sin(a * 3.0 + field * 3.5 - t * 0.45) + 0.42 * sin(a * 7.0 - warp * 3.0 + t * 0.3);',
-      '    float shellRadius = 0.83 + petals * 0.105 + (spec - 0.25) * 0.22 + uBass * 0.12 + uBeat * 0.04;',
+      '    float petals = 0.72 * sin(a * 3.0 + field * 3.5 - t * 0.45) + 0.28 * sin(a * 7.0 - warp * 3.0 + t * 0.3);',
+      '    float shellRadius = 0.86 + petals * 0.085 + (spec - 0.25) * 0.22 + uBass * 0.12 + uBeat * 0.04 + uHigh * band * 0.12;',
       '    float shellDelta = r - shellRadius;',
       '    float mantle = exp(-shellDelta * shellDelta * 9.0);',
       '    float edge = exp(-abs(shellDelta) * 32.0);',
