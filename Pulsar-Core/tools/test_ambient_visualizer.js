@@ -40,6 +40,8 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /float warpedX = s\.x \+ sin\(baseDepth \* 0\.3 - uTime \* 0\.4 \+ s\.x \* 2\.0\)/, `${platform}: Retro Grid has subtle lateral wave distortion as well as height movement`);
   const sunset = html.slice(html.indexOf("'  } else if (uMode == 11){"), html.indexOf("'  } else {", html.indexOf("'  } else if (uMode == 11){")));
   assert.ok(sunset.indexOf("'    sky = mix(sky, mountainColor") < sunset.indexOf("'    sky = mix(sky, sunColor"), `${platform}: sunset mountains render behind the complete sun`);
+  assert.match(sunset, /float cloudPeak = horizonY \+ 0\.12 \+ 0\.082 \* sin\(s\.x \* 7\.0\) \+ 0\.034 \* sin\(s\.x \* 19\.0\) \+ 0\.024 \* sin\(s\.x \* 3\.2 \+ 1\.1\);/, `${platform}: sunset cloud and mountain silhouette is continuous across the whole horizon`);
+  assert.doesNotMatch(sunset, /step\(-0\.22, s\.x\)|step\(0\.22, s\.x\)/, `${platform}: sunset silhouette has no abrupt left/right cutoff seams`);
   assert.match(html, /if \(on && !wasOn\) visualMode = VISUAL_MODES\.length \+ retroVisualModeIndex;\s*else if \(!on && wasOn\) visualMode = normalVisualMode;/, `${platform}: switching Retro on/off restores the corresponding standard visualizer`);
   console.log(`${platform}: album-centered visualizer checks passed`);
 }
