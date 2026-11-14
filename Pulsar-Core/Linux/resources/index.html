@@ -3612,6 +3612,7 @@
       'uniform vec2 uPointer;',
       'uniform vec2 uOrigin;',
       'uniform int uMode;',
+      'uniform float uStereo;',
       'uniform vec3 uCol0;',
       'uniform vec3 uCol1;',
       'uniform vec3 uCol2;',
@@ -3847,19 +3848,32 @@
       '    for (int i = 0; i < 3; i++){',
       '      float fi = float(i);',
       '      float band = i == 0 ? uBass : (i == 1 ? uMid : uHigh);',
-      // Let each x-position sample a different FFT bin so traces form lively, music-shaped peaks.
+      '      float baseline = (fi - 1.0) * 0.42;',
       '      float fftBin = clamp(0.035 + (s.x / max(0.01, aspect) * 0.5 + 0.5) * 0.9, 0.02, 0.98);',
-      '      float localSpectrum = texture2D(uSpectrum, vec2(fftBin, 0.5)).r;',
-      '      float localDrive = clamp(localSpectrum * 1.8 + band * 0.55 + uBeat * 0.25, 0.0, 1.5);',
-      '      float amp = 0.045 + band * 0.28 + uBeat * 0.1 + localSpectrum * 0.26;',
-      '      float phase = uTime * (0.92 + fi * 0.24 + band * 0.38) + fi * 1.7;',
-      '      float wave = 0.58 * sin(s.x * (2.7 + fi * 0.95) + phase + localDrive * 1.8) + 0.27 * sin(s.x * (5.4 + fi * 1.2) - phase * 1.35) + 0.15 * sin(s.x * (1.35 + fi * 0.3) - uTime * 0.63 + fi);',
-      '      wave += (localDrive - 0.18) * (0.5 + band * 0.5);',
-      '      float y = (fi - 1.0) * 0.42 + wave * amp;',
-      '      float distToTrace = abs(s.y - y);',
-      '      float core = exp(-distToTrace * 115.0);',
-      '      float glow = exp(-distToTrace * 24.0);',
-      '      col += pop(paletteMix(0.12 + fi * 0.28)) * (core * (0.45 + band * 1.7 + localDrive * 1.25 + uBeat * 0.6) + glow * (0.12 + localDrive * 0.08));',
+      '      for (int side = 0; side < 2; side++){',
+      '        float sideF = float(side);',
+      '        float sideWeight = side == 0 ? 1.0 : uStereo;',
+      '        float sideOffset = (sideF - 0.5) * 0.12 * uStereo;',
+      '        float row = side == 0 ? 0.25 : 0.75;',
+      '        float localSpectrum = texture2D(uSpectrum, vec2(fftBin, mix(0.5, row, uStereo))).r;',
+      '        float localDrive = clamp(localSpectrum * 1.8 + band * 0.55 + uBeat * 0.25, 0.0, 1.5);',
+      '        float amp = 0.045 + band * 0.28 + uBeat * 0.1 + localSpectrum * 0.26;',
+      '        float phase = uTime * (0.92 + fi * 0.24 + band * 0.38) + fi * 1.7 + sideF * 0.17;',
+      '        float wave = 0.58 * sin(s.x * (2.7 + fi * 0.95) + phase + localDrive * 1.8) + 0.27 * sin(s.x * (5.4 + fi * 1.2) - phase * 1.35) + 0.15 * sin(s.x * (1.35 + fi * 0.3) - uTime * 0.63 + fi);',
+      '        wave += (localDrive - 0.18) * (0.5 + band * 0.5);',
+      '        float y = baseline + sideOffset + wave * amp;',
+      '        vec3 traceColor = side == 0 ? pop(paletteMix(0.12 + fi * 0.28)) : pop(paletteMix(0.46 + fi * 0.22));',
+      '        float distToTrace = abs(s.y - y);',
+      '        float core = exp(-distToTrace * 115.0);',
+      '        float glow = exp(-distToTrace * 24.0);',
+      '        col += traceColor * sideWeight * (core * (0.45 + band * 1.7 + localDrive * 1.25 + uBeat * 0.6) + glow * (0.12 + localDrive * 0.08));',
+      // A dim, phase-lagged echo gives the trace a phosphor afterglow without framebuffer history.
+      '        float echoPhase = phase - 0.38;',
+      '        float echoWave = 0.58 * sin(s.x * (2.7 + fi * 0.95) + echoPhase + localDrive * 1.8) + 0.27 * sin(s.x * (5.4 + fi * 1.2) - echoPhase * 1.35) + 0.15 * sin(s.x * (1.35 + fi * 0.3) - (uTime - 0.38) * 0.63 + fi);',
+      '        float echoY = baseline + sideOffset + (echoWave + (localDrive - 0.18) * (0.5 + band * 0.5)) * amp * 0.92;',
+      '        float echoGlow = exp(-abs(s.y - echoY) * 22.0);',
+      '        col += traceColor * sideWeight * echoGlow * (0.055 + localDrive * 0.035);',
+      '      }',
       '    }',
       '    col *= 0.94 + 0.06 * sin(uv.y * uRes.y * 0.3);',
       '  } else if (uMode == 11){',
@@ -3993,12 +4007,13 @@
       gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
       const U = {};
-      ['uRes', 'uTime', 'uBass', 'uMid', 'uHigh', 'uBeat', 'uPointer', 'uOrigin', 'uMode', 'uCol0', 'uCol1', 'uCol2', 'uCol3', 'uCol4', 'uSpectrum'].forEach(function(name){
+      ['uRes', 'uTime', 'uBass', 'uMid', 'uHigh', 'uBeat', 'uPointer', 'uOrigin', 'uMode', 'uStereo', 'uCol0', 'uCol1', 'uCol2', 'uCol3', 'uCol4', 'uSpectrum'].forEach(function(name){
         U[name] = gl.getUniformLocation(program, name);
       });
 
       const SPEC_N = 64;
-      const specTexArr = new Uint8Array(SPEC_N);
+      // Two spectrum rows carry L/R when stereo is really present; mono is mirrored to both.
+      const specTexArr = new Uint8Array(SPEC_N * 2);
       let specTex = null;
       try {
         specTex = gl.createTexture();
@@ -4007,7 +4022,7 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, SPEC_N, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, specTexArr);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, SPEC_N, 2, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, specTexArr);
       } catch(e){ specTex = null; }
 
       const palette = [
@@ -4078,15 +4093,26 @@
           gl.uniform2f(U.uOrigin, originX, originY);
           gl.uniform1i(U.uMode, visualMode);
           if (specTex && U.uSpectrum){
+            const stereoLeft = stereoAnalyserL && stereoFreqL;
+            const stereoRight = stereoAnalyserR && stereoFreqR;
+            if (stereoLeft) stereoAnalyserL.getByteFrequencyData(stereoFreqL);
+            if (stereoRight) stereoAnalyserR.getByteFrequencyData(stereoFreqR);
+            let leftEnergy = 0, rightEnergy = 0, stereoDifference = 0;
             for (let si = 0; si < SPEC_N; si++){
               const idxF = Math.floor(Math.pow(si / SPEC_N, 1.7) * Math.max(1, (freqData ? freqData.length : 0) - 2));
               const v = freqData ? (freqData[idxF] || 0) / 255 : 0;
-              specTexArr[si] = Math.max(Math.round(v * 255), Math.floor(specTexArr[si] * 0.88));
+              const l = stereoLeft ? (stereoFreqL[idxF] || 0) / 255 : v;
+              const r = stereoRight ? (stereoFreqR[idxF] || 0) / 255 : v;
+              leftEnergy += l; rightEnergy += r; stereoDifference += Math.abs(l - r);
+              specTexArr[si] = Math.max(Math.round(l * 255), Math.floor(specTexArr[si] * 0.88));
+              specTexArr[SPEC_N + si] = Math.max(Math.round(r * 255), Math.floor(specTexArr[SPEC_N + si] * 0.88));
             }
+            const stereoReady = !!(stereoLeft && stereoRight && leftEnergy > 0.7 && rightEnergy > 0.7 && stereoDifference > (leftEnergy + rightEnergy) * 0.055);
+            gl.uniform1f(U.uStereo, stereoReady ? 1 : 0);
             try {
               gl.activeTexture(gl.TEXTURE0);
               gl.bindTexture(gl.TEXTURE_2D, specTex);
-              gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, SPEC_N, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, specTexArr);
+              gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, SPEC_N, 2, gl.LUMINANCE, gl.UNSIGNED_BYTE, specTexArr);
               gl.uniform1i(U.uSpectrum, 0);
             } catch(e){}
           }
@@ -4153,6 +4179,7 @@
   function savePlayerMode(){ try{ localStorage.setItem('playerMode', JSON.stringify({ repeat: repeatMode, shuffle: shuffleOn })); } catch(e){} }
   let threeDMode = false;
   let audioCtx = null, analyser = null, freqData = null;
+  let stereoAnalyserL = null, stereoAnalyserR = null, stereoFreqL = null, stereoFreqR = null;
   let seeking = false;
   let volSeeking = false;
   let currentBgLayer = 1;
@@ -8024,6 +8051,18 @@
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.7;
       freqData = new Uint8Array(analyser.frequencyBinCount);
+      try {
+        const stereoSplit = audioCtx.createChannelSplitter(2);
+        stereoAnalyserL = audioCtx.createAnalyser(); stereoAnalyserR = audioCtx.createAnalyser();
+        stereoAnalyserL.fftSize = 256; stereoAnalyserR.fftSize = 256;
+        stereoAnalyserL.smoothingTimeConstant = 0.66; stereoAnalyserR.smoothingTimeConstant = 0.66;
+        stereoFreqL = new Uint8Array(stereoAnalyserL.frequencyBinCount);
+        stereoFreqR = new Uint8Array(stereoAnalyserR.frequencyBinCount);
+        masterGain.connect(stereoSplit);
+        stereoSplit.connect(stereoAnalyserL, 0); stereoSplit.connect(stereoAnalyserR, 1);
+        const stereoTapMute = audioCtx.createGain(); stereoTapMute.gain.value = 0;
+        stereoAnalyserL.connect(stereoTapMute); stereoAnalyserR.connect(stereoTapMute); stereoTapMute.connect(audioCtx.destination);
+      } catch(e){ stereoAnalyserL = null; stereoAnalyserR = null; stereoFreqL = null; stereoFreqR = null; }
       let node = inputBus;
       node.connect(normNode); node = normNode;
       filters.forEach(bq => { node.connect(bq); node = bq; });

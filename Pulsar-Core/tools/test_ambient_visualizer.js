@@ -35,9 +35,16 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /else if \(uMode == 9\)/, `${platform}: Retro plasma shader branch exists`);
   assert.match(html, /else if \(uMode == 10\)/, `${platform}: Retro oscilloscope shader branch exists`);
   const oscilloscope = html.slice(html.indexOf("'  } else if (uMode == 10){"), html.indexOf("'  } else if (uMode == 11){"));
-  assert.match(oscilloscope, /texture2D\(uSpectrum, vec2\(fftBin, 0\.5\)\)/, `${platform}: each oscilloscope trace reacts to local FFT bins`);
+  assert.match(oscilloscope, /texture2D\(uSpectrum, vec2\(fftBin, mix\(0\.5, row, uStereo\)\)\)/, `${platform}: each oscilloscope trace reacts to local FFT bins and channel rows`);
+  assert.match(oscilloscope, /float sideOffset = \(sideF - 0\.5\) \* 0\.12 \* uStereo;/, `${platform}: stereo inputs separate the left and right traces`);
+  assert.match(html, /createChannelSplitter\(2\)/, `${platform}: audio graph can analyze left and right channels separately`);
+  assert.match(html, /const stereoReady = !!\(stereoLeft && stereoRight && leftEnergy > 0\.7 && rightEnergy > 0\.7/, `${platform}: stereo display only activates when both channels contain distinct signal`);
+  assert.match(html, /gl\.texImage2D\(gl\.TEXTURE_2D, 0, gl\.LUMINANCE, SPEC_N, 2,/, `${platform}: spectrum texture stores separate channel rows`);
   assert.match(oscilloscope, /float amp = 0\.045 \+ band \* 0\.28 \+ uBeat \* 0\.1 \+ localSpectrum \* 0\.26;/, `${platform}: oscilloscope waveform has stronger audio-driven vertical travel`);
   assert.match(oscilloscope, /wave \+= \(localDrive - 0\.18\)/, `${platform}: local spectral peaks distort the trace shape independently`);
+  assert.match(oscilloscope, /float echoPhase = phase - 0\.38;/, `${platform}: oscilloscope draws a short phase-lagged phosphor echo`);
+  assert.match(oscilloscope, /float echoGlow = exp\(-abs\(s\.y - echoY\) \* 22\.0\)/, `${platform}: oscilloscope echo fades softly behind the live trace`);
+  assert.match(html, /specTexArr\[si\] \* 0\.88/, `${platform}: spectrum decay supplies a subtle lingering afterglow`);
   assert.match(html, /else if \(uMode == 11\)/, `${platform}: Retro neon sunset shader branch exists`);
   assert.match(html, /float gridFade = 1\.0 - smoothstep\(6\.0, 13\.0, depth\);/, `${platform}: distant Retro Grid lines fade smoothly to prevent horizon flicker`);
   assert.match(html, /float groundWave = \(waveA \+ waveB \+ waveC\) \* \(1\.0 - smoothstep\(7\.0, 15\.0, baseDepth\)\);/, `${platform}: Retro Grid surface undulates at different places with three travelling waves`);
@@ -49,6 +56,7 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(sunset, /float farPeak = horizonY \+ 0\.065/, `${platform}: sunset has a separate distant mountain layer`);
   assert.match(sunset, /float cloudRim = exp\(-abs\(s\.y - cloudPeak\) \* 58\.0\)/, `${platform}: foreground clouds receive a soft neon outline`);
   assert.match(sunset, /float sunReflection = exp\(-abs\(s\.x - reflectionX\)/, `${platform}: sun casts a rippling reflection down the grid floor`);
+  assert.match(sunset, /sunReflection \* \(0\.24 \+ uBass \* 0\.22 \+ uBeat \* 0\.08\)/, `${platform}: reflection brightens with bass and beats`);
   assert.match(sunset, /float starTwinkle = 0\.55 \+ 0\.45 \* sin\(uTime/, `${platform}: stars twinkle over time`);
   assert.match(sunset, /float glitchRow = step\(0\.9992/, `${platform}: occasional glitch accents are sparse`);
   assert.match(sunset, /sin\(uTime \* 0\.11\) \* 0\.018 \+ uBass \* 0\.028/, `${platform}: sun height drifts slowly and reacts to bass`);
