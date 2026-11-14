@@ -39,9 +39,15 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /float groundWave = \(waveA \+ waveB \+ waveC\) \* \(1\.0 - smoothstep\(7\.0, 15\.0, baseDepth\)\);/, `${platform}: Retro Grid surface undulates at different places with three travelling waves`);
   assert.match(html, /float warpedX = s\.x \+ sin\(baseDepth \* 0\.3 - uTime \* 0\.4 \+ s\.x \* 2\.0\)/, `${platform}: Retro Grid has subtle lateral wave distortion as well as height movement`);
   const sunset = html.slice(html.indexOf("'  } else if (uMode == 11){"), html.indexOf("'  } else {", html.indexOf("'  } else if (uMode == 11){")));
-  assert.ok(sunset.indexOf("'    sky = mix(sky, sunColor") < sunset.indexOf("'    sky = mix(sky, mountainColor"), `${platform}: sun is composited before the foreground cloud ridge`);
-  assert.match(sunset, /float cloudPeak = horizonY \+ 0\.12 \+ 0\.082 \* sin\(s\.x \* 7\.0\) \+ 0\.034 \* sin\(s\.x \* 19\.0\) \+ 0\.024 \* sin\(s\.x \* 3\.2 \+ 1\.1\);/, `${platform}: sunset cloud and mountain silhouette is continuous across the whole horizon`);
+  assert.ok(sunset.indexOf("'    sky = mix(sky, sunColor") < sunset.indexOf("'    sky = mix(sky, cloudColor"), `${platform}: sun is composited before the foreground cloud ridge`);
+  assert.match(sunset, /float cloudPeak = horizonY \+ 0\.12 \+ 0\.082 \* sin\(s\.x \* 7\.0 \+ uTime \* 0\.035\)/, `${platform}: foreground cloud ridge is continuous and drifts slowly`);
   assert.doesNotMatch(sunset, /step\(-0\.22, s\.x\)|step\(0\.22, s\.x\)/, `${platform}: sunset silhouette has no abrupt left/right cutoff seams`);
+  assert.match(sunset, /float farPeak = horizonY \+ 0\.065/, `${platform}: sunset has a separate distant mountain layer`);
+  assert.match(sunset, /float cloudRim = exp\(-abs\(s\.y - cloudPeak\) \* 58\.0\)/, `${platform}: foreground clouds receive a soft neon outline`);
+  assert.match(sunset, /float sunReflection = exp\(-abs\(s\.x - reflectionX\)/, `${platform}: sun casts a rippling reflection down the grid floor`);
+  assert.match(sunset, /float starTwinkle = 0\.55 \+ 0\.45 \* sin\(uTime/, `${platform}: stars twinkle over time`);
+  assert.match(sunset, /float glitchRow = step\(0\.9992/, `${platform}: occasional glitch accents are sparse`);
+  assert.match(sunset, /sin\(uTime \* 0\.11\) \* 0\.018 \+ uBass \* 0\.028/, `${platform}: sun height drifts slowly and reacts to bass`);
   assert.match(html, /if \(on && !wasOn\) visualMode = VISUAL_MODES\.length \+ retroVisualModeIndex;\s*else if \(!on && wasOn\) visualMode = normalVisualMode;/, `${platform}: switching Retro on/off restores the corresponding standard visualizer`);
   console.log(`${platform}: album-centered visualizer checks passed`);
 }
