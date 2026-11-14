@@ -1,2 +1,2 @@
-3a68be446fdd2314c14a3b49e94cb73a0fabca19b147d53e35fba8b3669f8681  Pulsar-Desktop.zip
-08fc123cbeb95bd907ae8398e5cedb55f11000a0ceeeea81ce0d3d568c299e54  Pulsar-Linux.zip
+250471aeee0e58ca15606b7038d7ff4246e9e60d6b2337fb9035367189bc07ce  Pulsar-Desktop.zip
+c2ab1870f595bda16e7a26c303d78cb21203c297a60e4819ba369cd53eb646da  Pulsar-Linux.zip

@@ -108,7 +108,7 @@ def check(platform: str) -> None:
             f"{platform}: Compact Retro does not expose the 3D visual-style button")
     require("const retroMode = document.body.classList.contains('retro-mode');" in source and
             "threeDMode || retroMode" in source and
-            "const RETRO_VISUAL_MODES = ['Siatka wektorowa', 'Plazma retro', 'Oscyloskop retro'];" in source,
+            "const RETRO_VISUAL_MODES = ['Siatka wektorowa', 'Plazma retro', 'Oscyloskop retro', 'Neonowy zachód'];" in source,
             f"{platform}: three dedicated 3D backgrounds are not available throughout Retro mode")
     require("document.body.classList.add('three-d-mode');" in source and
             "localStorage.setItem('threeDMode', 'true')" in source,
