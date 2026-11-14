@@ -36,11 +36,12 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /else if \(uMode == 10\)/, `${platform}: Retro oscilloscope shader branch exists`);
   const oscilloscope = html.slice(html.indexOf("'  } else if (uMode == 10){"), html.indexOf("'  } else if (uMode == 11){"));
   assert.match(oscilloscope, /texture2D\(uSpectrum, vec2\(fftBin, mix\(0\.5, row, uStereo\)\)\)/, `${platform}: each oscilloscope trace reacts to local FFT bins and channel rows`);
-  assert.match(oscilloscope, /float sideOffset = \(sideF - 0\.5\) \* 0\.12 \* uStereo;/, `${platform}: stereo inputs separate the left and right traces`);
+  assert.match(oscilloscope, /float sideOffset = \(sideF - 0\.5\) \* 0\.085 \* uStereo;/, `${platform}: stereo inputs gently separate the left and right traces`);
   assert.match(html, /createChannelSplitter\(2\)/, `${platform}: audio graph can analyze left and right channels separately`);
   assert.match(html, /const stereoReady = !!\(stereoLeft && stereoRight && leftEnergy > 0\.7 && rightEnergy > 0\.7/, `${platform}: stereo display only activates when both channels contain distinct signal`);
   assert.match(html, /gl\.texImage2D\(gl\.TEXTURE_2D, 0, gl\.LUMINANCE, SPEC_N, 2,/, `${platform}: spectrum texture stores separate channel rows`);
-  assert.match(oscilloscope, /float amp = 0\.045 \+ band \* 0\.28 \+ uBeat \* 0\.1 \+ localSpectrum \* 0\.26;/, `${platform}: oscilloscope waveform has stronger audio-driven vertical travel`);
+  assert.match(oscilloscope, /float amp = 0\.035 \+ band \* 0\.19 \+ uBeat \* 0\.055 \+ localSpectrum \* 0\.14;/, `${platform}: oscilloscope keeps moderate, controlled audio-driven movement`);
+  assert.match(oscilloscope, /float localDrive = clamp\(localSpectrum \* 1\.25 \+ band \* 0\.4 \+ uBeat \* 0\.18, 0\.0, 1\.2\);/, `${platform}: local spectral response is restrained to avoid erratic peaks`);
   assert.match(oscilloscope, /wave \+= \(localDrive - 0\.18\)/, `${platform}: local spectral peaks distort the trace shape independently`);
   assert.match(oscilloscope, /float echoPhase = phase - 0\.38;/, `${platform}: oscilloscope draws a short phase-lagged phosphor echo`);
   assert.match(oscilloscope, /float echoGlow = exp\(-abs\(s\.y - echoY\) \* 22\.0\)/, `${platform}: oscilloscope echo fades softly behind the live trace`);
