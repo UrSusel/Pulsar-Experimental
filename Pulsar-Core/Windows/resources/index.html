@@ -3875,6 +3875,8 @@
       '    float sun = 1.0 - smoothstep(sunRadius - 0.006, sunRadius + 0.006, sunDist);',
       '    float sunGap = step(0.16, fract((sunPos.y - s.y + 0.025) * 28.0));',
       '    vec3 sunColor = mix(vec3(1.0, 0.26, 0.42), vec3(1.0, 0.66, 0.32), clamp((s.y - (sunPos.y - sunRadius)) / (2.0 * sunRadius), 0.0, 1.0));',
+      // Draw the sun into the sky first; the continuous cloud ridge naturally occludes its lower edge.
+      '    sky = mix(sky, sunColor, sun * sunGap);',
       // One continuous cloud ridge avoids the hard seams where the old left/right silhouettes stopped.
       '    float cloudPeak = horizonY + 0.12 + 0.082 * sin(s.x * 7.0) + 0.034 * sin(s.x * 19.0) + 0.024 * sin(s.x * 3.2 + 1.1);',
       '    float mountains = 1.0 - smoothstep(cloudPeak - 0.008, cloudPeak + 0.008, s.y);',
@@ -3882,8 +3884,6 @@
       '    sky = mix(sky, mountainColor, clamp(mountains, 0.0, 1.0));',
       '    float mountainRim = exp(-abs(s.y - cloudPeak) * 90.0);',
       '    sky += vec3(0.25, 0.16, 0.65) * mountainRim * 0.45;',
-      // Composite the sun after mountain silhouettes so it reads as a distant horizon sun, not a clipped disk.
-      '    sky = mix(sky, sunColor, sun * sunGap);',
       '    float floorDepth = min(16.0, 0.24 / max(0.035, floorDist));',
       '    float floorFade = 1.0 - smoothstep(6.0, 13.0, floorDepth);',
       '    float floorX = abs(fract(s.x * floorDepth * 1.8 + 0.5) - 0.5);',
