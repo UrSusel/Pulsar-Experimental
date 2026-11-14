@@ -36,6 +36,10 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /else if \(uMode == 10\)/, `${platform}: Retro oscilloscope shader branch exists`);
   assert.match(html, /else if \(uMode == 11\)/, `${platform}: Retro neon sunset shader branch exists`);
   assert.match(html, /float gridFade = 1\.0 - smoothstep\(6\.0, 13\.0, depth\);/, `${platform}: distant Retro Grid lines fade smoothly to prevent horizon flicker`);
+  assert.match(html, /float groundWave = \(waveA \+ waveB \+ waveC\) \* \(1\.0 - smoothstep\(7\.0, 15\.0, baseDepth\)\);/, `${platform}: Retro Grid surface undulates at different places with three travelling waves`);
+  assert.match(html, /float warpedX = s\.x \+ sin\(baseDepth \* 0\.3 - uTime \* 0\.4 \+ s\.x \* 2\.0\)/, `${platform}: Retro Grid has subtle lateral wave distortion as well as height movement`);
+  const sunset = html.slice(html.indexOf("'  } else if (uMode == 11){"), html.indexOf("'  } else {", html.indexOf("'  } else if (uMode == 11){")));
+  assert.ok(sunset.indexOf("'    sky = mix(sky, mountainColor") < sunset.indexOf("'    sky = mix(sky, sunColor"), `${platform}: sunset mountains render behind the complete sun`);
   assert.match(html, /if \(on && !wasOn\) visualMode = VISUAL_MODES\.length \+ retroVisualModeIndex;\s*else if \(!on && wasOn\) visualMode = normalVisualMode;/, `${platform}: switching Retro on/off restores the corresponding standard visualizer`);
   console.log(`${platform}: album-centered visualizer checks passed`);
 }
