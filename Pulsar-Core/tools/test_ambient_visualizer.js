@@ -34,6 +34,10 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /if \(uMode == 8\)/, `${platform}: Retro vector grid shader branch exists`);
   assert.match(html, /else if \(uMode == 9\)/, `${platform}: Retro plasma shader branch exists`);
   assert.match(html, /else if \(uMode == 10\)/, `${platform}: Retro oscilloscope shader branch exists`);
+  const oscilloscope = html.slice(html.indexOf("'  } else if (uMode == 10){"), html.indexOf("'  } else if (uMode == 11){"));
+  assert.match(oscilloscope, /texture2D\(uSpectrum, vec2\(fftBin, 0\.5\)\)/, `${platform}: each oscilloscope trace reacts to local FFT bins`);
+  assert.match(oscilloscope, /float amp = 0\.045 \+ band \* 0\.28 \+ uBeat \* 0\.1 \+ localSpectrum \* 0\.26;/, `${platform}: oscilloscope waveform has stronger audio-driven vertical travel`);
+  assert.match(oscilloscope, /wave \+= \(localDrive - 0\.18\)/, `${platform}: local spectral peaks distort the trace shape independently`);
   assert.match(html, /else if \(uMode == 11\)/, `${platform}: Retro neon sunset shader branch exists`);
   assert.match(html, /float gridFade = 1\.0 - smoothstep\(6\.0, 13\.0, depth\);/, `${platform}: distant Retro Grid lines fade smoothly to prevent horizon flicker`);
   assert.match(html, /float groundWave = \(waveA \+ waveB \+ waveC\) \* \(1\.0 - smoothstep\(7\.0, 15\.0, baseDepth\)\);/, `${platform}: Retro Grid surface undulates at different places with three travelling waves`);
