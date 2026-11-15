@@ -33,7 +33,7 @@ sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0
 sudo dnf install gtk3 webkit2gtk4.1
 ```
 
-`yt-dlp` runs on the bundled copy and only needs `python3`, which every desktop distro already has.
+`yt-dlp` runs on the bundled copy and only needs `python3`, which every desktop distro already has. Optional Discord Rich Presence also uses Python 3 for its local IPC helper; it is off until you enable it in Settings and provide your own Discord Application ID.
 
 ## Optional: FFmpeg exports and long recordings
 

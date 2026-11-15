@@ -27,6 +27,7 @@ Retro-only 3D scenes now include Vector Grid, Retro Plasma, Retro Oscilloscope, 
 ## ✨ Features
 
 - 🎧 **Built-in YouTube downloader** — yt-dlp ships inside the app and starts itself in the background
+- 💬 **Discord Rich Presence** — optionally share the current track and artist through Discord's local IPC; requires your Discord Application ID, but no bot or token
 - 🖼️ **Covers & tags embedded** — saved tracks look right in Explorer, your phone, any player
 - 🌠 **Nebula visualizers** — audio-reactive 3D backgrounds and fullscreen ambient mode; Retro adds four dedicated scenes: vector grid, plasma, stereo oscilloscope and neon sunset
 - 🎤 **Word-synced lyrics** — the regular lyrics panel gradually fills each word over its real duration from enhanced LRC, LRCLIB Lyricsfile, or the multi-source Lyrics+ fallback (used when LRCLIB has no word timing); otherwise it keeps the standard line-by-line highlighting
@@ -46,6 +47,10 @@ Retro-only 3D scenes now include Vector Grid, Retro Plasma, Retro Oscilloscope, 
 - ✏️ **Tag editor** — fix title, artist and cover from the track list; MP3/M4A tags are written into the file
 - ☁️ **One library everywhere** — point the app once at a folder synced with Google Drive and Windows, Linux and Android share the same library (names, favourites, plays, albums — never the audio files)
 - 💾 **Automatic & safe backups** — scheduled `.pulsarlib` copies, rotated versions, safety snapshots before restore/major changes, and a warning before deleting a track that exists only in the library
+
+## 💬 Discord Rich Presence
+
+Enable **Settings → Library → Discord Rich Presence**, create an application in the Discord Developer Portal, and paste its **Application ID** into Pulsar. Keep the Discord desktop app running. Pulsar then shows the current track and artist through Discord's local IPC connection; no bot, OAuth flow, token, or Pulsar-hosted service is involved. Presence is opt-in and can be switched off at any time. Linux needs Python 3 for the small local IPC helper; Windows uses the built-in PowerShell.
 
 ## ☁️ One library on every device
 

@@ -1003,6 +1003,9 @@
   .sm-val { flex: 0 0 auto; min-width: 54px; text-align: right; font-size: 12px; color: var(--accent); font-variant-numeric: tabular-nums; }
   .sm-val:empty { display: none; }
   .sm-select { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .sm-discord-id { width:100%; margin:8px 0; cursor:text; }
+  .sm-discord-help { display:inline-block; margin:0 0 8px; color:var(--accent); font-size:11px; text-decoration:none; }
+  .sm-discord-status { min-height:16px; margin-top:7px; color:var(--text-muted); font-size:11px; }
   .sm-select option { background: #14141c; color: #fff; }
   .sm-act { flex: none; padding: 7px 14px; border-radius: 9px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07); color: #fff; font: inherit; font-size: 12.5px; cursor: pointer; transition: .14s; white-space: nowrap; }
   .sm-act:hover { background: rgba(var(--accent-rgb), .18); border-color: var(--accent); }
@@ -2319,6 +2322,7 @@
         <h2 class="sm-pane-title">Biblioteka</h2>
         <div class="sm-card sm-desktop-only"><h3 class="sm-cap">Obserwowany folder</h3><div class="sm-row"><div class="sm-txt"><span class="sm-desc sm-desc-top">Nowe pliki audio z tego folderu (i podfolderów) same trafią do biblioteki</span><span class="sm-lab sm-path" id="smWatchPath">nie wybrano</span></div><button type="button" class="sm-mini" id="smWatchOff" hidden>Wyłącz</button></div><button type="button" class="sm-btn" id="smWatchBtn" title="Nowe pliki audio z tego folderu (i podfolderów) same trafią do biblioteki">Wybierz folder…</button></div>
         <div class="sm-card"><h3 class="sm-cap">Okładki albumów</h3><div class="sm-row"><div class="sm-txt"><span class="sm-desc">Ponownie odczyta osadzone okładki z obsługiwanych formatów audio, a brakujące wyszuka w iTunes, Deezerze, MusicBrainz i na YouTube.</span></div></div><button type="button" class="sm-btn" id="smReloadAlbumCoversBtn" title="Ponownie wczytaj okładki z plików i źródeł online">Wczytaj okładki ponownie</button></div>
+        <div class="sm-card sm-desktop-only"><h3 class="sm-cap">Discord Rich Presence</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Pokaż odtwarzany utwór na Discordzie</span><span class="sm-desc">Udostępnia tytuł i wykonawcę na Twoim profilu, gdy Discord desktop jest uruchomiony. Wymaga Application ID z własnej aplikacji Discord; łączy się lokalnie przez IPC, bez bota i tokenu. Na Linuxie wymaga Python 3; Windows korzysta z wbudowanego PowerShella.</span></div><label class="switch"><input type="checkbox" id="smDiscordPresenceToggle"><span class="slider"></span></label></div><input type="text" class="sm-select sm-discord-id" id="smDiscordApplicationId" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Discord Application ID" aria-label="Discord Application ID"><button type="button" class="sm-btn" id="smDiscordPortalBtn">Otwórz Discord Developer Portal</button><button type="button" class="sm-btn" id="smDiscordSaveIdBtn">Zapisz Application ID</button><div class="sm-discord-status" id="smDiscordStatus" role="status" aria-live="polite">Wyłączone</div></div>
         <div class="sm-card"><h3 class="sm-cap">Historia odsłuchów i statystyki</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Zapisuj historię odsłuchów</span><span class="sm-desc">Domyślnie wyłączone. Zapisuje utwór po co najmniej 30 sekundach słuchania lub po przesłuchaniu połowy krótszego utworu. Historia pozostaje tylko na tym urządzeniu i nie jest synchronizowana.</span></div><label class="switch"><input type="checkbox" id="smListeningHistoryToggle"><span class="slider"></span></label></div><button type="button" class="sm-btn" id="smListeningHistoryClearBtn">Usuń historię odsłuchów</button></div>
         <div class="sm-card"><h3 class="sm-cap">Rekomendacje YouTube</h3><div class="sm-row"><div class="sm-txt"><span class="sm-lab">Polecaj muzykę na podstawie odsłuchu</span><span class="sm-desc">Domyślnie wyłączone. Po włączeniu Pulsar zapisuje od teraz osobną historię rekomendacji lokalnie; wcześniejsze odsłuchy nie są w niej uwzględniane. Historia służy do szukania muzyki na YouTube. Wyniki nie są pobierane — pojawiają się w widoku „Dla Ciebie”.</span></div><label class="switch"><input type="checkbox" id="smRecommendationsToggle"><span class="slider"></span></label></div><div class="sm-desc" id="recommendationsPrivacyNote">Historia i polecenia pozostają na tym urządzeniu; zapytania wyszukiwania trafiają do skonfigurowanego źródła YouTube. Odświeżanie co 12 godzin.</div><button type="button" class="sm-btn" id="smRecommendationsClearBtn">Usuń zebrane dane rekomendacji</button></div>
         <div class="sm-card"><h3 class="sm-cap">Kopia zapasowa</h3><div class="sm-row"><div class="sm-txt"><span class="sm-desc sm-desc-top">Jeden plik .pulsarlib: utwory, okładki, albumy, ulubione, statystyki i ustawienia</span></div></div><div class="sm-btn-row"><button type="button" class="sm-btn" id="smBackupBtn" title="Jeden plik .pulsarlib: utwory, okładki, albumy, ulubione, statystyki i ustawienia">Kopia biblioteki…</button><button type="button" class="sm-btn" id="smRestoreBtn" title="Wczytuje plik .pulsarlib — dokłada brakujące utwory i albumy">Przywróć z kopii…</button></div><input type="file" id="backupFileInput" accept=".pulsarlib" hidden></div>
@@ -3213,6 +3217,20 @@
     'Grafika powstaje lokalnie z okładek i metadanych. Nic nie jest wysyłane ani generowane przez AI.': { en: 'Artwork is generated locally from covers and metadata. Nothing is uploaded or AI-generated.', es: 'La imagen se genera localmente a partir de portadas y metadatos. No se sube ni se genera con IA.' },
     'Nie udało się wygenerować plakatu': { en: 'Could not generate the poster', es: 'No se pudo generar el póster' },
     'Plakat ustawiono jako okładkę': { en: 'Poster set as the cover', es: 'Póster establecido como portada' },
+    'Discord Rich Presence': { en: 'Discord Rich Presence', es: 'Presencia enriquecida de Discord' },
+    'Pokaż odtwarzany utwór na Discordzie': { en: 'Show the current track on Discord', es: 'Mostrar la canción actual en Discord' },
+    'Udostępnia tytuł i wykonawcę na Twoim profilu, gdy Discord desktop jest uruchomiony. Wymaga Application ID z własnej aplikacji Discord; łączy się lokalnie przez IPC, bez bota i tokenu. Na Linuxie wymaga Python 3; Windows korzysta z wbudowanego PowerShella.': { en: 'Shows the title and artist on your profile while the Discord desktop app is running. Requires an Application ID from your own Discord application; connects locally over IPC, with no bot or token. Linux requires Python 3; Windows uses built-in PowerShell.', es: 'Muestra el título y el artista en tu perfil mientras Discord de escritorio está abierto. Requiere el ID de aplicación de tu propia aplicación; se conecta localmente por IPC, sin bot ni token. Linux requiere Python 3; Windows usa PowerShell integrado.' },
+    'Gdzie znaleźć Application ID': { en: 'Where to find the Application ID', es: 'Dónde encontrar el ID de aplicación' },
+    'Otwórz Discord Developer Portal': { en: 'Open Discord Developer Portal', es: 'Abrir el portal de desarrolladores de Discord' },
+    'Zapisz Application ID': { en: 'Save Application ID', es: 'Guardar ID de aplicación' },
+    'Wyłączone': { en: 'Off', es: 'Desactivado' },
+    'Wpisz prawidłowy Discord Application ID.': { en: 'Enter a valid Discord Application ID.', es: 'Introduce un ID de aplicación de Discord válido.' },
+    'Discord RPC zakończył działanie.': { en: 'Discord RPC helper stopped.', es: 'El proceso de presencia de Discord se detuvo.' },
+    'Application ID zapisany.': { en: 'Application ID saved.', es: 'ID de aplicación guardado.' },
+    'Discord Rich Presence włączone.': { en: 'Discord Rich Presence enabled.', es: 'Presencia enriquecida de Discord activada.' },
+    'Discord Rich Presence wyłączone.': { en: 'Discord Rich Presence disabled.', es: 'Presencia enriquecida de Discord desactivada.' },
+    'Połączono z Discordem': { en: 'Connected to Discord', es: 'Conectado a Discord' },
+    'Nie znaleziono Discorda — uruchom aplikację desktopową.': { en: 'Discord was not found — launch the desktop app.', es: 'No se encontró Discord; inicia la aplicación de escritorio.' },
     'Odsłuchy': { en: 'Listening', es: 'Escuchas' },
     'Historia odsłuchów': { en: 'Listening history', es: 'Historial de escucha' },
     'Historia jest wyłączona. Włącz ją w Ustawieniach → Biblioteka, aby zapisywać odsłuchy lokalnie.': { en: 'History is off. Enable it in Settings → Library to keep listening activity on this device.', es: 'El historial está desactivado. Actívalo en Ajustes → Biblioteca para guardar la actividad en este dispositivo.' },
@@ -8998,6 +9016,63 @@
     }
     smShowPane(smCurrentPane());
   }
+  let discordPresenceEnabled=false,discordApplicationId='';
+  try{discordPresenceEnabled=localStorage.getItem('pulsarDiscordPresenceEnabled')==='1';discordApplicationId=localStorage.getItem('pulsarDiscordApplicationId')||'';}catch(e){}
+  const discordPresenceToggleEl=document.getElementById('smDiscordPresenceToggle');
+  const discordApplicationIdEl=document.getElementById('smDiscordApplicationId');
+  const discordSaveIdBtn=document.getElementById('smDiscordSaveIdBtn');
+  const discordPortalBtn=document.getElementById('smDiscordPortalBtn');
+  const discordStatusEl=document.getElementById('smDiscordStatus');
+  if(discordPresenceEnabled&&!/^\d{17,20}$/.test(discordApplicationId)){discordPresenceEnabled=false;try{localStorage.setItem('pulsarDiscordPresenceEnabled','0');}catch(e){}}
+  let discordPresenceTimer=0,discordPresenceRefreshTimer=0;
+  function discordStatus(text,ok){if(discordStatusEl){discordStatusEl.textContent=text;discordStatusEl.dataset.ok=ok?'1':'0';}}
+  function discordDesktop(){return window.__pulsarDesktop&&window.__pulsarDesktop.discordPresence||null;}
+  function clearDiscordActivity(){const api=discordDesktop();if(api&&api.clear)api.clear(discordApplicationId).catch(function(){});}
+  function updateDiscordActivity(){
+    if(!discordPresenceEnabled)return;
+    const api=discordDesktop();
+    if(!api||!api.update){discordPresenceRefreshTimer=setTimeout(updateDiscordActivity,1000);return;}
+    const player=window.__pulsarHost&&window.__pulsarHost.nowPlaying?window.__pulsarHost.nowPlaying():null;
+    if(!player||!player.hasTrack){api.clear(discordApplicationId).catch(function(){});return;}
+    api.update({appId:discordApplicationId,title:player.title,artist:player.artist,playing:player.playing,position:player.pos,duration:player.dur}).catch(function(error){discordStatus(String(error&&error.message||error||'Discord RPC error'),false);});
+  }
+  function scheduleDiscordActivity(){clearTimeout(discordPresenceRefreshTimer);discordPresenceRefreshTimer=setTimeout(updateDiscordActivity,250);}
+  if(discordApplicationIdEl)discordApplicationIdEl.value=discordApplicationId;
+  if(discordPresenceToggleEl){
+    discordPresenceToggleEl.checked=discordPresenceEnabled;
+    discordPresenceToggleEl.addEventListener('change',function(){
+      if(discordPresenceToggleEl.checked&&!/^\d{17,20}$/.test(discordApplicationId)){
+        discordPresenceToggleEl.checked=false;discordStatus(t('Wpisz prawidłowy Discord Application ID.'),false);return;
+      }
+      discordPresenceEnabled=!!discordPresenceToggleEl.checked;
+      try{localStorage.setItem('pulsarDiscordPresenceEnabled',discordPresenceEnabled?'1':'0');}catch(e){}
+      if(discordPresenceEnabled){startDiscordPolling();discordStatus(t('Discord Rich Presence włączone.'),true);updateDiscordActivity();}
+      else{stopDiscordPolling();clearDiscordActivity();discordStatus(t('Discord Rich Presence wyłączone.'),true);}
+    });
+  }
+  if(discordSaveIdBtn)discordSaveIdBtn.addEventListener('click',function(){
+    const value=String(discordApplicationIdEl&&discordApplicationIdEl.value||'').trim();
+    if(!/^\d{17,20}$/.test(value)){discordStatus(t('Wpisz prawidłowy Discord Application ID.'),false);return;}
+    discordApplicationId=value;
+    try{localStorage.setItem('pulsarDiscordApplicationId',value);}catch(e){}
+    discordStatus(t('Application ID zapisany.'),true);
+    if(discordPresenceEnabled)updateDiscordActivity();
+  });
+  if(discordPortalBtn)discordPortalBtn.addEventListener('click',function(){
+    try{const desktop=window.__pulsarDesktop;if(desktop&&desktop.openUrl)desktop.openUrl('https://discord.com/developers/applications');}
+    catch(e){discordStatus(String(e&&e.message||e),false);}
+  });
+  document.addEventListener('pulsar:discord-status',function(event){
+    const detail=event&&event.detail||{};let message=String(detail.message||'');
+    if(message==='Connected to Discord')message=t('Połączono z Discordem');
+    else if(message==='Discord desktop IPC not found; open the Discord desktop app')message=t('Nie znaleziono Discorda — uruchom aplikację desktopową.');
+    else if(message==='Discord Rich Presence cleared')message=t('Discord Rich Presence wyłączone.');
+    else if(message==='Discord Rich Presence cleared')message=t('Discord Rich Presence wyłączone.');
+    discordStatus(message,!!detail.ok);
+  });
+  document.addEventListener('pulsar:state',scheduleDiscordActivity);
+  if(discordPresenceEnabled&&/^\d{17,20}$/.test(discordApplicationId)){setTimeout(updateDiscordActivity,1000);startDiscordPolling();}
+  window.addEventListener('pagehide',function(){stopDiscordPolling();const api=discordDesktop();if(api&&api.stop)api.stop();else clearDiscordActivity();});
   const listeningHistoryToggleEl=document.getElementById('smListeningHistoryToggle');
   if(listeningHistoryToggleEl){
     listeningHistoryToggleEl.checked=listeningHistoryEnabled;
@@ -10754,6 +10829,8 @@
   }
   audio.addEventListener('play', function(){ emitHostState('play'); });
   audio.addEventListener('pause', function(){ emitHostState('pause'); });
+  audio.addEventListener('seeked', function(){ emitHostState('seek'); });
+  audio.addEventListener('ended', function(){ emitHostState('ended'); });
 
   // ---- Widok mini (kompaktowe okno) ----
   const mv = {
@@ -11071,12 +11148,12 @@
       return {
         title: tr ? (tr.title || '') : '',
         artist: tr ? txArtist(tr.artist || '') : '',
-        playing: !audio.paused,
+        playing: !audio.paused || (typeof xf !== 'undefined' && !!xf.active),
         hasTracks: tracks.length > 0 || !!activeOnlineTrack,
         hasTrack: !!tr,
         cover: (cu && cu !== DEFAULT_COVER) ? cu : '',
-        pos: audio.currentTime || 0,
-        dur: isFinite(audio.duration) ? audio.duration : 0,
+        pos: (typeof xf !== 'undefined' && xf.active ? audioXF.currentTime : audio.currentTime) || 0,
+        dur: (typeof xf !== 'undefined' && xf.active && isFinite(audioXF.duration) ? audioXF.duration : (isFinite(audio.duration) ? audio.duration : 0)),
         accent: accent
       };
     },
