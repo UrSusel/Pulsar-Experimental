@@ -22,7 +22,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 
 ### Latest release: 0.23.1
 
-Retro-only 3D scenes now include Vector Grid, Retro Plasma, Retro Oscilloscope, and Neon Sunset. This update adds stronger audio-driven oscilloscope motion with stereo separation and a phosphor-style echo, layered sunset scenery and a bass-reactive floor reflection, and safer import handling for macOS metadata sidecars. See the full [0.23.1 release notes](RELEASE-0.23.1.md).
+Retro-only 3D scenes now include Vector Grid, Retro Plasma, Retro Oscilloscope, and Neon Sunset. This update adds stronger audio-driven oscilloscope motion with stereo separation and a phosphor-style echo, layered sunset scenery and a bass-reactive floor reflection, safer import handling for macOS metadata sidecars, and a more reliable factory reset. See the full [0.23.1 release notes](RELEASE-0.23.1.md).
 
 ## ✨ Features
 
