@@ -3407,6 +3407,28 @@
   const coverImg = document.getElementById('coverImg');
   const ambient3dCanvas = document.getElementById('ambient3dCanvas');
   let ambientVisual = null;
+  let ambientVisualInitAttempted = false;
+  // Start the WebGL renderer only after explicit opt-in. A previous unclean exit
+  // (for example a driver crash or BSOD) also forces one safe, non-WebGL launch.
+  const APP_RUN_STATE_KEY = 'pulsarAppRunStateV1';
+  const GPU_SAFE_STARTUP_KEY = 'pulsarGpuSafeStartupV1';
+  let recoveredAfterUncleanExit = false;
+  let initializeGpuAtStartup = false;
+  try {
+    recoveredAfterUncleanExit = localStorage.getItem(APP_RUN_STATE_KEY) === 'running';
+    const gpuSafeStartupDone = localStorage.getItem(GPU_SAFE_STARTUP_KEY) === '1';
+    localStorage.setItem(APP_RUN_STATE_KEY, 'running');
+    window.addEventListener('beforeunload', function () {
+      try { localStorage.setItem(APP_RUN_STATE_KEY, 'clean'); } catch (e) {}
+    }, { once: true });
+    if (!gpuSafeStartupDone || recoveredAfterUncleanExit) {
+      localStorage.setItem(GPU_SAFE_STARTUP_KEY, '1');
+      localStorage.setItem('threeDMode', 'false');
+    } else {
+      const savedGpuMode = localStorage.getItem('threeDMode');
+      initializeGpuAtStartup = savedGpuMode === 'true' || savedGpuMode === '1';
+    }
+  } catch (e) {}
   const coverWrap = document.getElementById('coverWrap');
   const playOverlay = document.getElementById('playOverlay');
   const overlayIcon = document.getElementById('overlayIcon');
@@ -4202,12 +4224,18 @@
     }
   }
 
-  ambientVisual = initAmbientVisual();
-  if (ambientVisual){
+  function ensureAmbientVisual(){
+    if (ambientVisual) return true;
+    if (ambientVisualInitAttempted) return false;
+    ambientVisualInitAttempted = true;
+    try { ambientVisual = initAmbientVisual(); } catch (e) { ambientVisual = null; }
+    if (!ambientVisual) return false;
     ambientVisual.resize();
     window.addEventListener('resize', function(){ if (ambientVisual) ambientVisual.resize(); });
     document.addEventListener('fullscreenchange', function(){ setTimeout(function(){ if (ambientVisual) ambientVisual.resize(); }, 150); });
+    return true;
   }
+  if (initializeGpuAtStartup && !recoveredAfterUncleanExit) ensureAmbientVisual();
 
   let tracks = [];
   let activeOnlineTrack = null, activeOnlineSession = null, onlinePlaybackToken = 0, onlinePlaybackLoading = false;
@@ -10127,7 +10155,9 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (modalDim.classList.contains('show')) closeModal(); if (playlistMenu.classList.contains('open')) playlistMenu.classList.remove('open'); else setFullscreen(false); } });
 
   reactiveToggle.addEventListener('change', function(e){
-    threeDMode = e.target.checked && Boolean(ambientVisual);
+    const requested = !!e.target.checked;
+    if (requested) ensureAmbientVisual();
+    threeDMode = requested && Boolean(ambientVisual);
     e.target.checked = threeDMode;
     document.body.classList.toggle('three-d-mode', threeDMode);
     if (threeDMode && ambientVisual) ambientVisual.resize();
