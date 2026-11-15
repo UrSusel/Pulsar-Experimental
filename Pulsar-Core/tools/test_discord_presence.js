@@ -14,7 +14,9 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /id="smDiscordApplicationId"/, `${platform}: user can configure their Discord application ID`);
   assert.match(html, /id="smDiscordSaveIdBtn"/, `${platform}: application ID can be saved`);
   assert.match(html, /pulsarDiscordPresenceEnabled/, `${platform}: preference persists locally`);
-  assert.match(html, /pulsarDiscordApplicationId/, `${platform}: public application ID persists locally`);
+  assert.match(html, /pulsarDiscordApplicationId/, `${platform}: application ID preference remains overridable`);
+  assert.match(html, /pulsarDiscordApplicationId'\)\|\|'1571647035168530442'/,
+    `${platform}: Pulsar's shared public Application ID is preconfigured for all users`);
   for (const key of [
     'Discord Rich Presence', 'Pokaż odtwarzany utwór na Discordzie',
     'Otwórz Discord Developer Portal', 'Zapisz Application ID', 'Application ID zapisany.',
