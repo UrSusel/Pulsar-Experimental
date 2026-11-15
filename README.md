@@ -22,7 +22,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 
 ### Latest release: 0.23.1
 
-Retro-only 3D scenes now include Vector Grid, Retro Plasma, Retro Oscilloscope, and Neon Sunset. This update adds stronger audio-driven oscilloscope motion with stereo separation and a phosphor-style echo, layered sunset scenery and a bass-reactive floor reflection, safer import handling for macOS metadata sidecars, and a more reliable factory reset. See the full [0.23.1 release notes](RELEASE-0.23.1.md).
+Retro-only 3D scenes now include Vector Grid, Retro Plasma, Retro Oscilloscope, and Neon Sunset. This update adds stronger audio-driven oscilloscope motion with stereo separation and a phosphor-style echo, layered sunset scenery and a bass-reactive floor reflection, safer import handling for macOS metadata sidecars, a more reliable factory reset, and opt-in local listening history with stats. See the full [0.23.1 release notes](RELEASE-0.23.1.md).
 
 ## ✨ Features
 
@@ -35,7 +35,7 @@ Retro-only 3D scenes now include Vector Grid, Retro Plasma, Retro Oscilloscope, 
 - 🎞️ **MP3 / FLAC & long recordings** — optional FFmpeg export; large files are edited without decoding the whole recording in WebView
 - ⏱️ **Lyrics timing controls** — shift subtitles per track, export adjusted LRC, and keep lyrics aligned automatically after audio cuts
 - 🎨 **Dynamic colours** — the whole UI picks up palettes from the current album cover
-- ⏱️ **Sleep timer & stats** — gentle fade-out, favourites, play counts, smart sorting
+- ⏱️ **Sleep timer & stats** — gentle fade-out, favourites, play counts, smart sorting, and an opt-in local listening history with top artists and recent plays
 - 📻 **Auto-DJ 2.0** — calm/focus/workout/party/discovery moods, “more like this”, artist/genre diversity, undoable history and a short reason for every pick
 - 🔌 **Truly portable** — keep it on any drive, even a USB stick; identical experience on Windows and Linux
 - 🔄 **App update checks** — checks GitHub Releases on app startup (then at most every 12 hours during a long session), shows release notes and a platform-matched download link when available; Pulsar never installs an update by itself
