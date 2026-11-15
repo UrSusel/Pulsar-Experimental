@@ -45,6 +45,25 @@ def socket_candidates():
     explicit = os.environ.get("DISCORD_IPC_PATH")
     if explicit:
         yield explicit
+    # Discord resolves its socket in these temporary/runtime directories first.
+    # In particular, current desktop clients commonly put it under XDG_RUNTIME_DIR,
+    # not ~/.config/discord (the older fallback below).
+    runtime_dirs = [
+        os.environ.get("XDG_RUNTIME_DIR"),
+        os.environ.get("TMPDIR"),
+        os.environ.get("TMP"),
+        os.environ.get("TEMP"),
+        "/tmp",
+    ]
+    found = set()
+    for directory in runtime_dirs:
+        if not directory:
+            continue
+        for path in glob.glob(os.path.join(directory, "discord-ipc-*")):
+            if path not in found:
+                found.add(path)
+                yield path
+
     config = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
     roots = [config]
     roots.extend([
@@ -55,7 +74,6 @@ def socket_candidates():
     if runtime:
         roots.extend(glob.glob(os.path.join(runtime, "app", "com.discordapp.*")))
     names = ("discord", "discordcanary", "discordptb", "vesktop", "armcord")
-    found = set()
     for root in roots:
         for name in names:
             directory = os.path.join(root, name)

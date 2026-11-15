@@ -43,6 +43,29 @@ class DiscordRpcTests(unittest.TestCase):
         self.assertEqual(activity["state"], "Example artist")
         self.assertEqual(activity["timestamps"]["start"], 965)
 
+    def test_linux_socket_search_checks_runtime_and_temp_directories_first(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = pathlib.Path(directory) / "runtime"
+            temp = pathlib.Path(directory) / "tmp"
+            config = pathlib.Path(directory) / "config"
+            runtime.mkdir()
+            temp.mkdir()
+            config.mkdir()
+            runtime_socket = runtime / "discord-ipc-0"
+            temp_socket = temp / "discord-ipc-1"
+            runtime_socket.touch()
+            temp_socket.touch()
+            env = {
+                "XDG_RUNTIME_DIR": str(runtime), "TMPDIR": str(temp),
+                "TMP": str(temp), "TEMP": str(temp), "XDG_CONFIG_HOME": str(config),
+                "DISCORD_IPC_PATH": "",
+            }
+            with patch.dict(os.environ, env, clear=False):
+                candidates = list(RPC.socket_candidates())
+            self.assertIn(str(runtime_socket), candidates)
+            self.assertIn(str(temp_socket), candidates)
+            self.assertLess(candidates.index(str(runtime_socket)), candidates.index(str(temp_socket)))
+
     def test_paused_activity_has_no_running_clock(self):
         activity = RPC.make_activity({"title": "Paused song", "artist": "Artist", "playing": False, "position": 40})
         self.assertNotIn("timestamps", activity)
