@@ -2640,6 +2640,7 @@
     'Zaimportowano napisy: ': { en: 'Imported lyrics: ', es: 'Letra importada: ' },
     'Przywrócono napisy online': { en: 'Restored online lyrics', es: 'Se restauró la letra en línea' },
     'Nie znaleziono plików audio w wybranym folderze.': { en: 'No audio files found in the chosen folder.', es: 'No se encontraron archivos de audio en la carpeta elegida.' },
+    'Pominięto pomocnicze pliki macOS; dodaj oryginalne pliki audio, jeśli utworów brakuje.': { en: 'Skipped macOS metadata sidecars; add the original audio files if any tracks are missing.', es: 'Se omitieron archivos auxiliares de macOS; añade los archivos de audio originales si faltan canciones.' },
     'Najpierw dodaj utwory do biblioteki.': { en: 'Add tracks to the library first.', es: 'Primero añade canciones a la biblioteca.' },
     'Nowy album': { en: 'New album', es: 'Nuevo álbum' },
     'Zmień nazwę albumu': { en: 'Rename album', es: 'Renombrar álbum' },
@@ -3305,6 +3306,14 @@
   );
 
   const AUDIO_EXT_RE = /\.(mp3|mp2|mpga|wav|aif|aiff|caf|ogg|oga|m4a|m4b|m4p|mp4|3gp|3g2|aac|flac|opus|weba|webm|mka|ape|wv|mpc|wma|dsf|dff)$/i;
+  function isAppleDoubleSidecar(fileOrPath){
+    const raw = typeof fileOrPath === 'string' ? fileOrPath : String(fileOrPath && (fileOrPath.webkitRelativePath || fileOrPath.name) || '');
+    const path = raw.replace(/\\/g, '/');
+    return /(?:^|\/)\._[^/]*(?:$|\/)/.test(path) || /(?:^|\/)__MACOSX(?:$|\/)/i.test(path);
+  }
+  function isImportableAudioFile(file){
+    return !!(file && !isAppleDoubleSidecar(file) && AUDIO_EXT_RE.test(String(file.name || '')));
+  }
   const AUDIO_MIME_BY_EXT = Object.freeze({
     mp3:'audio/mpeg',mp2:'audio/mpeg',mpga:'audio/mpeg',wav:'audio/wav',aif:'audio/aiff',aiff:'audio/aiff',caf:'audio/x-caf',
     ogg:'audio/ogg',oga:'audio/ogg',opus:'audio/ogg',m4a:'audio/mp4',m4b:'audio/mp4',m4p:'audio/mp4',mp4:'audio/mp4',
@@ -4267,7 +4276,8 @@
     try {
       const storedTracks = await dbGetAll('tracks');
       const storedAlbums = await dbGetAll('playlists');
-      tracks = storedTracks.map(item => ({
+      const invalidMacSidecars = storedTracks.some(item => isAppleDoubleSidecar(String(item.folder || '') + '/' + String(item.name || '')));
+      tracks = storedTracks.filter(item => !isAppleDoubleSidecar(String(item.folder || '') + '/' + String(item.name || ''))).map(item => ({
         id: item.id, file: normalizeAudioFile(new File([item.blob], item.name, { type: item.type || item.blob.type || '' })), 
         folder: item.folder || '', title: item.title, artist: item.artist,
         matchedImg: null, coverBlob: item.coverBlob || null, coverUrl: null, coverSource: item.coverSource || (item.coverBlob ? 'legacy' : ''), resolved: true,
@@ -4276,6 +4286,14 @@
         netLink: item.netLink || '', durMs: Math.round(Number(item.durMs || 0) || 0)
       }));
       albums = storedAlbums.map(a => Object.assign({ createdAt: 0, customCover: false }, a));
+      if (invalidMacSidecars){
+        try {
+          if (!localStorage.getItem('pulsarAppleDoubleNoticeShown')){
+            localStorage.setItem('pulsarAppleDoubleNoticeShown', '1');
+            showToast(t('Pominięto pomocnicze pliki macOS; dodaj oryginalne pliki audio, jeśli utworów brakuje.'), 8000);
+          }
+        } catch(e){}
+      }
       if (tracks.length) {
         if (folderBtn) folderBtn.classList.remove('attention');
         // Wznawianie: ostatni utwór + pozycja (bez autostartu)
@@ -4742,7 +4760,7 @@
   function buildPngMap(fileList){
     const map = new Map();
     for (const f of fileList){
-      if (/\.(png|jpg|jpeg)$/i.test(f.name)){
+      if (!isAppleDoubleSidecar(f) && /\.(png|jpg|jpeg)$/i.test(f.name)){
         const rel = f.webkitRelativePath || f.name;
         const key = rel.slice(0, rel.lastIndexOf('.')).toLowerCase();
         map.set(key, f);
@@ -4756,13 +4774,13 @@
     const imgMap = buildPngMap(files);
     const lrcMap = new Map();
     files.forEach(function(f){
-      if (/\.lrc$/i.test(f.name)){
+      if (!isAppleDoubleSidecar(f) && /\.lrc$/i.test(f.name)){
         const rel = f.webkitRelativePath || f.name;
         const dot = rel.lastIndexOf('.');
         lrcMap.set((dot > -1 ? rel.slice(0, dot) : rel).toLowerCase(), f);
       }
     });
-    const audioFiles = files.filter(f => AUDIO_EXT_RE.test(f.name));
+    const audioFiles = files.filter(isImportableAudioFile);
     if (!audioFiles.length) return 0;
     audioFiles.sort((a,b) => a.name.localeCompare(b.name, 'pl'));
 
@@ -4809,7 +4827,7 @@
   folderInput.addEventListener('change', function(e){
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const hadAudio = files.some(f => AUDIO_EXT_RE.test(f.name));
+    const hadAudio = files.some(isImportableAudioFile);
     const added = addFilesToLibrary(files);
     folderInput.value = '';
     if (!hadAudio){ alert(t('Nie znaleziono plików audio w wybranym folderze.')); return; }
@@ -4864,7 +4882,7 @@
       for (const f of (dt.files || [])) files.push(f);
     }
     if (!files.length) return;
-    if (!files.some(f => AUDIO_EXT_RE.test(f.name))) return;
+    if (!files.some(isImportableAudioFile)) return;
     afterFilesAdded(addFilesToLibrary(files));
   });
 

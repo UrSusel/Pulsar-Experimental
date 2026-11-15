@@ -8,6 +8,7 @@ A focused visualizer update for Pulsar on Windows and Linux. This release expand
 - **Vector Grid improvements** — restore smoothly travelling, locally varied surface waves while fading distant lines to prevent horizon flicker.
 - **Neon Sunset enhancements** — add layered mountain silhouettes, a gently drifting sun behind the foreground ridge, softly glowing cloud edges, twinkling stars, rare glitch accents, and a rippling reflection across the grid that responds to bass and beats.
 - **A livelier Retro Oscilloscope** — stronger waveform motion, local frequency-driven peaks, a subtle phosphor-style echo, and separated left/right traces when the audio contains distinguishable stereo channels. Mono audio continues to use a single trace.
+- **Import compatibility** — macOS AppleDouble sidecar files are no longer mistaken for playable audio. Previously imported sidecars are hidden on restore without deleting stored library data.
 - **Consistent desktop builds** — the Retro backgrounds and visualizer behavior are aligned across Windows and Linux.
 
 ## Downloads
