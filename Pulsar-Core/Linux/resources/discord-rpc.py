@@ -172,7 +172,7 @@ def make_activity(message):
         if duration > 0:
             clock += " / " + format_clock(duration)
         artist_limit = max(0, 110 - len(clock))
-        activity["state"] = ("Paused · " + artist[:artist_limit] + " · " + clock).strip(" ·")[:128]
+        activity["state"] = ("Paused - " + artist[:artist_limit] + " - " + clock).strip(" -")[:128]
     return activity
 
 

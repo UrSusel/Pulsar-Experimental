@@ -27,8 +27,10 @@ for (const platform of ['Linux', 'Windows']) {
     `${platform}: polling retries only while Discord is disconnected`);
   assert.match(html, /reason==='track'[\s\S]*?setTimeout\(updateDiscordActivity,500\)/,
     `${platform}: track state refresh is briefly debounced to merge the following play event`);
-  assert.match(html, /audio.addEventListener\(eventName,scheduleDiscordActivity\)/,
-    `${platform}: play and pause state changes schedule presence updates`);
+  assert.match(html, /audio.addEventListener\(eventName,scheduleDiscordActivity\)[\s\S]*?audioXF.addEventListener\(eventName,scheduleDiscordActivity\)/,
+    `${platform}: both playback decks schedule presence updates`);
+  assert.match(html, /playing: !audio.paused \|\| !audioXF.paused/,
+    `${platform}: Rich Presence stays playing during crossfade handoff`);
   assert.match(html, /if\(discordPresenceInFlight\)\{discordPresenceQueued=true;return;\}/,
     `${platform}: rapid state changes are coalesced instead of queued behind stale updates`);
   assert.match(html, /clearInterval\(discordPresenceTimer\)/,
@@ -53,7 +55,7 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(desktop, /os\.spawnProcess/, `${platform}: Discord IPC client runs as a native helper process`);
   assert.match(desktop, /updateSpawnedProcess\([^\n]+'stdIn'/, `${platform}: helper commands use local process stdin, not a web service`);
   assert.match(desktop, /pulsar:discord-status/, `${platform}: helper connection errors reach the settings UI`);
-  assert.match(html, /\['play','pause','seeked','loadedmetadata','durationchange'\]/,
+  assert.match(html, /\['play','playing','pause','seeked','loadedmetadata','durationchange'\]/,
     `${platform}: playback changes immediately refresh Discord presence`);
   if (platform === 'Windows') {
     assert.match(html, /last pipe error:/, 'Windows: named-pipe diagnostics are shown in settings');

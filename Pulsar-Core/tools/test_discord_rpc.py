@@ -76,7 +76,7 @@ class DiscordRpcTests(unittest.TestCase):
             "position": 40, "duration": 120,
         })
         self.assertNotIn("timestamps", activity)
-        self.assertEqual(activity["state"], "Paused · Artist · 0:40 / 2:00")
+        self.assertEqual(activity["state"], "Paused - Artist - 0:40 / 2:00")
 
     def test_activity_fields_are_bounded_and_helper_uses_no_secret_token(self):
         activity = RPC.make_activity({"title": "T" * 200, "artist": "A" * 200, "playing": True})

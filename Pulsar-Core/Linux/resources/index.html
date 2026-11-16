@@ -9083,8 +9083,9 @@
     discordStatus(message,!!detail.ok);
   });
   document.addEventListener('pulsar:state',onDiscordPlayerState);
-  ['play','pause','seeked','loadedmetadata','durationchange'].forEach(function(eventName){
+  ['play','playing','pause','seeked','loadedmetadata','durationchange'].forEach(function(eventName){
     audio.addEventListener(eventName,scheduleDiscordActivity);
+    audioXF.addEventListener(eventName,scheduleDiscordActivity);
   });
   if(discordPresenceEnabled&&/^\d{17,20}$/.test(discordApplicationId))startDiscordPolling();
   window.addEventListener('pagehide',function(){stopDiscordPolling();const api=discordDesktop();if(api&&api.stop)api.stop();else clearDiscordActivity();});
@@ -11163,12 +11164,12 @@
       return {
         title: tr ? (tr.title || '') : '',
         artist: tr ? txArtist(tr.artist || '') : '',
-        playing: !audio.paused || (typeof xf !== 'undefined' && !!xf.active),
+        playing: !audio.paused || !audioXF.paused,
         hasTracks: tracks.length > 0 || !!activeOnlineTrack,
         hasTrack: !!tr,
         cover: (cu && cu !== DEFAULT_COVER) ? cu : '',
-        pos: (typeof xf !== 'undefined' && xf.active ? audioXF.currentTime : audio.currentTime) || 0,
-        dur: (typeof xf !== 'undefined' && xf.active && isFinite(audioXF.duration) ? audioXF.duration : (isFinite(audio.duration) ? audio.duration : 0)),
+        pos: (!audioXF.paused ? audioXF.currentTime : audio.currentTime) || 0,
+        dur: (!audioXF.paused && isFinite(audioXF.duration) ? audioXF.duration : (isFinite(audio.duration) ? audio.duration : 0)),
         accent: accent
       };
     },

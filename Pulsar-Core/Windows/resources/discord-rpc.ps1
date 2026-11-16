@@ -146,7 +146,7 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
           $pausedParts = @('Paused')
           if ($artist) { $pausedParts += $artist }
           $pausedParts += $clock
-          $activity.state = ($pausedParts -join ' · ').Substring(0, [Math]::Min(128, ($pausedParts -join ' · ').Length))
+          $activity.state = ($pausedParts -join ' - ').Substring(0, [Math]::Min(128, ($pausedParts -join ' - ').Length))
         }
         Send-Activity $appId $activity
         Write-Status $true 'Connected to Discord'
