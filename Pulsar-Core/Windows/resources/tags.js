@@ -5,7 +5,7 @@
  *   PulsarTags.id3Embed(u8, meta)        → MP3: ID3v2 (zachowuje inne ramki, np. teksty, album, rok)
  *   PulsarTags.mp4Embed(u8, meta)        → M4A/MP4: zapis tekstowych metadanych i covr (poprawia offsety stco/co64)
  *   PulsarTags.extractMp4Metadata(file) → odczyt tagów MP4/M4A
- *   PulsarTags.extractAudioMetadata(file) → okładka z ID3, MP4, FLAC/Vorbis, APEv2, ASF/WMA, CAF i Matroska
+ *   PulsarTags.extractAudioMetadata(file) → tagi i okładka z ID3, MP4/M4A, FLAC/Vorbis, APEv2, ASF/WMA, CAF i Matroska
  * meta = { title, artist, album, year, genre, cover: Uint8Array|null, coverMime } — podane puste pola usuwają tag.
  */
 (function (root) {
@@ -431,6 +431,52 @@
     } catch(e){}
     return null;
   }
+  function parseVorbisComments(bytes){
+    try {
+      if (!bytes || bytes.length < 8) return null;
+      let p = 0;
+      const takeLength = function(){
+        if (p + 4 > bytes.length) return -1;
+        const n = readU32LE(bytes, p); p += 4;
+        return n;
+      };
+      const vendorLength = takeLength();
+      if (vendorLength < 0 || vendorLength > bytes.length - p) return null;
+      p += vendorLength;
+      const count = takeLength();
+      if (count < 0 || count > 100000) return null;
+      const result = {};
+      let legacyCover = null, legacyCoverMime = '';
+      const fields = {
+        TITLE: 'title', ARTIST: 'artist', ALBUM: 'album', DATE: 'year', YEAR: 'year',
+        GENRE: 'genre', ALBUMARTIST: 'albumArtist', 'ALBUM ARTIST': 'albumArtist',
+        ALBUM_ARTIST: 'albumArtist', COMPOSER: 'composer', TRACKNUMBER: 'trackNumber',
+        DISCNUMBER: 'discNumber'
+      };
+      for (let i = 0; i < count; i++){
+        const length = takeLength();
+        if (length < 0 || length > bytes.length - p) return Object.keys(result).length ? result : null;
+        const entry = new TextDecoder('utf-8').decode(bytes.subarray(p, p + length));
+        p += length;
+        const equals = entry.indexOf('=');
+        if (equals < 1) continue;
+        const key = entry.slice(0, equals).trim().toUpperCase();
+        const value = entry.slice(equals + 1).replace(/\0+$/g, '').trim();
+        if (!value) continue;
+        if (key === 'METADATA_BLOCK_PICTURE'){
+          const raw = decodeBase64(value);
+          if (raw) result.coverBlob = parseFlacPicture(raw, 0, raw.length) || result.coverBlob;
+        }else if (key === 'COVERART') legacyCover = decodeBase64(value) || legacyCover;
+        else if (key === 'COVERARTMIME') legacyCoverMime = value;
+        else if (fields[key] && !result[fields[key]]) result[fields[key]] = value;
+      }
+      if (!result.coverBlob && legacyCover){
+        const blob = artworkBlob(legacyCover, legacyCoverMime);
+        if (blob) result.coverBlob = blob;
+      }
+      return Object.keys(result).length ? result : null;
+    } catch(e){ return null; }
+  }
   function parseFlac(a){
     if (u8type(a, 0) !== 'fLaC') return null;
     let p = 4;
@@ -586,10 +632,11 @@
     } catch(e){}
     return null;
   }
-  async function extractFlacArtwork(file){
+  async function extractFlacMetadata(file){
     try {
       const marker = new Uint8Array(await file.slice(0, 4).arrayBuffer());
       if (u8type(marker, 0) !== 'fLaC') return null;
+      const result = {};
       let p = 4, scanned = 0;
       while (p + 4 <= file.size && scanned < MAX_ARTWORK_SCAN){
         const header = new Uint8Array(await file.slice(p, p + 4).arrayBuffer());
@@ -597,16 +644,21 @@
         const len = (header[1] << 16) | (header[2] << 8) | header[3];
         p += 4; scanned += 4;
         if (!len || len > MAX_ARTWORK_SCAN || p + len > file.size) break;
-        if (type === 6 || type === 4){
+        if (type === 4 || type === 6){
           const block = new Uint8Array(await file.slice(p, p + len).arrayBuffer());
-          const blob = type === 6 ? parseFlacPicture(block, 0, block.length) : parseXiphPictureComment(block);
-          if (blob) return blob;
+          if (type === 4){
+            const comments = parseVorbisComments(block);
+            if (comments) Object.assign(result, comments);
+          }else if (!result.coverBlob){
+            result.coverBlob = parseFlacPicture(block, 0, block.length) || undefined;
+            if (!result.coverBlob) delete result.coverBlob;
+          }
         }
         p += len; scanned += len;
         if (header[0] & 0x80) break;
       }
-    } catch(e){}
-    return null;
+      return Object.keys(result).length ? result : null;
+    } catch(e){ return null; }
   }
   async function extractId3Chunks(file, aiff){
     try {
@@ -676,9 +728,9 @@
           if (blob) return { coverBlob: blob };
         }
       }
+      if (u8type(probe, 0) === 'fLaC') return await extractFlacMetadata(file);
       let coverBlob = null;
-      if (u8type(probe, 0) === 'fLaC') coverBlob = await extractFlacArtwork(file);
-      else if (u8type(probe, 0) === 'RIFF') coverBlob = await extractId3Chunks(file, false);
+      if (u8type(probe, 0) === 'RIFF') coverBlob = await extractId3Chunks(file, false);
       else if (u8type(probe, 0) === 'FORM') coverBlob = await extractId3Chunks(file, true);
       else if (u8type(probe, 0) === 'OggS' || /\.(ogg|oga|opus)$/i.test(name)){
         const data = new Uint8Array(await file.slice(0, Math.min(file.size, MAX_ARTWORK_SCAN)).arrayBuffer());

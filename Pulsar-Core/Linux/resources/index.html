@@ -8032,8 +8032,11 @@
   async function ensureTrackMeta(track, options){
     options = options || {};
     const forceFileScan = !!options.forceFileScan;
-    const mayContainMp4Metadata = /\.(m4a|m4b|mp4)$/i.test(String(track && track.file && track.file.name || ''));
-    if (!forceFileScan && track.audioTagsScanned) return { embeddedCover: false };
+    const trackFileName = String(track && track.file && track.file.name || '');
+    const mayContainMp4Metadata = /\.(m4a|m4b|mp4)$/i.test(trackFileName);
+    const mayContainFlacMetadata = /\.flac$/i.test(trackFileName);
+    const needsFlacMetadataMigration = mayContainFlacMetadata && !track.flacTagsScanned;
+    if (!forceFileScan && track.audioTagsScanned && !needsFlacMetadataMigration) return { embeddedCover: false };
     const index = tracks.indexOf(track);
     let embeddedCover = null;
     const originalCover = track.coverBlob;
@@ -8051,6 +8054,7 @@
         if (embedded){
           if (embedded.title) track.title = embedded.title;
           if (embedded.artist) track.artist = embedded.artist;
+          else if (embedded.albumArtist) track.artist = embedded.albumArtist;
           if (embedded.album) track.album = embedded.album;
           if (embedded.year) track.year = String(embedded.year).slice(0, 4);
           if (embedded.genre) track.genre = embedded.genre;
@@ -8059,6 +8063,7 @@
       }
       track.audioTagsScanned = true;
       if (mayContainMp4Metadata) track.mp4TagsScanned = true; // zachowanie zgodności ze starszymi rekordami
+      if (mayContainFlacMetadata) track.flacTagsScanned = true;
     } catch(e){}
     if (embeddedCover && (!track.coverBlob || (track.coverSource !== 'manual' && track.coverSource !== 'legacy'))){
       track.coverBlob = embeddedCover; track.coverSource = 'embedded';

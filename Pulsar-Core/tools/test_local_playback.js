@@ -25,6 +25,14 @@ for (const platform of ['Linux', 'Windows']) {
     `${platform}: common audio formats receive canonical MIME types`);
   assert.match(html, /file: normalizeAudioFile\(new File\(\[item\.blob\]/,
     `${platform}: older library entries are corrected by filename when restored`);
+  assert.match(html, /const needsFlacMetadataMigration = mayContainFlacMetadata && !track\.flacTagsScanned;/,
+    `${platform}: existing FLAC library entries get one metadata rescan after the FLAC tag reader is added`);
+  assert.match(html, /track\.audioTagsScanned && !needsFlacMetadataMigration/,
+    `${platform}: the FLAC migration bypasses the previous generic scan cache only once`);
+  assert.match(html, /if \(mayContainFlacMetadata\) track\.flacTagsScanned = true;/,
+    `${platform}: completed FLAC metadata scans are cached`);
+  assert.match(html, /if \(embedded\.artist\) track\.artist = embedded\.artist;\s*else if \(embedded\.albumArtist\) track\.artist = embedded\.albumArtist;/,
+    `${platform}: album artist is used as a fallback when a FLAC has no track-artist tag`);
   const importFilter = html.match(/function isAppleDoubleSidecar\(fileOrPath\)\{[\s\S]*?function isImportableAudioFile\(file\)\{[\s\S]*?\n  \}/);
   assert.ok(importFilter, `${platform}: local imports identify macOS AppleDouble sidecars`);
   const importChecks = new Function('AUDIO_EXT_RE', `${importFilter[0]}; return { isAppleDoubleSidecar, isImportableAudioFile };`)(/\.(mp3|wav|flac)$/i);
