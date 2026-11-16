@@ -9041,8 +9041,10 @@
   function scheduleDiscordActivity(){clearTimeout(discordPresenceRefreshTimer);discordPresenceRefreshTimer=setTimeout(updateDiscordActivity,250);}
   function onDiscordPlayerState(event){
     if(event&&event.detail&&event.detail.reason==='track'){
+      // Track selection is already authoritative here; don't debounce it behind
+      // the periodic refresh or the asynchronous media pipeline.
       clearTimeout(discordPresenceRefreshTimer);
-      discordPresenceRefreshTimer=setTimeout(updateDiscordActivity,500);
+      updateDiscordActivity();
       return;
     }
     scheduleDiscordActivity();

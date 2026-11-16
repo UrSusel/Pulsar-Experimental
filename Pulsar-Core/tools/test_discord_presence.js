@@ -25,8 +25,8 @@ for (const platform of ['Linux', 'Windows']) {
     `${platform}: there is exactly one presence polling lifecycle`);
   assert.match(html, /setInterval\(function\(\)\{if\(!discordConnected\)updateDiscordActivity\(\);\},15000\)/,
     `${platform}: polling retries only while Discord is disconnected`);
-  assert.match(html, /reason==='track'[\s\S]*?setTimeout\(updateDiscordActivity,500\)/,
-    `${platform}: track state refresh is briefly debounced to merge the following play event`);
+  assert.match(html, /reason==='track'[\s\S]*?clearTimeout\(discordPresenceRefreshTimer\);\s*updateDiscordActivity\(\);/,
+    `${platform}: track changes immediately bypass the ordinary playback debounce`);
   assert.match(html, /audio.addEventListener\(eventName,scheduleDiscordActivity\)[\s\S]*?audioXF.addEventListener\(eventName,scheduleDiscordActivity\)/,
     `${platform}: both playback decks schedule presence updates`);
   assert.match(html, /playing: !audio.paused \|\| !audioXF.paused/,

@@ -2,7 +2,7 @@
 
 A free, **portable** music player for **Windows and Linux** with a pulsar-nebula soul: search YouTube, save full tracks **with cover art and tags embedded**, sing along with synced lyrics, and watch audio-reactive visualizers. No installer, no command line — one folder that just runs.
 
-![version](https://img.shields.io/badge/version-0.23.1-4de3ff) ![license](https://img.shields.io/badge/license-Apache--2.0-blue) ![platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20%C2%B7%20Linux%20x64-a06bff) ![size](https://img.shields.io/badge/size-%7E20%20MB%20(Win)%20%2F%20%7E7%20MB%20(Linux)-ff5fd0)
+![version](https://img.shields.io/badge/version-0.23.2-4de3ff) ![license](https://img.shields.io/badge/license-Apache--2.0-blue) ![platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20%C2%B7%20Linux%20x64-a06bff) ![size](https://img.shields.io/badge/size-%7E20%20MB%20(Win)%20%2F%20%7E7%20MB%20(Linux)-ff5fd0)
 
 ## ⬇️ Download
 
@@ -20,9 +20,9 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 > (the GStreamer packages are what actually decode MP3/AAC — without them the player stays silent)
 > `ffmpeg` is optional: it unlocks MP3/FLAC export and memory-safe editing of very long recordings. The optional experimental AI lyrics aligner needs Python 3.10+ on first use, but does not need system FFmpeg. On Wayland everything works through XWayland out of the box.
 
-### Latest release: 0.23.1
+### Latest release: 0.23.2
 
-Retro-only 3D scenes now include Vector Grid, Retro Plasma, Retro Oscilloscope, and Neon Sunset. This update adds stronger audio-driven oscilloscope motion with stereo separation and a phosphor-style echo, layered sunset scenery and a bass-reactive floor reflection, safer import handling for macOS metadata sidecars, a more reliable factory reset, and opt-in local listening history with stats. See the full [0.23.1 release notes](RELEASE-0.23.1.md).
+Discord Rich Presence now sends track-change updates immediately instead of waiting through a 500 ms debounce, while routine playback-state updates remain coalesced. App version metadata is updated to 0.23.2. See the [0.23.2 changelog](RELEASE-0.23.2.md).
 
 ## ✨ Features
 
