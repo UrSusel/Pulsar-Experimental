@@ -9080,6 +9080,9 @@
     discordStatus(message,!!detail.ok);
   });
   document.addEventListener('pulsar:state',scheduleDiscordActivity);
+  ['play','pause','seeked','loadedmetadata','durationchange'].forEach(function(eventName){
+    audio.addEventListener(eventName,scheduleDiscordActivity);
+  });
   if(discordPresenceEnabled&&/^\d{17,20}$/.test(discordApplicationId))startDiscordPolling();
   window.addEventListener('pagehide',function(){stopDiscordPolling();const api=discordDesktop();if(api&&api.stop)api.stop();else clearDiscordActivity();});
   const listeningHistoryToggleEl=document.getElementById('smListeningHistoryToggle');

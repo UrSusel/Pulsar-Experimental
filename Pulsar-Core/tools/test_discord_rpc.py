@@ -32,16 +32,20 @@ class DiscordRpcTests(unittest.TestCase):
         self.assertEqual(opcode, 0)
         self.assertEqual(size, len(packet) - 8)
         self.assertEqual(payload, {"v": 1, "client_id": "12345678901234567"})
+        unicode_packet = RPC.encode_frame(RPC.OP_FRAME, {"details": "Zażółć gęślą jaźń"})
+        self.assertEqual(json.loads(unicode_packet[8:].decode("utf-8"))["details"], "Zażółć gęślą jaźń")
 
     def test_playing_activity_includes_title_artist_and_elapsed_timestamp(self):
         with patch.object(RPC.time, "time", return_value=1000):
             activity = RPC.make_activity({
-                "title": "Example song", "artist": "Example artist", "playing": True, "position": 34.8
+                "title": "Example song", "artist": "Example artist", "playing": True,
+                "position": 34.8, "duration": 200,
             })
         self.assertEqual(activity["type"], 2)
         self.assertEqual(activity["details"], "Example song")
         self.assertEqual(activity["state"], "Example artist")
-        self.assertEqual(activity["timestamps"]["start"], 965)
+        self.assertEqual(activity["timestamps"]["start"], 965200)
+        self.assertEqual(activity["timestamps"]["end"], 1165200)
 
     def test_linux_socket_search_checks_runtime_and_temp_directories_first(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -66,10 +70,13 @@ class DiscordRpcTests(unittest.TestCase):
             self.assertIn(str(temp_socket), candidates)
             self.assertLess(candidates.index(str(runtime_socket)), candidates.index(str(temp_socket)))
 
-    def test_paused_activity_has_no_running_clock(self):
-        activity = RPC.make_activity({"title": "Paused song", "artist": "Artist", "playing": False, "position": 40})
+    def test_paused_activity_shows_a_frozen_position_without_a_running_clock(self):
+        activity = RPC.make_activity({
+            "title": "Paused song", "artist": "Artist", "playing": False,
+            "position": 40, "duration": 120,
+        })
         self.assertNotIn("timestamps", activity)
-        self.assertEqual(activity["state"], "Paused · Artist")
+        self.assertEqual(activity["state"], "Paused · Artist · 0:40 / 2:00")
 
     def test_activity_fields_are_bounded_and_helper_uses_no_secret_token(self):
         activity = RPC.make_activity({"title": "T" * 200, "artist": "A" * 200, "playing": True})
@@ -88,6 +95,11 @@ class DiscordRpcTests(unittest.TestCase):
         self.assertIn("if ($connected)", source)
         self.assertNotIn(".ReadTimeout", source)
         self.assertNotIn(".WriteTimeout", source)
+        self.assertIn("[Console]::InputEncoding", source)
+        self.assertIn("[Console]::OutputEncoding", source)
+        self.assertIn("ToUnixTimeMilliseconds()", source)
+        self.assertIn("$activity.timestamps.end", source)
+        self.assertIn("Format-Clock $position", source)
 
     def test_desktop_archives_include_their_native_ipc_helper(self):
         expected = {

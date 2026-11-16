@@ -46,6 +46,8 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(desktop, /os\.spawnProcess/, `${platform}: Discord IPC client runs as a native helper process`);
   assert.match(desktop, /updateSpawnedProcess\([^\n]+'stdIn'/, `${platform}: helper commands use local process stdin, not a web service`);
   assert.match(desktop, /pulsar:discord-status/, `${platform}: helper connection errors reach the settings UI`);
+  assert.match(html, /\['play','pause','seeked','loadedmetadata','durationchange'\]/,
+    `${platform}: playback changes immediately refresh Discord presence`);
   if (platform === 'Windows') {
     assert.match(html, /last pipe error:/, 'Windows: named-pipe diagnostics are shown in settings');
     assert.match(html, /Discord wykryto, ale uzgadnianie RPC nie powiodło się:/,

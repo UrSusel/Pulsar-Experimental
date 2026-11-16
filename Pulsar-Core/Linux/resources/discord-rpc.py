@@ -147,17 +147,32 @@ class DiscordIPC:
                 raise ConnectionError("Discord closed the Rich Presence connection")
 
 
+def format_clock(seconds):
+    total = max(0, int(float(seconds or 0)))
+    hours, remainder = divmod(total, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+
+
 def make_activity(message):
     title = str(message.get("title") or "Pulsar")[:128]
     artist = str(message.get("artist") or "")[:128]
     details = title
     state = artist
     activity = {"type": 2, "details": details, "state": state, "instance": False}
+    position = max(0.0, float(message.get("position") or 0))
+    duration = max(0.0, float(message.get("duration") or 0))
     if message.get("playing"):
-        position = max(0.0, float(message.get("position") or 0))
-        activity["timestamps"] = {"start": int(time.time() - position)}
+        start = int((time.time() - position) * 1000)
+        activity["timestamps"] = {"start": start}
+        if duration > 0:
+            activity["timestamps"]["end"] = start + int(duration * 1000)
     else:
-        activity["state"] = ("Paused · " + artist).strip(" ·")[:128]
+        clock = format_clock(position)
+        if duration > 0:
+            clock += " / " + format_clock(duration)
+        artist_limit = max(0, 110 - len(clock))
+        activity["state"] = ("Paused · " + artist[:artist_limit] + " · " + clock).strip(" ·")[:128]
     return activity
 
 

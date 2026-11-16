@@ -1,5 +1,8 @@
 # Pulsar's local Discord Rich Presence IPC client. No Discord token or network API.
 $ErrorActionPreference = 'Stop'
+$script:utf8 = New-Object System.Text.UTF8Encoding($false)
+[Console]::InputEncoding = $script:utf8
+[Console]::OutputEncoding = $script:utf8
 $script:pipe = $null
 $script:sequence = 0
 
@@ -7,6 +10,15 @@ function Write-Status([bool]$Ok, [string]$Message) {
   $line = @{ type = 'status'; ok = $Ok; message = $Message } | ConvertTo-Json -Compress
   [Console]::Out.WriteLine($line)
   [Console]::Out.Flush()
+}
+
+function Format-Clock([double]$Seconds) {
+  $total = [Math]::Max(0, [int][Math]::Floor($Seconds))
+  $hours = [int][Math]::Floor($total / 3600)
+  $minutes = [int][Math]::Floor(($total % 3600) / 60)
+  $remaining = $total % 60
+  if ($hours -gt 0) { return ('{0}:{1:00}:{2:00}' -f $hours, $minutes, $remaining) }
+  return ('{0}:{1:00}' -f $minutes, $remaining)
 }
 
 function Read-Exact($Stream, [int]$Count) {
@@ -120,11 +132,21 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
         $artist = [string]$request.artist
         if ($artist.Length -gt 128) { $artist = $artist.Substring(0, 128) }
         $activity = @{ type = 2; details = $title; state = $artist; instance = $false }
+        $position = [Math]::Max(0.0, [double]$request.position)
+        $duration = [Math]::Max(0.0, [double]$request.duration)
         if ($request.playing) {
-          $position = [Math]::Max(0.0, [double]$request.position)
-          $activity.timestamps = @{ start = [int][DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [int]$position }
+          $start = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - ($position * 1000))
+          $activity.timestamps = @{ start = $start }
+          if ($duration -gt 0) { $activity.timestamps.end = $start + [int64]($duration * 1000) }
         } else {
-          $activity.state = ('Paused - ' + $artist).Trim()
+          $clock = Format-Clock $position
+          if ($duration -gt 0) { $clock += ' / ' + (Format-Clock $duration) }
+          $artistLimit = [Math]::Max(0, 110 - $clock.Length)
+          if ($artist.Length -gt $artistLimit) { $artist = $artist.Substring(0, $artistLimit) }
+          $pausedParts = @('Paused')
+          if ($artist) { $pausedParts += $artist }
+          $pausedParts += $clock
+          $activity.state = ($pausedParts -join ' · ').Substring(0, [Math]::Min(128, ($pausedParts -join ' · ').Length))
         }
         Send-Activity $appId $activity
         Write-Status $true 'Connected to Discord'
