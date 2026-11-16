@@ -58,8 +58,6 @@ function Connect-Discord([string]$AppId) {
     try {
       $candidate.Connect(1000)
       $connected = $true
-      $candidate.ReadTimeout = 10000
-      $candidate.WriteTimeout = 5000
       Write-Packet $candidate 0 @{ v = 1; client_id = $AppId }
       $reply = Read-Packet $candidate
       if ($reply.opcode -ne 1 -or $reply.payload.evt -ne 'READY') {

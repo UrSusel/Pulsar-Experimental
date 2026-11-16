@@ -86,6 +86,8 @@ class DiscordRpcTests(unittest.TestCase):
         self.assertIn("RPC handshake failed", source)
         self.assertIn("last pipe error:", source)
         self.assertIn("if ($connected)", source)
+        self.assertNotIn(".ReadTimeout", source)
+        self.assertNotIn(".WriteTimeout", source)
 
     def test_desktop_archives_include_their_native_ipc_helper(self):
         expected = {
