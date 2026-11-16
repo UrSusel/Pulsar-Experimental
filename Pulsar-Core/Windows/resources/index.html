@@ -9019,7 +9019,7 @@
   const discordPresenceToggleEl=document.getElementById('smDiscordPresenceToggle');
   const discordStatusEl=document.getElementById('smDiscordStatus');
   if(discordPresenceEnabled&&!/^\d{17,20}$/.test(discordApplicationId)){discordPresenceEnabled=false;try{localStorage.setItem('pulsarDiscordPresenceEnabled','0');}catch(e){}}
-  let discordPresenceTimer=0,discordPresenceRefreshTimer=0,discordPresenceInFlight=false,discordPresenceQueued=false;
+  let discordPresenceTimer=0,discordPresenceRefreshTimer=0,discordPresenceInFlight=false,discordPresenceQueued=false,discordConnected=false;
   function discordStatus(text,ok){if(discordStatusEl){discordStatusEl.textContent=text;discordStatusEl.dataset.ok=ok?'1':'0';}}
   function discordDesktop(){return window.__pulsarDesktop&&window.__pulsarDesktop.discordPresence||null;}
   function clearDiscordActivity(){const api=discordDesktop();if(api&&api.clear)api.clear(discordApplicationId).catch(function(){});}
@@ -9043,7 +9043,7 @@
   function onDiscordPlayerState(event){
     if(event&&event.detail&&event.detail.reason==='track'){
       clearTimeout(discordPresenceRefreshTimer);
-      updateDiscordActivity();
+      discordPresenceRefreshTimer=setTimeout(updateDiscordActivity,500);
       return;
     }
     scheduleDiscordActivity();
@@ -9051,7 +9051,7 @@
   function startDiscordPolling(){
     if(discordPresenceTimer)return;
     updateDiscordActivity();
-    discordPresenceTimer=setInterval(updateDiscordActivity,15000);
+    discordPresenceTimer=setInterval(function(){if(!discordConnected)updateDiscordActivity();},15000);
   }
   function stopDiscordPolling(){
     if(discordPresenceTimer){clearInterval(discordPresenceTimer);discordPresenceTimer=0;}
@@ -9072,6 +9072,8 @@
   }
   document.addEventListener('pulsar:discord-status',function(event){
     const detail=event&&event.detail||{};let message=String(detail.message||'');
+    if(message==='Connected to Discord')discordConnected=true;
+    else if(!detail.ok)discordConnected=false;
     if(discordPresenceInFlight){
       discordPresenceInFlight=false;
       if(discordPresenceQueued&&discordPresenceEnabled){discordPresenceQueued=false;updateDiscordActivity();}
