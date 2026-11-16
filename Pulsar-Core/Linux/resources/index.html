@@ -9036,6 +9036,15 @@
     api.update({appId:discordApplicationId,title:player.title,artist:player.artist,playing:player.playing,position:player.pos,duration:player.dur}).catch(function(error){discordStatus(String(error&&error.message||error||'Discord RPC error'),false);});
   }
   function scheduleDiscordActivity(){clearTimeout(discordPresenceRefreshTimer);discordPresenceRefreshTimer=setTimeout(updateDiscordActivity,250);}
+  function startDiscordPolling(){
+    if(discordPresenceTimer)return;
+    updateDiscordActivity();
+    discordPresenceTimer=setInterval(updateDiscordActivity,15000);
+  }
+  function stopDiscordPolling(){
+    if(discordPresenceTimer){clearInterval(discordPresenceTimer);discordPresenceTimer=0;}
+    if(discordPresenceRefreshTimer){clearTimeout(discordPresenceRefreshTimer);discordPresenceRefreshTimer=0;}
+  }
   function startDiscordPolling(){if(!discordPresenceTimer)discordPresenceTimer=setInterval(updateDiscordActivity,15000);}
   function stopDiscordPolling(){if(discordPresenceTimer){clearInterval(discordPresenceTimer);discordPresenceTimer=0;}}
   if(discordApplicationIdEl)discordApplicationIdEl.value=discordApplicationId;
@@ -9047,7 +9056,7 @@
       }
       discordPresenceEnabled=!!discordPresenceToggleEl.checked;
       try{localStorage.setItem('pulsarDiscordPresenceEnabled',discordPresenceEnabled?'1':'0');}catch(e){}
-      if(discordPresenceEnabled){startDiscordPolling();discordStatus(t('Discord Rich Presence włączone.'),true);updateDiscordActivity();}
+      if(discordPresenceEnabled){startDiscordPolling();discordStatus(t('Discord Rich Presence włączone.'),true);}
       else{stopDiscordPolling();clearDiscordActivity();discordStatus(t('Discord Rich Presence wyłączone.'),true);}
     });
   }
@@ -9071,7 +9080,7 @@
     discordStatus(message,!!detail.ok);
   });
   document.addEventListener('pulsar:state',scheduleDiscordActivity);
-  if(discordPresenceEnabled&&/^\d{17,20}$/.test(discordApplicationId)){setTimeout(updateDiscordActivity,1000);startDiscordPolling();}
+  if(discordPresenceEnabled&&/^\d{17,20}$/.test(discordApplicationId))startDiscordPolling();
   window.addEventListener('pagehide',function(){stopDiscordPolling();const api=discordDesktop();if(api&&api.stop)api.stop();else clearDiscordActivity();});
   const listeningHistoryToggleEl=document.getElementById('smListeningHistoryToggle');
   if(listeningHistoryToggleEl){

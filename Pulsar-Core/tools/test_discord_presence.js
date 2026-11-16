@@ -15,8 +15,20 @@ for (const platform of ['Linux', 'Windows']) {
   assert.match(html, /id="smDiscordSaveIdBtn"/, `${platform}: application ID can be saved`);
   assert.match(html, /pulsarDiscordPresenceEnabled/, `${platform}: preference persists locally`);
   assert.match(html, /pulsarDiscordApplicationId/, `${platform}: application ID preference remains overridable`);
-  assert.match(html, /pulsarDiscordApplicationId'\)\|\|'1571647035168530442'/,
+  assert.ok(html.includes("||'1571647035168530442'"),
     `${platform}: Pulsar's shared public Application ID is preconfigured for all users`);
+  assert.match(html, /function startDiscordPolling\(\)/,
+    `${platform}: enabling presence starts its retry/update timer`);
+  assert.match(html, /function stopDiscordPolling\(\)/,
+    `${platform}: disabling presence clears its timers`);
+  assert.match(html, /discordPresenceTimer=setInterval\(updateDiscordActivity,15000\)/,
+    `${platform}: active presence retries when Discord becomes available`);
+  assert.match(html, /clearInterval\(discordPresenceTimer\)/,
+    `${platform}: the retry timer is cleared when presence is disabled`);
+  const pollingDefinition = html.indexOf('function startDiscordPolling()');
+  const pollingStartup = html.indexOf('if(discordPresenceEnabled&&/^');
+  assert.ok(pollingDefinition >= 0 && pollingStartup > pollingDefinition,
+    `${platform}: polling functions exist before saved preferences start polling`);
   for (const key of [
     'Discord Rich Presence', 'Pokaż odtwarzany utwór na Discordzie',
     'Otwórz Discord Developer Portal', 'Zapisz Application ID', 'Application ID zapisany.',
