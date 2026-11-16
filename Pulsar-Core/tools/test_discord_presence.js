@@ -11,8 +11,8 @@ for (const platform of ['Linux', 'Windows']) {
   const html = fs.readFileSync(path.join(root, platform, 'resources', 'index.html'), 'utf8');
   const desktop = fs.readFileSync(path.join(root, platform, 'resources', 'desktop.js'), 'utf8');
   assert.match(html, /id="smDiscordPresenceToggle"/, `${platform}: presence is opt-in`);
-  assert.match(html, /id="smDiscordApplicationId"/, `${platform}: user can configure their Discord application ID`);
-  assert.match(html, /id="smDiscordSaveIdBtn"/, `${platform}: application ID can be saved`);
+  assert.doesNotMatch(html, /id="smDiscordApplicationId|id="smDiscordSaveIdBtn|id="smDiscordPortalBtn/,
+    `${platform}: application ID and developer controls stay out of the settings UI`);
   assert.match(html, /pulsarDiscordPresenceEnabled/, `${platform}: preference persists locally`);
   assert.match(html, /pulsarDiscordApplicationId/, `${platform}: application ID preference remains overridable`);
   assert.ok(html.includes("||'1571647035168530442'"),
@@ -21,8 +21,12 @@ for (const platform of ['Linux', 'Windows']) {
     `${platform}: enabling presence starts its retry/update timer`);
   assert.match(html, /function stopDiscordPolling\(\)/,
     `${platform}: disabling presence clears its timers`);
-  assert.match(html, /discordPresenceTimer=setInterval\(updateDiscordActivity,15000\)/,
-    `${platform}: active presence retries when Discord becomes available`);
+  assert.equal((html.match(/function startDiscordPolling\(\)/g) || []).length, 1,
+    `${platform}: there is exactly one presence polling lifecycle`);
+  assert.match(html, /discordPresenceTimer=setInterval\(updateDiscordActivity,2000\)/,
+    `${platform}: fallback polling keeps track changes responsive`);
+  assert.match(html, /reason==='track'[\s\S]*?updateDiscordActivity\(\)/,
+    `${platform}: track changes immediately update presence`);
   assert.match(html, /clearInterval\(discordPresenceTimer\)/,
     `${platform}: the retry timer is cleared when presence is disabled`);
   const pollingDefinition = html.indexOf('function startDiscordPolling()');
@@ -31,7 +35,6 @@ for (const platform of ['Linux', 'Windows']) {
     `${platform}: polling functions exist before saved preferences start polling`);
   for (const key of [
     'Discord Rich Presence', 'Pokaż odtwarzany utwór na Discordzie',
-    'Otwórz Discord Developer Portal', 'Zapisz Application ID', 'Application ID zapisany.',
     'Połączono z Discordem', 'Nie znaleziono Discorda — uruchom aplikację desktopową.'
   ]) {
     assert.match(html, new RegExp(`['"]${key.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}['"]\\s*:\\s*\\{\\s*en:[^,]+,\\s*es:`),
