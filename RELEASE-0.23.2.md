@@ -2,12 +2,12 @@
 
 ## Highlights
 
-- **Faster Discord Rich Presence track changes** — track-selection events now update the local Discord IPC presence immediately rather than waiting through the previous 500 ms debounce. Other playback-state refreshes remain coalesced, and periodic refresh remains a fallback.
-- **Version metadata** — align the desktop app metadata, window title, website build labels, and update-check fixtures with version 0.23.2.
+- **Better handling of Apple/macOS files** — AppleDouble sidecars (`._*`) and `__MACOSX` archive entries are skipped when importing audio or scanning watched folders, so metadata sidecars are not mistaken for playable tracks. Previously saved sidecars are hidden when restoring the library without deleting stored data; Pulsar explains when the original audio files need to be added.
+- **Discord Rich Presence** — add an opt-in way to show the current track and artist in the Discord desktop app. It uses local IPC (no bot or Discord token), follows track changes without the previous 500 ms debounce, and accounts for playback across a crossfade.
 
 ## Notes
 
-Discord Rich Presence remains opt-in and uses the Discord desktop client's local IPC connection. No bot, Discord token, or per-user Application ID setup is introduced. Actual end-to-end timing depends on the desktop runtime and Discord; verify against the running app.
+Rich Presence remains optional and requires the Discord desktop client to be running. End-to-end update timing depends on the desktop runtime and Discord, so verify it in the running app.
 
 ## Downloads
 

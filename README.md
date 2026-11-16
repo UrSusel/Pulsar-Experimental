@@ -22,7 +22,7 @@ The project page — [ursusel.github.io/Pulsar-Desktop](https://ursusel.github.i
 
 ### Latest release: 0.23.2
 
-Discord Rich Presence now sends track-change updates immediately instead of waiting through a 500 ms debounce, while routine playback-state updates remain coalesced. App version metadata is updated to 0.23.2. See the [0.23.2 changelog](RELEASE-0.23.2.md).
+This update improves handling of Apple/macOS metadata sidecars and adds opt-in Discord Rich Presence for the current track. See the [0.23.2 changelog](RELEASE-0.23.2.md).
 
 ## ✨ Features
 
