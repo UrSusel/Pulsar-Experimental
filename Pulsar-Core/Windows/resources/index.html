@@ -9075,6 +9075,8 @@
     const detail=event&&event.detail||{};let message=String(detail.message||'');
     if(message==='Connected to Discord')message=t('Połączono z Discordem');
     else if(message==='Discord desktop IPC not found; open the Discord desktop app')message=t('Nie znaleziono Discorda — uruchom aplikację desktopową.');
+    else if(message.indexOf('Discord desktop IPC not found; open the Discord desktop app (last pipe error: ')===0)message=t('Nie znaleziono Discorda — uruchom aplikację desktopową.')+' '+message.slice('Discord desktop IPC not found; open the Discord desktop app '.length);
+    else if(message.indexOf('Discord IPC pipe was found, but RPC handshake failed: ')===0)message='Discord wykryto, ale uzgadnianie RPC nie powiodło się: '+message.slice('Discord IPC pipe was found, but RPC handshake failed: '.length);
     else if(message==='Discord Rich Presence cleared')message=t('Discord Rich Presence wyłączone.');
     else if(message==='Discord Rich Presence cleared')message=t('Discord Rich Presence wyłączone.');
     discordStatus(message,!!detail.ok);

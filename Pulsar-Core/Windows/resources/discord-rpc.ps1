@@ -50,23 +50,36 @@ function Close-Pipe {
 function Connect-Discord([string]$AppId) {
   if ($script:pipe -and $script:appId -eq $AppId) { return }
   Close-Pipe
+  $handshakeErrors = @()
+  $lastPipeError = ''
   for ($i = 0; $i -lt 10; $i++) {
     $candidate = New-Object System.IO.Pipes.NamedPipeClientStream('.', ('discord-ipc-' + $i), [System.IO.Pipes.PipeDirection]::InOut, [System.IO.Pipes.PipeOptions]::None)
+    $connected = $false
     try {
-      $candidate.Connect(500)
+      $candidate.Connect(1000)
+      $connected = $true
       $candidate.ReadTimeout = 10000
       $candidate.WriteTimeout = 5000
       Write-Packet $candidate 0 @{ v = 1; client_id = $AppId }
       $reply = Read-Packet $candidate
-      if ($reply.opcode -ne 1 -or $reply.payload.evt -ne 'READY') { throw 'Discord RPC handshake was rejected' }
+      if ($reply.opcode -ne 1 -or $reply.payload.evt -ne 'READY') {
+        $evt = if ($reply.payload -and $reply.payload.evt) { [string]$reply.payload.evt } else { 'none' }
+        throw ('RPC handshake rejected on discord-ipc-' + $i + ' (opcode=' + $reply.opcode + ', evt=' + $evt + ')')
+      }
       $script:pipe = $candidate
       $script:appId = $AppId
       return
     } catch {
+      $detail = $_.Exception.GetBaseException().Message
+      if ($connected) { $handshakeErrors += ('discord-ipc-' + $i + ': ' + $detail) }
+      elseif (-not $lastPipeError) { $lastPipeError = 'discord-ipc-' + $i + ': ' + $detail }
       try { $candidate.Dispose() } catch {}
     }
   }
-  throw 'Discord desktop IPC not found; open the Discord desktop app'
+  if ($handshakeErrors.Count -gt 0) {
+    throw ('Discord IPC pipe was found, but RPC handshake failed: ' + ($handshakeErrors -join '; '))
+  }
+  throw ('Discord desktop IPC not found; open the Discord desktop app (last pipe error: ' + $lastPipeError + ')')
 }
 
 function Send-Activity([string]$AppId, $Activity) {

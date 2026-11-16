@@ -80,6 +80,13 @@ class DiscordRpcTests(unittest.TestCase):
         self.assertIn("AF_UNIX", source)
         self.assertIn("SET_ACTIVITY", source)
 
+    def test_windows_reports_pipe_and_rpc_handshake_failures_separately(self):
+        source = (ROOT / "Windows/resources/discord-rpc.ps1").read_text(encoding="utf-8")
+        self.assertIn("Connect(1000)", source)
+        self.assertIn("RPC handshake failed", source)
+        self.assertIn("last pipe error:", source)
+        self.assertIn("if ($connected)", source)
+
     def test_desktop_archives_include_their_native_ipc_helper(self):
         expected = {
             REPO / "Pulsar-Linux/resources.neu": ("resources/discord-rpc.py", ROOT / "Linux/resources/discord-rpc.py"),
