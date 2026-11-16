@@ -1216,6 +1216,7 @@
       Neutralino.events.on('windowFocus', function (){ focused = true; });
       Neutralino.events.on('windowBlur', function (){ focused = false; });
       Neutralino.events.on('ready', function (){
+        if (window.__pulsarDiag) { window.__pulsarDiag.nativeReady = true; window.dispatchEvent(new Event('pulsar:diag-update')); }
         if (started) return;
         onDom(async function (){
           started = true;
@@ -1701,4 +1702,5 @@
 
   // pomocnik do testów poza webviewem (node): mapowanie wpisów yt-dlp
   window.__desktopBridge = { http: httpGet, mapEntry: mapEntry, isBridgeUrl: isBridgeUrl, mp4Embed: mp4EmbedBytes, ytdlp: ytdlpUpdater, watch: watchFolder };
+  if (window.__pulsarDiag) { window.__pulsarDiag.desktopLoaded = true; window.dispatchEvent(new Event('pulsar:diag-update')); }
 })();

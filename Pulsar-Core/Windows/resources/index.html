@@ -1,6 +1,31 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+  <script>
+  (function(){
+    const d = window.__pulsarDiag = { coreReady:false, desktopLoaded:false, nativeReady:false, pointerCount:0, clickCount:0, lastTarget:'—', error:'—' };
+    function targetName(el){
+      if (!el) return 'none';
+      return String(el.tagName || 'node').toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : '');
+    }
+    function render(){
+      const panel = document.getElementById('pulsarDiagPanel');
+      if (!panel) return;
+      panel.textContent = 'DIAG  core=' + (d.coreReady ? 'ready' : 'NO') + ' desktop=' + (d.desktopLoaded ? 'loaded' : 'NO') + ' native=' + (d.nativeReady ? 'ready' : 'NO') + '\n' +
+        'pointer=' + d.pointerCount + ' click=' + d.clickCount + ' target=' + d.lastTarget + '\n' + 'error=' + d.error;
+    }
+    window.addEventListener('error', function(e){ d.error = String(e.message || e.error || 'script error') + ' @ ' + (e.filename || '') + ':' + (e.lineno || 0); render(); }, true);
+    window.addEventListener('unhandledrejection', function(e){ d.error = 'promise: ' + String(e.reason && e.reason.stack || e.reason || 'rejected'); render(); });
+    window.addEventListener('pulsar:diag-update', render);
+    window.addEventListener('pointerdown', function(e){ d.pointerCount++; d.lastTarget = targetName(e.target); render(); }, true);
+    window.addEventListener('click', function(e){ d.clickCount++; d.lastTarget = targetName(e.target); render(); }, true);
+    document.addEventListener('DOMContentLoaded', function(){
+      const panel = document.createElement('pre'); panel.id = 'pulsarDiagPanel';
+      panel.style.cssText = 'position:fixed;left:8px;top:28px;z-index:2147483647;max-width:48vw;max-height:72px;overflow:hidden;margin:0;padding:5px 7px;border:1px solid #8d9;background:rgba(0,0,0,.86);color:#baffb2;font:10px/1.25 Consolas,monospace;white-space:pre-wrap;pointer-events:none;user-select:none';
+      document.body.appendChild(panel); render();
+    });
+  })();
+  </script>
   <script src="tags.js"></script>
   <script src="neutralino.js"></script>
   <script src="desktop.js"></script>
@@ -11478,6 +11503,7 @@ window.__pulsarSyncApply = async function (plan) {
 
 
   applyLang();
+  if (window.__pulsarDiag) { window.__pulsarDiag.coreReady = true; window.dispatchEvent(new Event('pulsar:diag-update')); }
 })();
 </script>
 </body></html>
