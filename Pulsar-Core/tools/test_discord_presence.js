@@ -23,10 +23,12 @@ for (const platform of ['Linux', 'Windows']) {
     `${platform}: disabling presence clears its timers`);
   assert.equal((html.match(/function startDiscordPolling\(\)/g) || []).length, 1,
     `${platform}: there is exactly one presence polling lifecycle`);
-  assert.match(html, /discordPresenceTimer=setInterval\(updateDiscordActivity,2000\)/,
-    `${platform}: fallback polling keeps track changes responsive`);
+  assert.match(html, /discordPresenceTimer=setInterval\(updateDiscordActivity,15000\)/,
+    `${platform}: fallback polling remains low-frequency`);
   assert.match(html, /reason==='track'[\s\S]*?updateDiscordActivity\(\)/,
     `${platform}: track changes immediately update presence`);
+  assert.match(html, /if\(discordPresenceInFlight\)\{discordPresenceQueued=true;return;\}/,
+    `${platform}: rapid state changes are coalesced instead of queued behind stale updates`);
   assert.match(html, /clearInterval\(discordPresenceTimer\)/,
     `${platform}: the retry timer is cleared when presence is disabled`);
   const pollingDefinition = html.indexOf('function startDiscordPolling()');

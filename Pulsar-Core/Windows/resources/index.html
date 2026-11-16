@@ -9019,7 +9019,7 @@
   const discordPresenceToggleEl=document.getElementById('smDiscordPresenceToggle');
   const discordStatusEl=document.getElementById('smDiscordStatus');
   if(discordPresenceEnabled&&!/^\d{17,20}$/.test(discordApplicationId)){discordPresenceEnabled=false;try{localStorage.setItem('pulsarDiscordPresenceEnabled','0');}catch(e){}}
-  let discordPresenceTimer=0,discordPresenceRefreshTimer=0;
+  let discordPresenceTimer=0,discordPresenceRefreshTimer=0,discordPresenceInFlight=false,discordPresenceQueued=false;
   function discordStatus(text,ok){if(discordStatusEl){discordStatusEl.textContent=text;discordStatusEl.dataset.ok=ok?'1':'0';}}
   function discordDesktop(){return window.__pulsarDesktop&&window.__pulsarDesktop.discordPresence||null;}
   function clearDiscordActivity(){const api=discordDesktop();if(api&&api.clear)api.clear(discordApplicationId).catch(function(){});}
@@ -9027,9 +9027,17 @@
     if(!discordPresenceEnabled)return;
     const api=discordDesktop();
     if(!api||!api.update){discordPresenceRefreshTimer=setTimeout(updateDiscordActivity,1000);return;}
+    if(discordPresenceInFlight){discordPresenceQueued=true;return;}
+    discordPresenceInFlight=true;
     const player=window.__pulsarHost&&window.__pulsarHost.nowPlaying?window.__pulsarHost.nowPlaying():null;
-    if(!player||!player.hasTrack){api.clear(discordApplicationId).catch(function(){});return;}
-    api.update({appId:discordApplicationId,title:player.title,artist:player.artist,playing:player.playing,position:player.pos,duration:player.dur}).catch(function(error){discordStatus(String(error&&error.message||error||'Discord RPC error'),false);});
+    const command=(!player||!player.hasTrack)
+      ? api.clear(discordApplicationId)
+      : api.update({appId:discordApplicationId,title:player.title,artist:player.artist,playing:player.playing,position:player.pos,duration:player.dur});
+    command.catch(function(error){
+      discordPresenceInFlight=false;
+      if(player&&player.hasTrack)discordStatus(String(error&&error.message||error||'Discord RPC error'),false);
+      if(discordPresenceQueued&&discordPresenceEnabled){discordPresenceQueued=false;updateDiscordActivity();}
+    });
   }
   function scheduleDiscordActivity(){clearTimeout(discordPresenceRefreshTimer);discordPresenceRefreshTimer=setTimeout(updateDiscordActivity,250);}
   function onDiscordPlayerState(event){
@@ -9043,11 +9051,12 @@
   function startDiscordPolling(){
     if(discordPresenceTimer)return;
     updateDiscordActivity();
-    discordPresenceTimer=setInterval(updateDiscordActivity,2000);
+    discordPresenceTimer=setInterval(updateDiscordActivity,15000);
   }
   function stopDiscordPolling(){
     if(discordPresenceTimer){clearInterval(discordPresenceTimer);discordPresenceTimer=0;}
     if(discordPresenceRefreshTimer){clearTimeout(discordPresenceRefreshTimer);discordPresenceRefreshTimer=0;}
+    discordPresenceQueued=false;
   }
   if(discordPresenceToggleEl){
     discordPresenceToggleEl.checked=discordPresenceEnabled;
@@ -9063,6 +9072,10 @@
   }
   document.addEventListener('pulsar:discord-status',function(event){
     const detail=event&&event.detail||{};let message=String(detail.message||'');
+    if(discordPresenceInFlight){
+      discordPresenceInFlight=false;
+      if(discordPresenceQueued&&discordPresenceEnabled){discordPresenceQueued=false;updateDiscordActivity();}
+    }
     if(message==='Connected to Discord')message=t('Połączono z Discordem');
     else if(message==='Discord desktop IPC not found; open the Discord desktop app')message=t('Nie znaleziono Discorda — uruchom aplikację desktopową.');
     else if(message.indexOf('Discord desktop IPC not found; open the Discord desktop app (last pipe error: ')===0)message=t('Nie znaleziono Discorda — uruchom aplikację desktopową.')+' '+message.slice('Discord desktop IPC not found; open the Discord desktop app '.length);
