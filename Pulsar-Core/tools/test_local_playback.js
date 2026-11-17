@@ -44,7 +44,7 @@ for (const platform of ['Linux', 'Windows']) {
     `${platform}: AppleDouble archive folders are ignored`);
   assert.match(html, /const audioFiles = files\.filter\(isImportableAudioFile\)/,
     `${platform}: library import excludes sidecars before saving them`);
-  assert.match(html, /tracks = storedTracks\.filter\(item => !isAppleDoubleSidecar\(String\(item\.folder \|\| ''\) \+ '\/' \+ String\(item\.name \|\| ''\)\)\)\.map/,
+  assert.match(html, /const validStoredTracks = storedTracks\.filter\(item => !isAppleDoubleSidecar\(String\(item\.folder \|\| ''\) \+ '\/' \+ String\(item\.name \|\| ''\)\)\);[\s\S]*?tracks = validStoredTracks\.map/,
     `${platform}: already-stored sidecars are hidden on restore without deleting library data`);
   assert.match(html, /Pominięto pomocnicze pliki macOS; dodaj oryginalne pliki audio, jeśli utworów brakuje\./,
     `${platform}: users are told how to restore the real tracks after sidecars are skipped`);
