@@ -4412,9 +4412,10 @@
 
   async function persistTrack(track){
     try {
+      if (!Number.isFinite(Number(track.addedAt)) || Number(track.addedAt) <= 0) track.addedAt = Date.now();
       await dbPut('tracks', {
         id: track.id, name: track.file.name, type: track.file.type, folder: track.folder,
-        title: track.title, artist: track.artist, blob: track.file, coverBlob: track.coverBlob || null,
+        title: track.title, artist: track.artist, addedAt: Number(track.addedAt), blob: track.file, coverBlob: track.coverBlob || null,
         coverSource: track.coverSource || '',
         fav: !!track.fav, plays: track.plays || 0, lastPlay: track.lastPlay || 0,
         srcPath: track.srcPath || '', // ścieżka oryginału na dysku — edytor tagów może go zaktualizować
@@ -4438,14 +4439,24 @@
       const storedTracks = await dbGetAll('tracks');
       const storedAlbums = await dbGetAll('playlists');
       const invalidMacSidecars = storedTracks.some(item => isAppleDoubleSidecar(String(item.folder || '') + '/' + String(item.name || '')));
-      tracks = storedTracks.filter(item => !isAppleDoubleSidecar(String(item.folder || '') + '/' + String(item.name || ''))).map(item => ({
-        id: item.id, file: normalizeAudioFile(new File([item.blob], item.name, { type: item.type || item.blob.type || '' })), 
-        folder: item.folder || '', title: item.title, artist: item.artist,
-        matchedImg: null, coverBlob: item.coverBlob || null, coverUrl: null, coverSource: item.coverSource || (item.coverBlob ? 'legacy' : ''), resolved: true,
-        fav: !!item.fav, plays: item.plays || 0, lastPlay: item.lastPlay || 0, srcPath: item.srcPath || '',
-        netId: item.netId || '', album: item.album || '', year: item.year || '', genre: item.genre || '',
-        netLink: item.netLink || '', durMs: Math.round(Number(item.durMs || 0) || 0)
-      }));
+      const validStoredTracks = storedTracks.filter(item => !isAppleDoubleSidecar(String(item.folder || '') + '/' + String(item.name || '')));
+      const legacyAddedAtBase = Date.now() - validStoredTracks.length;
+      const tracksNeedingAddedAt = [];
+      tracks = validStoredTracks.map((item, index) => {
+        const savedAddedAt = Number(item.addedAt);
+        const addedAt = Number.isFinite(savedAddedAt) && savedAddedAt > 0 ? savedAddedAt : legacyAddedAtBase + index;
+        const track = {
+          id: item.id, file: normalizeAudioFile(new File([item.blob], item.name, { type: item.type || item.blob.type || '' })),
+          folder: item.folder || '', title: item.title, artist: item.artist, addedAt: addedAt,
+          matchedImg: null, coverBlob: item.coverBlob || null, coverUrl: null, coverSource: item.coverSource || (item.coverBlob ? 'legacy' : ''), resolved: true,
+          fav: !!item.fav, plays: item.plays || 0, lastPlay: item.lastPlay || 0, srcPath: item.srcPath || '',
+          netId: item.netId || '', album: item.album || '', year: item.year || '', genre: item.genre || '',
+          netLink: item.netLink || '', durMs: Math.round(Number(item.durMs || 0) || 0)
+        };
+        if (!(Number.isFinite(savedAddedAt) && savedAddedAt > 0)) tracksNeedingAddedAt.push(track);
+        return track;
+      });
+      tracksNeedingAddedAt.forEach(persistTrack);
       albums = storedAlbums.map(a => Object.assign({ createdAt: 0, customCover: false }, a));
       if (invalidMacSidecars){
         try {
@@ -4950,8 +4961,10 @@
     const audioFiles = files.filter(isImportableAudioFile);
     if (!audioFiles.length) return 0;
     audioFiles.sort((a,b) => a.name.localeCompare(b.name, 'pl'));
+    const latestAddedAt = tracks.reduce((latest, track) => Math.max(latest, Number(track.addedAt) || 0), 0);
+    const addedAtBase = Math.max(Date.now(), latestAddedAt + 1);
 
-    const made = audioFiles.map(f => {
+    const made = audioFiles.map((f, index) => {
       const rel = f.webkitRelativePath || f.name;
       const dot = rel.lastIndexOf('.');
       const baseKey = (dot > -1 ? rel.slice(0, dot) : rel).toLowerCase();
@@ -4959,7 +4972,7 @@
       const fallback = parseNameFallback(f.name);
       const folder = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : 'Muzyka';
       const playableFile = normalizeAudioFile(f);
-      return { id: makeId(), file: playableFile, folder: folder, title: fallback.title, artist: fallback.artist, matchedImg: matchedImg, coverBlob: matchedImg, coverUrl: null, coverSource: matchedImg ? 'matched' : '', resolved: false, lrcFile: lrcMap.get(baseKey) || null, srcPath: f.__srcPath || '' };
+      return { id: makeId(), file: playableFile, folder: folder, title: fallback.title, artist: fallback.artist, addedAt: addedAtBase + index, matchedImg: matchedImg, coverBlob: matchedImg, coverUrl: null, coverSource: matchedImg ? 'matched' : '', resolved: false, lrcFile: lrcMap.get(baseKey) || null, srcPath: f.__srcPath || '' };
     });
 
     // Zawsze DOKŁADAMY do biblioteki — nigdy jej nie podmieniamy. Utwór, który już jest (ta sama nazwa pliku i rozmiar,
@@ -5228,7 +5241,7 @@
     } else if (libSortMode === 3){
       idx.sort((a, b) => String(tracks[a].artist || '').localeCompare(String(tracks[b].artist || ''), 'pl', { sensitivity: 'base' }));
     } else if (libSortMode === 4){
-      idx.sort((a, b) => b - a);
+      idx.sort((a, b) => ((Number(tracks[b].addedAt) || 0) - (Number(tracks[a].addedAt) || 0)) || b - a);
     } else if (libSortMode === 5){
       for (let k = idx.length - 1; k >= 0; k--){ if (!tracks[idx[k]].fav) idx.splice(k, 1); }
     } else if (libSortMode === 6){
